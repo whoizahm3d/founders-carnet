@@ -1,12 +1,14 @@
-import styles from './ProgressBar.module.css';
+import React from 'react';
+import { cn } from '@/lib/utils';
 
-interface ProgressBarProps {
+export interface ProgressBarProps {
   value: number; // 0 to 100
   label?: string;
   showValueText?: boolean;
   variant?: 'accent' | 'success' | 'warning';
   size?: 'normal' | 'large';
   className?: string;
+  onInk?: boolean;
 }
 
 export function ProgressBar({
@@ -16,33 +18,54 @@ export function ProgressBar({
   variant = 'accent',
   size = 'normal',
   className = '',
+  onInk = false,
 }: ProgressBarProps) {
   const clampedValue = Math.min(100, Math.max(0, value));
 
-  const barVariantClass =
-    variant === 'success'
-      ? styles.barSuccess
-      : variant === 'warning'
-      ? styles.barWarning
-      : '';
+  const variantFills: Record<'accent' | 'success' | 'warning', string> = {
+    accent: 'bg-accent',
+    success: 'bg-status-success',
+    warning: 'bg-status-warning',
+  };
 
   return (
-    <div className={`${styles.progressWrapper} ${className}`}>
+    <div className={cn('w-full space-y-1.5', className)}>
       {(label || showValueText) && (
-        <div className={styles.labelRow}>
-          {label && <span className={styles.label}>{label}</span>}
-          {showValueText && <span className={styles.value}>{Math.round(clampedValue)}%</span>}
+        <div className="flex items-center justify-between text-xs font-mono uppercase tracking-[0.05em]">
+          {label && (
+            <span className={onInk ? 'text-white/70' : 'text-text-secondary'}>
+              {label}
+            </span>
+          )}
+          {showValueText && (
+            <span
+              className={cn(
+                'font-semibold tabular-nums',
+                onInk ? 'text-white' : 'text-ink'
+              )}
+            >
+              {Math.round(clampedValue)}%
+            </span>
+          )}
         </div>
       )}
+
       <div
-        className={`${styles.track} ${size === 'large' ? styles.trackLarge : ''}`}
+        className={cn(
+          'w-full rounded-pill overflow-hidden',
+          size === 'large' ? 'h-2.5' : 'h-1.5',
+          onInk ? 'bg-ink-border' : 'bg-fill'
+        )}
         role="progressbar"
         aria-valuenow={clampedValue}
         aria-valuemin={0}
         aria-valuemax={100}
       >
         <div
-          className={`${styles.bar} ${barVariantClass}`}
+          className={cn(
+            'h-full rounded-pill transition-all duration-300 ease-out',
+            variantFills[variant]
+          )}
           style={{ width: `${clampedValue}%` }}
         />
       </div>

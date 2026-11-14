@@ -16,6 +16,27 @@ One entry per finished piece of work, newest first. This is what we use to write
 
 ## Entries
 
+## 2026-11-14: Frontend foundation rebuild — Tailwind, DESIGN.md tokens, TopNav & styleguide (Gemini)
+
+- **Feature and IDs:** Frontend Design System and Foundation Rebuild, NFR-23, FR-1 to FR-31 layout foundation.
+- **Built:**
+  - Installed approved packages: `tailwindcss@^3.4.17`, `postcss`, `autoprefixer`, `clsx`, `tailwind-merge`, and `class-variance-authority`. Configured `tailwind.config.ts` and `postcss.config.js`.
+  - Configured `src/app/globals.css` with exact `DESIGN.md` tokens (palette, hairlines, status pairs, glass, and glow) and set global page background to fixed radial gradient: `radial-gradient(circle at 85% 15%, #F5C842 0%, #FF8A2B 30%, #C4451A 55%, #3A1206 100%) fixed`.
+  - Configured Google Fonts via `next/font/google` in `src/app/layout.tsx`: Hanken Grotesk (sans), Instrument Serif italic (serif), and JetBrains Mono (mono).
+  - Built canonical `Logo.tsx` rendering the exact inline SVG mark from `DESIGN.md` line 216 and wordmark.
+  - Built complete family of Phosphor-style inline SVG icons in `src/components/ui/icons/` without adding any icon packages.
+  - Replaced legacy sidebar layout with floating glass pill `TopNav.tsx` (featuring live Karachi local time chip in JetBrains Mono and avatar with user initials) and full-screen mobile `MenuOverlay.tsx` (supporting Escape key listener and numbered navigation links).
+  - Built `Footer.tsx` with logo mark and plain text links.
+  - Restyled UI components to `DESIGN.md`: `Button.tsx` (full pill, 44/48 min-height, primary with 36px circular arrow badge, all states), `Input.tsx` (radius 12, height 44/48, white fill, 1px #8D8D8D border, 3px #F8EDE5 focus ring, Textarea, Select), `Card.tsx` (radius 24, white card, ink monolith, glass card), `ConsentBox.tsx` (radius 12, #F1F0EE fill, 20px custom checkbox), `Badge.tsx` (JetBrains Mono uppercase 12px, #F1F0EE, #F8EDE5, status pairs), `StatCard.tsx`, `ProgressBar.tsx`, `Spinner.tsx`, `EmptyState.tsx`, `Dialog.tsx` (accessible modal with ink/30 blur backdrop), `Drawer.tsx`, `Tabs.tsx`.
+  - Created `/styleguide` route demonstrating all tokens, typography scales, buttons, inputs, cards, dialogs, drawers, and status pairs.
+- **Tested:**
+  - `npx tsc --noEmit` passed with 0 errors.
+  - `npm run lint` passed with 0 errors (0 errors, 1 pre-existing warning in admin queue).
+  - `npm run build` completed successfully with all 25 static routes generated.
+  - Verified responsive layouts across 1440px desktop, 768px tablet, and 390px mobile viewports.
+- **Cut or partial:** None.
+- **Differs from the report?** Replaces CSS Modules with Tailwind CSS and shadcn/ui primitives as planned. Recorded in `docs/DECISIONS.md`.
+
 ## 2026-11-13: Compliance evaluation mappings and dev retrieval (Codex)
 
 - **Feature and IDs:** Compliance assistant and evaluation, FR-8, NFR-12, NFR-13, NFR-14, NFR-20.

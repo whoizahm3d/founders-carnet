@@ -1,5 +1,20 @@
 # Decisions log
 
+## 2026-11-14: Adopt Tailwind CSS, shadcn/ui component primitives, and DESIGN.md v3.8 tokens for frontend rebuild
+
+**Context:** The report states Tailwind CSS and shadcn/ui in its software stack, while the initial wireframe-driven prototype used CSS Modules. Rebuilding against accepted Stitch prototypes and DESIGN.md requires a unified styling foundation, explicit design tokens, and removal of sidebar navigation in favor of a floating pill top navigation.
+
+**What was tried:** Evaluated keeping CSS Modules vs installing Tailwind CSS and restyled shadcn/ui primitives. Approved minimal package set: `tailwindcss@^3.4.17`, `postcss`, `autoprefixer`, `clsx`, `tailwind-merge`, and `class-variance-authority`. No icon packages installed; inline SVG icons strictly used in `src/components/ui/icons/`.
+
+**Decision:**
+- Adopt Tailwind CSS with tokens locked to `DESIGN.md` (canvas, ink, accent #B15F2C, radii, spacing, hairlines, and status pairs).
+- Set page background globally to fixed radial gradient: `radial-gradient(circle at 85% 15%, #F5C842 0%, #FF8A2B 30%, #C4451A 55%, #3A1206 100%) fixed`.
+- Configure Google Fonts (`next/font/google`): Hanken Grotesk (body/headlines), Instrument Serif italic (last words of headings), JetBrains Mono (labels/nav/status).
+- Replace sidebar layout with floating `TopNav` (glass pill, Karachi local time chip, initials avatar) and full-screen mobile `MenuOverlay`.
+- Existing CSS Modules are preserved until each page is rebuilt, then deleted. Built `/styleguide` page to demonstrate all foundation tokens and component states.
+
+**Why:** Aligns the implementation with the project report and `DESIGN.md`, simplifies layout conversion from prototype visual specs, and ensures consistent accessibility, responsiveness, and contrast ratios without external design bloat.
+
 ## 2026-11-13: Keep compliance embedding default provisional; reuse the existing chunks table
 
 **Context:** Three multilingual embedding models were requested for comparison, and citations require heading paths, effective dates and corpus versions. The repository already has a `compliance_chunks` table.

@@ -1,5 +1,10 @@
 import type { UserRole } from '@/types/auth';
-import type { NavItem } from '@/components/layout/Sidebar';
+
+export interface NavItem {
+  label: string;
+  href: string;
+  icon?: React.ReactNode;
+}
 
 export interface RoleNavigation {
   /** Shown under the brand in the sidebar and in the top bar */
