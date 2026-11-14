@@ -1,6 +1,6 @@
 ## Updates, 14 Nov 2026 (these override anything below)
 
-- Styling is CSS Modules. Ignore Tailwind option A and the choice step in prompt F1.
+- Styling is Tailwind and shadcn/ui (option A in prompt F1). The choice is made. List packages and ask before installing.
 - `/design/` means DESIGN.md at the repo root and `frontend/design_reference/`. Ignore stitch-v1, stitch-v2 and rename_map. `frontend/design_reference/INDEX.md` maps each route to its reference folder.
 - Agents never commit. Ali commits after each step.
 - No AI marks, badges or labels anywhere in the UI. The "Language-model label" rule in section 6 and test FT-06 no longer apply.

@@ -216,6 +216,14 @@ Other items (spec-kit and the per-person installs) are listed in `THIRD_PARTY.md
 
 ## Guide overrides
 
-- Styling is CSS Modules only. Ignore the Tailwind option in `docs/frontend_implementation_guide.md`.
 - In that guide, `/design/` means `DESIGN.md` at the repo root plus `frontend/design_reference/`. Ignore stitch-v1, stitch-v2 and rename_map.
 - No AI marks, badges or labels anywhere in the UI. Ignore the guide's language model mark rule and test FT-06.
+
+## Stack (latest, overrides "Stack and layout", rules 1 and 2, and "Do not" above)
+
+- Styling is Tailwind CSS with shadcn/ui, as the report says. DESIGN.md tokens live in `globals.css` and are exposed through the Tailwind theme. Components use theme tokens only: no raw hex and no arbitrary values such as `text-[19px]` or `p-[13px]`. Sizes and spacing stay on the DESIGN.md scales.
+- List the exact packages needed for Tailwind and shadcn and wait for approval before installing.
+- shadcn components are copied into `src/components/ui` and must be restyled to DESIGN.md. The default shadcn look is not allowed.
+- Icons stay inline SVG in `src/components/ui/icons`. Do not add lucide-react or any icon package.
+- Existing CSS Modules stay until their page is rebuilt, then are removed from that page. New code is Tailwind only.
+- `code.html` may be read for structure and spacing, never pasted. Its Tailwind config colors are never used.
