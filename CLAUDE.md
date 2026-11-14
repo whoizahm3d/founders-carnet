@@ -227,3 +227,11 @@ Other items (spec-kit and the per-person installs) are listed in `THIRD_PARTY.md
 - Icons stay inline SVG in `src/components/ui/icons`. Do not add lucide-react or any icon package.
 - Existing CSS Modules stay until their page is rebuilt, then are removed from that page. New code is Tailwind only.
 - `code.html` may be read for structure and spacing, never pasted. Its Tailwind config colors are never used.
+
+## Reporting rules for agents
+
+- Stop after every step. The user commits.
+- Paste the raw output of `npx tsc --noEmit`, `npm run lint` and `npm run build`, never a summary. Do not report a check you did not run.
+- Do not claim a screen matches its reference unless you compared it with screen.png. List the differences you could not remove.
+- Before finishing a step, search frontend/src for SECP, PSEB, FBR, PECA, NFR, "AI-assisted", "AI-generated", "powered by", compliant, secure, encrypted and certified. Fix hits in the files you touched and list the rest.
+- Fix every new lint warning you introduce.
