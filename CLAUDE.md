@@ -235,3 +235,15 @@ Other items (spec-kit and the per-person installs) are listed in `THIRD_PARTY.md
 - Do not claim a screen matches its reference unless you compared it with screen.png. List the differences you could not remove.
 - Before finishing a step, search frontend/src for SECP, PSEB, FBR, PECA, NFR, "AI-assisted", "AI-generated", "powered by", compliant, secure, encrypted and certified. Fix hits in the files you touched and list the rest.
 - Fix every new lint warning you introduce.
+
+## Copy punctuation
+
+- No em dashes or en dashes anywhere in UI copy, labels, placeholders, option text, comments or docs. Use a comma, colon, period or the word "to" instead.
+
+## Context economy (read this first)
+- Start every task by reading docs/frontend-map.md and the last 40 lines of docs/build-log.md. Do not re-read the whole repo.
+- Read only the files named in the prompt or listed in the map for that screen. Use search with line ranges instead of opening whole files.
+- Read only the DESIGN.md section for the screen you are building (use search for its heading). Read all of DESIGN.md only when asked.
+- Do not re-measure colors, contrast or alignment that a previous step already reported unless the prompt asks.
+- Reuse the last screenshots if the screen did not change. One screenshot round, one build at the end.
+- After each step, update docs/frontend-map.md (new or changed components, tokens, routes, decisions) in a few lines.

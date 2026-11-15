@@ -1,6 +1,6 @@
 ---
 name: The Founder's Carnet
-version: 3.8
+version: 3.9.2
 description: Editorial design system with layered, asymmetric composition. for an AI platform that introduces founders, talent, mentors and investors in Pakistan's startup ecosystem. Warm paper canvas, ink black monoliths, one burnt orange accent. Merged from the accepted Stitch prototypes (login, register, founder dashboard) and the project rules.
 colors:
   canvas: "#FAF9F7"
@@ -101,7 +101,7 @@ Style reference: a calm studio landing page with a near white page, deep ink are
 - Layered depth: a glass card overlapping a glow, an ink panel beside white cards, glass cards at different sizes and offsets that slightly overlap. Keep overlap away from text.
 - Soft orange glow blobs sit behind the hero zone only, one or two per screen, using the glow tokens. They are blurred shapes (blur 80 to 120), never a hard gradient bar, and only the glow colors.
 - Glass card: fill rgba(255,255,255,0.70), backdrop blur 12, 1px ring rgba(230,229,226,0.70), shadow 0 8px 24px rgba(10,10,10,0.06), radius 24. Use for the top nav, floating info cards and the login form card. Text on glass stays #0A0A0A (4.5:1 minimum).
-- Rows fill #F1F0EE on hover and show a 36 px ink circular arrow badge at the right (hover only). The one main action per screen keeps its permanent badge.
+- Rows fill #F1F0EE on hover and show a 36 px ink circular arrow badge at the right (hover only). The one main action per screen shows its badge on hover and keyboard focus, and always on touch devices.
 - Small meta line (12 px, muted) is allowed at the top of ink cards and glass cards. It follows the Typography lock.
 - Believable Pakistani data: Karachi, Lahore, Islamabad, Faisalabad, PKR amounts, real sector names. No lorem ipsum, no emoji, no stock illustrations. Do not mention SECP, PSEB or FBR as endorsement or compliance.
 
@@ -233,7 +233,7 @@ Phosphor, Regular weight, one stroke weight across the product, 20 px in nav, 16
 
 # Components
 
-Buttons: full pill, min height 44 (48 on mobile), label style. Only the main action on a screen has the inset circular arrow badge: 36 px circle on the right, with 6 px padding on the right and 24 px on the left, so the badge sits snug inside the pill. All other buttons are plain pills with 24 to 28 px side padding and no badge. Hover scales to 1.03 and the arrow moves 3 px right.
+Buttons: full pill, min height 44 (48 on mobile), label style. Only the main action on a screen has the inset circular arrow badge: 36 px circle on the right, with 6 px padding on the right and 24 px on the left, so the badge sits snug inside the pill. All other buttons are plain pills with 24 to 28 px side padding and no badge. At rest the main action shows the label only. On hover and keyboard focus the badge slides in from the left to the right end of the pill and the arrow moves with it (300 ms). On touch devices the badge stays visible. Under reduced motion it appears without sliding. Press scales to 0.98. Hover does not scale. Disabled buttons show no badge.
 - Primary: ink fill, white label, white 36 px badge with an ink arrow. On hover the badge turns accent with a white arrow.
 - Accent: #B15F2C fill, white label (large or bold only). Hover #964E22. Badge only if it is the main action.
 - Secondary: transparent or white fill, 1px #E6E5E2 border (#8D8D8D when it needs 3:1), ink label, no badge.
@@ -275,12 +275,24 @@ Data views have Loading (skeleton shaped like the layout), Empty (one composed m
 
 Easing cubic-bezier(0.22, 1, 0.36, 1). 500 ms layout changes, 300 ms color and opacity. Entrance: 12 to 24 px rise with fade, staggered 80 ms. Card hover lifts 4 px. Pill buttons scale to 1.03 and the badge arrow shifts 2 to 3 px. Mobile menu links stagger in. Honor prefers-reduced-motion.
 
+The motion set is closed. Use only these and invent no others:
+- Main action press: scale 0.98 while pressed. On submit, the arrow in the badge slides 8 px right and fades out while a spinner fades in at the same spot (300 ms). The label changes to its progress form ("Signing in", "Creating account") and the button stays disabled until the request ends. On error the arrow returns and the message fades in under the field group.
+- Tabs (Sign in and Register): the underline slides to the active tab over 300 ms.
+- Note card: the note text rises 8 px and cross fades to the next note over 300 ms. It advances every 6 seconds, pauses on hover and focus, and stops under reduced motion.
+- Fields: the focus ring fades in over 300 ms. Error messages fade in with a 4 px rise. The password strength bar fills over 300 ms.
+- Entrance: the form card rises 24 px with a fade on load, and the left block follows 80 ms later.
+- No bounce, spring, shake, parallax or looping decoration. Under prefers-reduced-motion every item above becomes an instant state change or a plain opacity change.
+
 # Sign in and Register
 
-One screen with two states (Login and Register tabs). Full bleed warm gradient artwork behind everything. The form is a glass card that overlaps the artwork on the right, and the note card floats at a different height on the left. Left: top row with logo and name, a Display 1 headline "Introductions for Pakistan's startup ecosystem", a muted subline, and a frosted glass note card with three short product notes and prev and next arrows (for example mutual consent introductions, profile similarity not success odds, human review of unclear profiles). Right: a white form card 480 px wide, radius 24.
-- Login: Welcome back, email, password, remember me, forgot password, Sign in pill, "Continue with LinkedIn", link to Register. No role picker, no consent box, no step counter. (Role picker and consent box belong to Register only.)
-- Register: Create account, email, password, role select, LinkedIn option, ConsentBox, Create account pill (disabled until consent is checked).
-- Footer: "The Founder's Carnet", 2026, Privacy, Terms, Contact. No status, compliance or security claims. Mobile: the artwork shrinks to a header band above the form.
+One screen with two states (Login and Register tabs), built as two routes, /login and /register, linked by the tabs. Full bleed warm gradient artwork behind everything. The form is a solid white card (not glass) on the right, and the note card floats at a different height on the left. Left: top row with logo and name, a Display 1 headline "Introductions for Pakistan's startup ecosystem" with "Pakistan's startup ecosystem." in Instrument Serif italic at weight 400 (three words: the one exception to the last one or two words rule, used only on the Sign in, Register and Landing hero headline), the subline "A network that introduces founders, talent, mentors and investors across Karachi, Lahore and Islamabad. Contact details stay private until both sides accept.", and a dark translucent glass note card (ink at about 35 percent, blur 12, white text at 4.5:1 or better) with three short product notes and prev and next arrows (mutual consent introductions, profile similarity not success odds, human review of unclear profiles). No eyebrow pill, no city chips and no extra feature cards. Right: a white form card 480 px wide, radius 24, 64 px from the right edge at desktop, starting higher than the left block.
+- Login: Welcome back, email, password, remember me, forgot password, Sign in pill, the social options, link to Register. No consent box and no step counter. No role picker. In mock mode a short banner appears and the role is chosen from the start of the email (founder, talent, mentor, investor or admin, default founder). Setting NEXT_PUBLIC_HIDE_MOCK_BANNER to true hides the banner on Sign in and Register, for report screenshots only. (The role picker and consent box belong to Register only.)
+- Register: Create account, email, password with a strength bar, role select (founder, talent, mentor, investor, never admin), ConsentBox, Create account pill (disabled until consent is checked), the social options, link to Sign in.
+- Social options, on both screens: "Continue with LinkedIn" as a full width outlined pill, then "Google" and "GitHub" as two half width outlined pills side by side below it. Icons are the official LinkedIn, Google and GitHub logos, used unmodified: taken from each provider's brand assets as inline SVG, never redrawn or recolored by hand (provider brand rules forbid it). They are the only third-party colors allowed in the app. The buttons stay disabled and keep the caption. All three are disabled until the backend supports them, with one short visible caption under the group ("Not available yet"). Remember me and forgot password are also visible but disabled with the same caption.
+- Footer on these screens: a flat ink (#0A0A0A) band with rounded top corners at the bottom of the page, white text, logo and name on the left and "© 2026 The Founder's Carnet" on the right. Privacy, Terms and Contact links are added when those pages exist. No status, compliance or security claims.
+- Alignment: at every breakpoint the logo, the headline block, the note card and the form card share one left edge and one right edge (a single column below lg). No block is inset relative to another.
+- Instrument Serif italic uses normal letter spacing, never negative tracking.
+- Mobile: the artwork shrinks to a header band above the form with the logo and a 36 px headline. The subline and the note card are hidden so the form is visible on the first screen at 390 px. No horizontal scroll, 48 px controls.
 
 # Landing page (public, route /)
 
@@ -290,7 +302,7 @@ Look: the hero and the closing section use the exact sign-in artwork (full bleed
 
 Sections in order:
 1. Glass pill nav: logo and wordmark, links (What it is, How it works, Roles, Principles, FAQ, Contact), Karachi time chip, "Sign in" plain pill, "Create account" as the one main action with the circular arrow badge. Mobile: Menu button and the ink overlay.
-2. Hero on the sign-in artwork: Display 1 headline "Introductions for Pakistan's startup ecosystem.", a two line subline ("A network that introduces founders, talent, mentors and investors across Karachi, Lahore and Islamabad. Contact details stay private until both sides accept."), buttons "Create account" and "Sign in". A glass card cycles three product notes with prev and next arrows, and a smaller glass card at a different offset says "Contact details after mutual acceptance". Asymmetric: headline left, cards floating right and lower.
+2. Hero on the sign-in artwork: Display 1 headline "Introductions for Pakistan's startup ecosystem." with the last three words in Instrument Serif italic, a two line subline ("A network that introduces founders, talent, mentors and investors across Karachi, Lahore and Islamabad. Contact details stay private until both sides accept."), buttons "Create account" and "Sign in". A glass card cycles three product notes with prev and next arrows, and a smaller glass card at a different offset says "Contact details after mutual acceptance". Asymmetric: headline left, cards floating right and lower.
 3. What it is: a large statement on the left ("Finding the right people should not depend on who you already know.") and three short plain paragraphs on the right: the problem (early stage teams rely on personal networks), what the platform does (builds profiles, gives a readiness guide, suggests matches by profile similarity, sends introduction requests), and what it does not do (no payments, no brokerage, no equity dealing, no legal or tax advice, no cold outreach).
 4. How it works: a hairline list of four rows, each with a mono index, a title, two sentences of explanation and an arrow badge on hover. 01 Create your account and choose a role. 02 Build your profile; automated checks and a human reviewer verify it. 03 See your readiness guide (founders) and matches by profile similarity. 04 Request an introduction; contact details appear only after both sides accept.
 5. Roles: four hairline rows (Founders, Talent, Mentors, Investors), wide text column and a narrow "what you get" column. Founders: readiness guide on a 1 to 5 rubric, pitch practice with feedback, matches. Talent: profile, resume, job listings, matches with startups. Mentors: profile, advisory requests to accept or decline. Investors: thesis profile, founder matches, introduction requests. Use only features that exist in the app navigation.
@@ -317,7 +329,7 @@ Keep content, fields, copy, navigation items and functionality of all 12 prototy
 10. Investor dashboard: thesis summary, founder matches, request rows
 11. Admin console: one line of plain counts, review queue with status chips, review drawer
 12. Shared shell: top nav, mobile menu overlay
-13. Landing page (public, route /), see Landing page above. Sign in has no step counter and offers LinkedIn only.
+13. Landing page (public, route /), see Landing page above. Sign in has no step counter and offers LinkedIn, Google and GitHub as disabled options (see Sign in and Register).
 
 # Content
 
