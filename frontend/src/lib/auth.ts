@@ -101,10 +101,22 @@ async function request<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
+const MOCK_ROLES: UserRole[] = ['founder', 'talent', 'mentor', 'investor', 'admin'];
+
+/** Derives a UserRole from the email prefix (the part before @).
+ *  Trims whitespace and lower-cases before matching.
+ *  Only used inside the mock branch; the real API path is unaffected.
+ */
+function roleFromEmail(email: string): UserRole {
+  const prefix = email.split('@')[0].trim().toLowerCase();
+  const matched = MOCK_ROLES.find((r) => prefix === r || prefix.startsWith(r));
+  return matched ?? 'founder';
+}
+
 export async function loginApi(credentials: LoginCredentials): Promise<AuthResponse> {
   if (USE_MOCK) {
     await delay(300);
-    const role = credentials.role ?? 'founder';
+    const role = roleFromEmail(credentials.email);
     return {
       token: `mock-token-${role}-${Date.now()}`,
       user: buildMockUser(credentials.email, role),
@@ -117,6 +129,7 @@ export async function loginApi(credentials: LoginCredentials): Promise<AuthRespo
 }
 
 export async function registerApi(data: RegisterData): Promise<AuthResponse> {
+  const fullName = data.fullName?.trim() || nameFromEmail(data.email);
   if (USE_MOCK) {
     await delay(400);
     if (!data.agreedToTerms) {
@@ -124,8 +137,13 @@ export async function registerApi(data: RegisterData): Promise<AuthResponse> {
     }
     return {
       token: `mock-token-${data.role}-${Date.now()}`,
-      user: buildMockUser(data.email, data.role, data.fullName),
+      user: buildMockUser(data.email, data.role, fullName),
     };
   }
-  return request<AuthResponse>('/auth/register', data);
+  return request<AuthResponse>(`/api/v1/auth/register/${data.role}`, {
+    email: data.email,
+    password: data.password,
+    full_name: fullName,
+    consent_accepted: data.agreedToTerms,
+  });
 }

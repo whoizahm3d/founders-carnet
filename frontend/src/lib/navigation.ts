@@ -7,7 +7,7 @@ export interface NavItem {
 }
 
 export interface RoleNavigation {
-  /** Shown under the brand in the sidebar and in the top bar */
+  /** Shown in the top nav and mobile overlay */
   label: string;
   items: NavItem[];
 }
