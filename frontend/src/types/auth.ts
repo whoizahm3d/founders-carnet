@@ -27,6 +27,6 @@ export interface RegisterData {
   email: string;
   password: string;
   role: UserRole;
-  fullName: string;
+  fullName?: string; // Optional: not collected on the registration form; generated from email in mock mode
   agreedToTerms: boolean;
 }

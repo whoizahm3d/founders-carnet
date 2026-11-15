@@ -8,3 +8,8 @@ export * from './MatchCard';
 export * from './EmptyState';
 export * from './Spinner';
 export * from './ConsentBox';
+export * from './Logo';
+export * from './Dialog';
+export * from './Drawer';
+export * from './Tabs';
+export * from './icons';

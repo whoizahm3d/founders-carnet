@@ -4,6 +4,8 @@ Changes the code or tooling has already made that the report (`main.tex`), the m
 
 | Date | What changed | Report says | Now | Where to fix | DECISIONS entry |
 | --- | --- | --- | --- | --- | --- |
+| 2026-11-15 | Auth social providers scope (Google and GitHub) | Prototype screens show Google and GitHub options; FR-22 lists only email and LinkedIn | Prototype screens show Google and GitHub, but FR-22 lists only email and LinkedIn; report is finalized and will not be changed | `main.tex` Chapter 4 authentication and Section 4.8 GUI screens | to add |
+| 2026-11-14 | Auth frontend controls (LinkedIn sign-in, forgot password, remember me) | Prototype displays active LinkedIn button, forgot password link, and remember me checkbox | Controls are rendered in disabled state on `/login` and `/register` with tooltips indicating backend support is absent | `main.tex` Chapter 4/5 frontend & auth flow | to add |
 | 2026-11-13 | Compliance chunk metadata and evaluation status | Embedding candidates are to be compared; compliance chunks are described without the added citation metadata | Alembic 0005 extends existing `compliance_chunks` with heading path, effective date and corpus version; model downloads, indexing and measured comparison remain incomplete | `main.tex` implementation and evaluation chapters | 2026-11-13 provisional embedding default and existing chunks table |
 | 2026-11-13 | Narrow Finance Act 2026 retrieval scope | All amendments effective from 1 July 2026 | Keep Income Tax Ordinance amendments and Companies Act/SECP fee amendments; current 2026 Act yields 32 ITO amendment chunks and no Companies Act/SECP fee amendments | `main.tex` corpus scope table and answer-source scope; `docs/context/corpus.md` | 2026-11-13 Finance Act scope |
 | 2026-11-12 | Private structured-response cache and sanitized gateway call logs | Gateway architecture describes prompt/evidence logging | Gateway persists sanitized per-attempt metadata only; private user-scoped structured cache expires after 24 hours and is cleared on account deletion; queue position is internal, not returned by APIs | `main.tex` Chapter 5 LLM Gateway and privacy description | 2026-11-12 "Private structured response cache and sanitized gateway call logs" |
@@ -60,3 +62,6 @@ These items need a decision before the report can be finalised. They are listed 
 - **Hosting:** report says "Railway or Render" everywhere. Once one is chosen, update `main.tex`, the master document and `CLAUDE.md`, and log it.
 - **Feature freeze date:** not stated in the report; log it when confirmed.
 - **Supporting classifier details:** approved by Ms. Khaleel. Column names, split sizes and the Investments label rule are set when the training scripts are written. Log them and update the report then.
+
+- Pill buttons: arrow badge shows on hover and focus (always on touch), not at rest. Report prototypes show it at rest.
+- Login: no role dropdown. Mock mode picks the role from the email prefix. Mock banner can be hidden with NEXT_PUBLIC_HIDE_MOCK_BANNER.

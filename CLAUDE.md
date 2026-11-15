@@ -216,6 +216,34 @@ Other items (spec-kit and the per-person installs) are listed in `THIRD_PARTY.md
 
 ## Guide overrides
 
-- Styling is CSS Modules only. Ignore the Tailwind option in `docs/frontend_implementation_guide.md`.
 - In that guide, `/design/` means `DESIGN.md` at the repo root plus `frontend/design_reference/`. Ignore stitch-v1, stitch-v2 and rename_map.
 - No AI marks, badges or labels anywhere in the UI. Ignore the guide's language model mark rule and test FT-06.
+
+## Stack (latest, overrides "Stack and layout", rules 1 and 2, and "Do not" above)
+
+- Styling is Tailwind CSS with shadcn/ui, as the report says. DESIGN.md tokens live in `globals.css` and are exposed through the Tailwind theme. Components use theme tokens only: no raw hex and no arbitrary values such as `text-[19px]` or `p-[13px]`. Sizes and spacing stay on the DESIGN.md scales.
+- List the exact packages needed for Tailwind and shadcn and wait for approval before installing.
+- shadcn components are copied into `src/components/ui` and must be restyled to DESIGN.md. The default shadcn look is not allowed.
+- Icons stay inline SVG in `src/components/ui/icons`. Do not add lucide-react or any icon package.
+- Existing CSS Modules stay until their page is rebuilt, then are removed from that page. New code is Tailwind only.
+- `code.html` may be read for structure and spacing, never pasted. Its Tailwind config colors are never used.
+
+## Reporting rules for agents
+
+- Stop after every step. The user commits.
+- Paste the raw output of `npx tsc --noEmit`, `npm run lint` and `npm run build`, never a summary. Do not report a check you did not run.
+- Do not claim a screen matches its reference unless you compared it with screen.png. List the differences you could not remove.
+- Before finishing a step, search frontend/src for SECP, PSEB, FBR, PECA, NFR, "AI-assisted", "AI-generated", "powered by", compliant, secure, encrypted and certified. Fix hits in the files you touched and list the rest.
+- Fix every new lint warning you introduce.
+
+## Copy punctuation
+
+- No em dashes or en dashes anywhere in UI copy, labels, placeholders, option text, comments or docs. Use a comma, colon, period or the word "to" instead.
+
+## Context economy (read this first)
+- Start every task by reading docs/frontend-map.md and the last 40 lines of docs/build-log.md. Do not re-read the whole repo.
+- Read only the files named in the prompt or listed in the map for that screen. Use search with line ranges instead of opening whole files.
+- Read only the DESIGN.md section for the screen you are building (use search for its heading). Read all of DESIGN.md only when asked.
+- Do not re-measure colors, contrast or alignment that a previous step already reported unless the prompt asks.
+- Reuse the last screenshots if the screen did not change. One screenshot round, one build at the end.
+- After each step, update docs/frontend-map.md (new or changed components, tokens, routes, decisions) in a few lines.

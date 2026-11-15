@@ -2,6 +2,17 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-15: Auth and button fix pass (Antigravity)
+
+- **Feature and IDs:** Auth UX and design system polish (no FR/NFR directly; supports FR-1 login, FR-2 register)
+- **What was built:**
+  - Button `hasBadge` mode: badge is now absolutely positioned inside the pill via `.btn-badge` CSS class in `globals.css`. Slides from left edge to right end on hover and focus-visible (300ms `cubic-bezier(0.22,1,0.36,1)`). Always visible at right end on touch (`hover:none`) and under `prefers-reduced-motion`. Symmetric `px-12` padding on md/lg keeps the label centered. Disabled hides badge; loading shows Spinner inside badge.
+  - Login page: removed mock role select dropdown. Role now derived from email prefix in `auth.ts` (`loginApi` mock branch only; real API path unchanged). Supported prefixes: `founder`, `talent`, `mentor`, `investor`, `admin`; default `founder`. Banner text updated to explain prefix convention.
+  - `NEXT_PUBLIC_HIDE_MOCK_BANNER` flag: when `true`, hides the mock info banner on `/login` and `/register` without changing mock behavior. Documented in `.env.example` and `frontend/README.md`.
+  - Gradient stops tightened ~4pp: dark region extends further right on both desktop and mobile tokens. Single `--gradient-artwork` token in `globals.css`; all screens inherit via `.bg-page-gradient`.
+- **What was tested:** `tsc --noEmit`, `npm run lint`, `npm run build` passed. Screenshots taken at 1440 and 390 for `/login`, `/terms`, `/`.
+- **What was cut:** nothing
+
 ## Entry format
 
 ```
@@ -15,6 +26,136 @@ One entry per finished piece of work, newest first. This is what we use to write
 ```
 
 ## Entries
+
+## 2026-11-15: Step 3c Fix Pass — Landing page background, nav, spacing scale and Button component (Gemini)
+
+- **Feature and IDs:** Public Landing Page and Shared Button, FR-22, NFR-4, NFR-6, NFR-23.
+- **Built:**
+  - Full-bleed gradient background: Hero and Closing sections each use `.bg-hero-gradient` utility class in `globals.css` (reusing sign-in gradient tokens, with responsive radial glow positioning at 85% 15% on desktop and 100% 0% on mobile/tablet) instead of `position: fixed`. Hero given `min-h-hero` (720px) and `lg:min-h-hero-desktop` (820px).
+  - Floating Nav: Wordmark, "Sign in", and "Create account" styled with `whitespace-nowrap shrink-0`. Time chip and text links hidden below `lg` with dedicated mobile Menu button. Verified pill does not overflow at 1440, 768, or 390.
+  - Shared Button component (`Button.tsx`): Fixed arrow badge clipping/overlap with explicit `mr-3` (12px) label separation and tokenized padding. Removed `hover:scale-[1.03]`, retained active press 0.98 (`active:scale-98`) and 8px arrow badge hover slide (`group-hover:translate-x-2`).
+  - Typography and Labels: Removed yellow dot from the "Contact details after mutual acceptance" chip. Converted small uppercase mono labels to sentence-case Hanken Grotesk on the landing page (roles "What you get", principles eyebrow, footer links, chip text).
+  - Spacing Scale and Tokens: Banned arbitrary bracket values; added named tokens `width.badge`, `height.badge`, `minHeight.hero`, `minHeight['hero-desktop']`, `scale['98']` in `tailwind.config.ts`. Replaced all arbitrary/fractional spacings with tokens on the 2/4/8/12/16/24/32/40/48/64/80/96 scale. Section vertical gaps standardized to `py-16 lg:py-20` (64px / 80px).
+  - Principles Panel: Single-column on mobile and tablet (`grid-cols-1 lg:grid-cols-2`).
+- **Tested:**
+  - `npm run lint`: Copied directly from terminal (0 errors, 1 pre-existing warning in `src/app/(dashboard)/admin/dashboard/page.tsx`).
+  - `npx tsc --noEmit`: Exit code 0, 0 errors.
+  - `npm run build`: Compiled successfully in 10.4s, 25/25 static pages generated.
+  - Contrast ratios measured and verified on hero: Headline white on deep brown (16.55:1), on red-orange (4.98:1); Subline on deep brown (14.78:1), on red-orange (4.45:1); Yellow italic on deep brown (10.42:1), on red-orange (3.14:1, exceeding WCAG 3:1).
+  - Single Playwright screenshot round: Full-page screenshots captured for `/`, `/login`, and `/register` at 1440, 768, and 390 in `frontend/screenshots/`.
+- **Cut or partial:** Section 6 (Product Preview) and Privacy/Terms links remain deferred per instruction. Contact form submission disabled (backend gap).
+- **Differs from the report?** No new differences beyond documented deferred items.
+
+
+## 2026-11-15: Step 3c — Build Public Landing Page (/) per DESIGN.md v3.9.2 (Gemini)
+
+- **Feature and IDs:** Public Landing Page, FR-22, NFR-4, NFR-6, NFR-23.
+- **Built:**
+  - Rebuilt `src/app/page.tsx` as full public landing page replacing redirect stub.
+  - Floating Glass Pill Nav: Canonical Logo, Hanken Grotesk sentence-case nav links (`#what-it-is`, `#how-it-works`, `#roles`, `#principles`, `#faq`, `#contact`), client-rendered plain `HH:MM PKT` time chip (`bg-white/70 backdrop-blur-glass`, no amber dot, no pulse), "Sign in" plain pill, "Create account" primary action pill with 36px circular arrow badge (`hasBadge`), and full-screen `#0A0A0A` mobile menu overlay.
+  - Hero Section on fixed gradient artwork: Display 1 headline (`text-4xl sm:text-5xl lg:text-6xl`, "Pakistan's startup ecosystem." in `font-serif italic font-normal text-carnet-yellow tracking-normal`), subline (`text-base sm:text-lg`), primary "Create account" and secondary "Sign in" buttons, cycling dark glass note card and "Contact details after mutual acceptance" chip. Social logos omitted per instruction.
+  - "What it is" Section on canvas (`#FAF9F7`): Display 2 statement on left, three verified plain paragraphs on right (explaining network gap, profile similarity matching, and boundary conditions without banned words).
+  - "How it works" Section on canvas: 4 hairline-separated rows (`01` to `04`) with hover fill (`bg-fill`) and arrow badge reveal without content shift.
+  - "Roles" Section on canvas: 4 hairline rows (Founders, Talent, Mentors, Investors) strictly matching capabilities defined in `navigation.ts`.
+  - "Principles" Section: Flat `#0A0A0A` ink panel (`border-ink-border`, `rounded-card`) with 4 commitments in `text-white` (100%) and `text-white/70` (70%) tokens only.
+  - "FAQ" Section: 5 interactive accordion rows with plain two-sentence verified answers.
+  - "Contact" Section: "Get in touch" headline, exact sentence ("Questions about the platform can be sent with this form once it is available."), disabled form card with "(Not available yet)" caption. Gaps documented in `docs/api_gaps.md`.
+  - Closing Section & Footer: "Ready for an introduction?" headline with "Create account" pill, flat `#0A0A0A` bottom footer with Logo, uppercase nav links, and copyright. Product preview and Privacy/Terms omitted per instruction.
+  - Tokens and shared edge rule: All breakpoints (1440, 768, 390) use shared column widths (`max-w-auth-card lg:max-w-6xl mx-auto`), zero raw hex, and verified 0 em-dashes / en-dashes. Added `carnet-yellow: '#F5C842'` token in `tailwind.config.ts`.
+- **Tested:**
+  - `npm run lint`: Copied directly from terminal (0 errors, 1 pre-existing warning in `src/app/(dashboard)/admin/dashboard/page.tsx`).
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: Compiled successfully in 28.9s, all 25 static pages generated.
+  - Single Playwright screenshot round: Captured full-page screenshots for `/`, `/login`, and `/register` at 1440, 768, and 390 in `frontend/screenshots/`.
+- **Cut or partial:** Section 6 (Product Preview) and Privacy/Terms links deferred per instruction. Contact form submission disabled due to backend gap.
+- **Differs from the report?** No new differences beyond documented deferred items and backend gaps.
+
+## 2026-11-15: Step 3b — Polish /login and /register per DESIGN.md v3.9.2 (Gemini)
+
+- **Feature and IDs:** Authentication and Registration, FR-1, FR-2, FR-22, NFR-4, NFR-6, NFR-23.
+- **Built:**
+  - Official social logos: Replaced redrawn monochrome icons with official LinkedIn (blue `#0A66C2` on white `rect`), Google (four-path full color), and GitHub (flat `#24292F`) logos from simple-icons paths, all inline SVG, no new dependency. Buttons remain disabled with caption.
+  - Alignment: Wrapped layout shell in `max-w-auth-card lg:max-w-6xl mx-auto` container inside `layout.tsx` so logo, headline block, note card, and form card share one left and right edge at every breakpoint. Below `lg` all columns collapse to `max-w-auth-card` single column.
+  - Tracking: Added `tracking-normal` to every Instrument Serif italic span in `AuthHeroPanel.tsx`, `PageHeader.tsx`, and `styleguide/page.tsx`. Removes cramped negative letter-spacing.
+  - Forgot password: Moved below the password input field, right-aligned, `whitespace-nowrap`, on its own row — no collision at 390px.
+- **Tested:**
+  - `npx tsc --noEmit`: Exit code 0.
+  - `npm run build`: Compiled successfully in 48s, 25/25 static pages generated.
+  - Single Playwright screenshot round: All 6 screenshots captured at 1440, 768, and 390 in `frontend/screenshots/`.
+- **Cut or partial:** Social auth buttons remain disabled (backend gap).
+- **Differs from the report?** No new differences.
+
+## 2026-11-15: Step 3b — Polish /login and /register per DESIGN.md v3.9.1 (Gemini)
+
+- **Feature and IDs:** Authentication and Registration, FR-1, FR-2, FR-22, NFR-4, NFR-6, NFR-23.
+- **Built:**
+  - Quiet "How it works" list: Added 4 hairline-separated rows under the note card on lg screens and up, displaying mono indices (01 to 04) with exact copy from DESIGN.md lines 304-305. Hidden below lg.
+  - Narrow-screen WCAG contrast & glow shift: Shifted gradient glow to corner on screens <= 1023px (`circle at 100% 0%`) and added subtle ink scrim (`bg-ink/50 backdrop-blur-md rounded-card border border-white/10`) behind headline on mobile/tablet. Yellow italic text `#F5C842` achieves measured contrast ratio of 4.44:1 to 6.2:1 (exceeding 3:1), and white text achieves 7.06:1 to 10.5:1 (exceeding 4.5:1).
+  - Headline update per DESIGN.md v3.9.1: Set all three words "Pakistan's startup ecosystem." in Instrument Serif italic (weight 400), with "Introductions for" in bold Hanken Grotesk. Scaled italic up one step on DESIGN.md type scale (from 60px to 72px on desktop; from 30px to 36px on mobile) for optical body alongside bold sans.
+  - Footer copyright contrast: Updated footer text on ink to `text-white/70`, measuring 9.66:1 contrast ratio against `#0A0A0A`.
+  - Disabled controls clarity: Styled "Forgot password?" with `font-mono text-xs text-text-muted cursor-not-allowed` and explicit `(Not available yet)` caption.
+  - Zero dashes: Verified 0 em-dashes and 0 en-dashes across all touched files.
+- **Tested:**
+  - `npm run lint`: Copied directly from terminal (1 pre-existing warning in `src/app/(dashboard)/admin/dashboard/page.tsx` for `'ReviewItem'`).
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: Compiled successfully in 46s, 25/25 static pages generated.
+  - Single Playwright screenshot round: Captured full-page screenshots at 1440, 768, and 390 in `frontend/screenshots/`.
+- **Cut or partial:** Social options (LinkedIn, Google, GitHub) and password recovery remain disabled controls due to backend gaps.
+- **Differs from the report?** No new differences beyond documented social auth gaps.
+
+## 2026-11-15: Step 3b — Full Redo of /login and /register against DESIGN.md v3.9 and Prototypes (Gemini)
+
+- **Feature and IDs:** Authentication and Registration, FR-1, FR-2, FR-22, NFR-4, NFR-6, NFR-23.
+- **Built:**
+  - Token-only compliance: Replaced arbitrary values with design system tokens (`w-auth-card` 480px, `rounded-card`, `min-h-12` 48px buttons, 64px desktop side margins, `bg-page-gradient` fixed full viewport layer, dark glass note card).
+  - Left panel: Canonical Logo once, Display 1 (60px desktop) headline with italic ending in `font-normal` Instrument Serif, exact DESIGN.md subline (no "vetted capital"), rotating glass note card with 3 claims (pausing on hover/focus, stopping under `prefers-reduced-motion`). Mobile layout: compact top header with 36px headline, subline & note card hidden so form sits on the first screen at 390px.
+  - Right panel: Pinned asymmetric 480px card with sliding active underline tabs (300ms cubic-bezier transition). Sentence-case labels ("Mock mode role", "Email address", "Password", "Select your role").
+  - Form controls: Full 48px height inputs, SVG eye toggle. Remember me checkbox and Forgot password link with legible `(Not available yet)` caption. Social auth: Full-width LinkedIn pill, followed by Google and GitHub side-by-side pills with monochrome glyphs (no blue), all disabled with single `(Not available yet)` caption.
+  - Register page: 300ms password strength bar, single-word role options ("Founder", "Talent", "Mentor", "Investor") with helper text, exact ConsentBox copy (`"Profiles undergo verification before introduction requests are active. Contact details stay hidden until both sides accept."`).
+  - Button motion: 48px primary button with hover scale 1.03 + 3px arrow shift, pressed scale 0.98, full submit sequence (arrow slides out, spinner in, label "Signing in" / "Creating account", disabled state, `transitionTimingFunction: carnet`).
+  - Backend integration safety: Added `nameFromEmail` fallback in `src/lib/auth.ts` so `UserRegisterRequest` satisfies backend schema requirement without exposing demographic field in the UI.
+  - Zero dashes: Verified 0 em-dashes (U+2014) and 0 en-dashes (U+2013) across all touched files.
+  - Flat ink bottom footer (`bg-ink rounded-t-card text-white`) pinned to page bottom with `min-h-screen flex flex-col justify-between`.
+- **Tested:**
+  - `npm run lint`: 0 errors.
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: Compiled successfully, 25/25 static pages generated.
+  - Playwright visual testing: Full-page captures with viewport auto-sizing to document height at 1440, 768, and 390 for `/login` and `/register` in `frontend/screenshots/`.
+- **Cut or partial:** Social auth (LinkedIn, Google, GitHub), Forgot password, and Remember me are disabled with clear captions due to missing backend endpoints. Documented in `docs/api_gaps.md` and `docs/pending-report-changes.md`.
+- **Differs from the report?** Yes, prototype screens show Google and GitHub while FR-22 specifies email and LinkedIn. Social buttons are rendered as disabled options. Documented in `docs/pending-report-changes.md` and `docs/DECISIONS.md`.
+
+## 2026-11-14: Step 3a — Frontend codebase cleanup and audit (Gemini)
+
+- **Feature and IDs:** Frontend Cleanup, NFR-23.
+- **Built:**
+  - Removed unused `setProgress` in `src/app/styleguide/page.tsx`.
+  - Updated stale "sidebar" comment in `src/lib/navigation.ts` to reference top nav and mobile overlay.
+  - Audited `Sidebar.tsx` usage (confirmed 0 component imports across `frontend/src/`).
+  - Audited banned terms (SECP, PSEB, FBR, PECA, NFR, "AI-assisted", etc.) across `frontend/src/`; cleaned in all touched auth files.
+- **Tested:** `npm run lint`, `npx tsc --noEmit`.
+- **Cut or partial:** None.
+- **Differs from the report?** No.
+
+## 2026-11-14: Frontend foundation rebuild — Tailwind, DESIGN.md tokens, TopNav & styleguide (Gemini)
+
+- **Feature and IDs:** Frontend Design System and Foundation Rebuild, NFR-23, FR-1 to FR-31 layout foundation.
+- **Built:**
+  - Installed approved packages: `tailwindcss@^3.4.17`, `postcss`, `autoprefixer`, `clsx`, `tailwind-merge`, and `class-variance-authority`. Configured `tailwind.config.ts` and `postcss.config.js`.
+  - Configured `src/app/globals.css` with exact `DESIGN.md` tokens (palette, hairlines, status pairs, glass, and glow) and set global page background to fixed radial gradient: `radial-gradient(circle at 85% 15%, #F5C842 0%, #FF8A2B 30%, #C4451A 55%, #3A1206 100%) fixed`.
+  - Configured Google Fonts via `next/font/google` in `src/app/layout.tsx`: Hanken Grotesk (sans), Instrument Serif italic (serif), and JetBrains Mono (mono).
+  - Built canonical `Logo.tsx` rendering the exact inline SVG mark from `DESIGN.md` line 216 and wordmark.
+  - Built complete family of Phosphor-style inline SVG icons in `src/components/ui/icons/` without adding any icon packages.
+  - Replaced legacy sidebar layout with floating glass pill `TopNav.tsx` (featuring live Karachi local time chip in JetBrains Mono and avatar with user initials) and full-screen mobile `MenuOverlay.tsx` (supporting Escape key listener and numbered navigation links).
+  - Built `Footer.tsx` with logo mark and plain text links.
+  - Restyled UI components to `DESIGN.md`: `Button.tsx` (full pill, 44/48 min-height, primary with 36px circular arrow badge, all states), `Input.tsx` (radius 12, height 44/48, white fill, 1px #8D8D8D border, 3px #F8EDE5 focus ring, Textarea, Select), `Card.tsx` (radius 24, white card, ink monolith, glass card), `ConsentBox.tsx` (radius 12, #F1F0EE fill, 20px custom checkbox), `Badge.tsx` (JetBrains Mono uppercase 12px, #F1F0EE, #F8EDE5, status pairs), `StatCard.tsx`, `ProgressBar.tsx`, `Spinner.tsx`, `EmptyState.tsx`, `Dialog.tsx` (accessible modal with ink/30 blur backdrop), `Drawer.tsx`, `Tabs.tsx`.
+  - Created `/styleguide` route demonstrating all tokens, typography scales, buttons, inputs, cards, dialogs, drawers, and status pairs.
+- **Tested:**
+  - `npx tsc --noEmit` passed with 0 errors.
+  - `npm run lint` passed with 0 errors (0 errors, 1 pre-existing warning in admin queue).
+  - `npm run build` completed successfully with all 25 static routes generated.
+  - Verified responsive layouts across 1440px desktop, 768px tablet, and 390px mobile viewports.
+- **Cut or partial:** None.
+- **Differs from the report?** Replaces CSS Modules with Tailwind CSS and shadcn/ui primitives as planned. Recorded in `docs/DECISIONS.md`.
 
 ## 2026-11-13: Compliance evaluation mappings and dev retrieval (Codex)
 
@@ -63,6 +204,7 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** `rag/.venv/Scripts/python.exe -m pytest rag/tests -q` passed (21 passed). All 15 manifest hashes passed. pypdf extracted all active PDFs with text and no extraction errors. Chunk totals: 496 across 11 active source texts. Generated 10 Companies Act samples and 3 each from the Finance Act and Seventh Schedule for manual review.
 - **Cut or partial:** Embeddings, indexing, retrieval, answer generation, endpoint, and evaluation were not part of this step.
 - **Differs from the report?** No; see the 2026-11-13 entry in `docs/DECISIONS.md` for the verifier behavior and mixed manifest text-hash convention.
+
 ## 2026-11-12: Admin verification queue and appeals (Codex)
 
 - **Feature and IDs:** Administrative review and profile verification appeals, FR-16, FR-21, FR-26.
@@ -298,6 +440,7 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** Full backend suite: 18 passed. Full RAG suite: 11 passed. All 12 manifest entries matched their SHA-256 hashes. Indexing and Gemini tests use fakes; no live provider call, embedding-weight download, or PostgreSQL/pgvector database test was run.
 - **Cut or partial:** No corpus was indexed. `EMBEDDING_MODEL_NAME` is not selected/configured. The Companies Act and Income Tax Ordinance are skipped until their report-defined section filters are implemented; VOSS needs OCR or reviewed transcription; the report-designated dated PSEB HTML snapshot is absent, so the mismatched PDF remains unindexed. The gold-question evaluation remains to do.
 - **Differs from the report?** No difference introduced. The existing PSEB source mismatch remains unresolved. Alembic was selected by team approval; see `docs/DECISIONS.md` (2026-10-17, "Use Alembic for backend migrations").
+
 ## 2026-10-18: Dataset docs checked against dataset cards and papers (Claude)
 
 - **Feature and IDs:** External dataset documentation (Chapter 3 datasets table; no FR/NFR directly)
@@ -406,13 +549,6 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Cut or partial:** None.
 - **Differs from the report?** No.
 
-
-
-
-
-
-
-
 ## 2026-10-17: VOSS corpus transcription (Codex)
 
 - **Feature and IDs:** Compliance assistant, FR-8, NFR-12, NFR-14.
@@ -444,6 +580,7 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** 102 backend tests passed with one existing Starlette/AnyIO deprecation warning; compliance/RAG tests ran only for regression and remain frozen/out of scope.
 - **Cut or partial:** GitHub activity metrics are represented by optional link presence in this slice; real SECP lookup is intentionally not implemented. High scores remain pending while the manual SECP signal is pending.
 - **Differs from the report?** Yes. The report needs to describe full talent verification and normalized signal audit storage; see `docs/pending-report-changes.md`.
+
 ## 2026-11-12: LLM Gateway cache, queue position, and call metadata (Codex)
 
 - **Feature and IDs:** NFR-2, NFR-8, NFR-11, NFR-19, NFR-22.
@@ -451,6 +588,7 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** 114 backend tests passed; 22 compliance regression tests passed; 11 RAG regression tests passed. Each run has console and JUnit output in `docs/test-results/`. One existing Starlette/AnyIO deprecation warning appeared in backend and compliance runs.
 - **Cut or partial:** Cache is process-local filesystem storage; no distributed cache or API queue-position field was added. Report follow-up is in `docs/pending-report-changes.md`.
 - **Differs from the report?** Yes. The report currently describes prompt/evidence logging; update it to describe sanitized metadata and the private cache as specified in `docs/pending-report-changes.md`.
+
 ## 2026-11-13: Matching eligibility and contact visibility review (Codex)
 
 - **Feature and IDs:** Matching, FR-7, FR-10, FR-29, NFR-3, NFR-5, NFR-6.
@@ -458,6 +596,7 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** 15 focused matching tests, 116 backend tests, 22 isolated compliance regression tests, and 11 RAG regression tests passed. Saved console and JUnit output under `docs/test-results/`; `git diff --check` passed.
 - **Cut or partial:** No live PostgreSQL/pgvector server was used; PostgreSQL SQL compilation and the local Python cosine path were tested. Match records remain startup-anchored, so the direct talent–mentor pairing named by FR-7 is not implemented and needs an API/domain-model decision.
 - **Differs from the report?** Sector/stage weights remain as already recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`. `main.tex` is absent from this checkout, so review used `docs/context/requirements.md` and `docs/context/architecture.md`.
+
 ## 2026-11-13: Job board eligibility and listing validation (Codex)
 
 - **Feature and IDs:** Job and internship board, FR-6, FR-24, FR-25, NFR-5, NFR-22.
@@ -473,6 +612,7 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** 122 backend tests passed with 93.8% app line coverage (848/904 executable line starts; 2329.72 seconds). After final test dependency wiring, 29 focused task, infrastructure, matching, and admin tests passed. The isolated compliance regression suite passed 22 tests and the RAG regression suite passed 11. One existing Starlette/AnyIO deprecation warning appeared in backend and compliance runs. Console, JUnit, and coverage outputs are recorded in `docs/test-results/` and `backend/TESTS.md`.
 - **Cut or partial:** No live Redis/Celery deployment or PostgreSQL purge run was performed; task behavior was verified with isolated SQLite, private disk-cache, and PDF fixtures.
 - **Differs from the report?** No known difference from the available requirements summary; `main.tex` is absent from this checkout.
+
 ## 2026-11-02: graphify installed, skill-only (Ali, with Claude Code)
 
 - **Feature and IDs:** Developer tooling for context and token savings (no FR/NFR).
@@ -630,4 +770,24 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Built:** Nothing installed or moved. Plan: hook-free personal tools in the normal config, every hook-based tool in `C:\Users\pakistan\.claude-hooks`, launched only outside the FYP repo. All tools logged on 2 and 3 November 2026 are personal tools, not required by the FYP.
 - **Tested:** Sizes measured for the profile (104 KB) and four plugin clones (1.4 MB, 34 MB, 105 MB, 116 MB). None of last round's removals has been run.
 - **Cut or partial:** Decided: replica-design/build stay in the main config; codebase-memory-mcp stays dropped; gstack stays skipped; the profile does not sync the claude.ai account (`C:\Users\pakistan\.claude-hooks\settings.json` written with `syncClaudeAiPlugins` and `syncClaudeAiSkills` set to `false`).
+- **Differs from the report?** No.
+
+## 2026-11-15: Step 3d: /privacy, /terms, public layout extraction, register consent links (Ali, with Gemini)
+
+- **Feature and IDs:** FR-1, FR-2, NFR-10, NFR-13 (Public information architecture, privacy policy, terms of service, consent flow).
+- **Built:**
+  - Extracted shared `PublicNav` and `PublicFooter` into `frontend/src/components/layout/`.
+  - Added `/privacy` and `/terms` public routes with `bg-hero-gradient`, single white card (`rounded-card`, `1px hairline`, `shadow-modal-elevation`), sentence-case headings, and body text at `16px` (`text-base`).
+  - Terms copy updated: "Account closure" removed; "Your profile is shown to other members only under the introduction rules above." added.
+  - Privacy copy updated: "your email address, your role and the profile details you add" used.
+  - Landing and auth consent links: ConsentBox details updated with real `target="_blank" rel="noopener noreferrer"` links with visible focus rings.
+  - Landing footer: 768px and 390px left aligned on shared edge, links in one row (`What it is`, `How it works`, `Roles`, `Contact`, `Privacy`, `Terms`), copyright on one line.
+- **Tested:**
+  - `playwright` screenshots at 1440, 768, and 390 for `/privacy`, `/terms`, and `/` at 768 and 390.
+  - Measured `scrollWidth === innerWidth` on all captured breakpoints (1440=1440, 768=768, 390=390) with zero horizontal overflow.
+  - Banned-word, dash, raw hex, and arbitrary Tailwind bracket sweeps passed with 0 errors.
+  - `npm run lint` passed with 0 errors.
+  - `npx tsc --noEmit` passed with 0 errors.
+  - `npm run build` completed in 13.2s, 27/27 static pages generated.
+- **Cut or partial:** Section 6 (Product Preview) remains deferred per Step 3c instructions.
 - **Differs from the report?** No.

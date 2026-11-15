@@ -11,7 +11,8 @@ If a route has no entry here, ask before inventing the screen.
 |---|---|
 | / (desktop) | the_founder_s_carnet_landing_page |
 | / (mobile) | landing_page_mobile_preview_390px |
-| /login, /register | sign_in_and_register_1, sign_in_and_register_2 (confirm which is which) |
+| /login | sign_in_and_register_2 (sign in state) |
+| /register | sign_in_and_register_1 (register state) |
 | Verification status (under review, approved, rejected) | profile_verification_states |
 | Appeal confirmation | profile_appeal_confirmation_the_founder_s_carnet |
 | /privacy | privacy_policy |
