@@ -791,3 +791,19 @@ One entry per finished piece of work, newest first. This is what we use to write
   - `npm run build` completed in 13.2s, 27/27 static pages generated.
 - **Cut or partial:** Section 6 (Product Preview) remains deferred per Step 3c instructions.
 - **Differs from the report?** No.
+
+## 2026-11-15: Initial frontend Playwright tests and CI suite (Ali, with Gemini)
+
+- **Feature and IDs:** FT-02, FT-03, FT-09, FT-10, FR-17, FR-22 (Automated frontend verification and CI gates).
+- **Built:**
+  - Added `test:e2e` script to `frontend/package.json` utilizing the existing Playwright devDependency.
+  - Configured `frontend/playwright.config.ts` for automated test server start on port 3000.
+  - Added FT-02 test (`frontend/tests/ft-02-register-consent.spec.ts`) verifying the registration consent requirement (FR-17).
+  - Added FT-03 test (`frontend/tests/ft-03-register-roles.spec.ts`) verifying the registration role dropdown excludes the admin role (FR-22).
+  - Added FT-09 test (`frontend/tests/ft-09-mobile-viewport.spec.ts`) verifying zero horizontal overflow at 390px across all built pages (/, /login, /register, /privacy, /terms).
+  - Created `docs/frontend-test-log.md` recording test execution results and the combined FT-10 CI check note.
+- **Tested:**
+  - Ran `npm run test:e2e`: all 7 test cases passed.
+  - Ran FT-10 verification commands: `npm run lint` passed (0 errors), `npx tsc --noEmit` passed (0 errors), and `npm run build` passed (27 of 27 static pages generated).
+- **Cut or partial:** Vitest and Testing Library packages were not approved yet because the screens that need them (such as the talent dashboard for FT-06 and the compliance assistant for FT-07) are not built yet. FT-01, FT-04, FT-05, and FT-08 wait for their respective screens to be built.
+- **Differs from the report?** No.
