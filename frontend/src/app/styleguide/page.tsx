@@ -28,7 +28,7 @@ export default function StyleguidePage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [progress, setProgress] = useState(68);
+  const [progress] = useState(68);
 
   const colors = [
     { name: 'Canvas', hex: '#FAF9F7', bg: 'bg-canvas', text: 'text-ink' },
@@ -134,28 +134,28 @@ export default function StyleguidePage() {
             <div className="pt-2">
               <p className="font-mono text-xs text-text-muted uppercase mb-1">Display 1 (60px bold -2.5%)</p>
               <div className="font-sans text-5xl md:text-6xl font-bold tracking-tight text-ink">
-                Capital with <span className="font-serif italic font-normal text-accent">conviction.</span>
+                Capital with <span className="font-serif italic font-normal tracking-normal text-accent">conviction.</span>
               </div>
             </div>
 
             <div className="pt-4">
               <p className="font-mono text-xs text-text-muted uppercase mb-1">Display 2 (48px bold -2%)</p>
               <div className="font-sans text-4xl md:text-5xl font-bold tracking-tight text-ink">
-                Welcome back, <span className="font-serif italic font-normal text-accent">Bilal</span>
+                Welcome back, <span className="font-serif italic font-normal tracking-normal text-accent">Bilal</span>
               </div>
             </div>
 
             <div className="pt-4">
               <p className="font-mono text-xs text-text-muted uppercase mb-1">Heading 1 (30px bold -2%)</p>
               <div className="font-sans text-3xl font-bold tracking-tight text-ink">
-                Verification & Moderation <span className="font-serif italic font-normal text-accent">Console</span>
+                Verification & Moderation <span className="font-serif italic font-normal tracking-normal text-accent">Console</span>
               </div>
             </div>
 
             <div className="pt-4">
               <p className="font-mono text-xs text-text-muted uppercase mb-1">Heading 2 (24px semibold -1.5%)</p>
               <div className="font-sans text-2xl font-semibold tracking-tight text-ink">
-                Recommended <span className="font-serif italic font-normal text-accent">founders</span>
+                Recommended <span className="font-serif italic font-normal tracking-normal text-accent">founders</span>
               </div>
             </div>
 
@@ -380,7 +380,7 @@ export default function StyleguidePage() {
             </div>
 
             <h3 className="font-sans text-2xl font-bold text-ink">
-              Layered <span className="font-serif italic font-normal text-accent">depth</span>
+              Layered <span className="font-serif italic font-normal tracking-normal text-accent">depth</span>
             </h3>
             <p className="font-sans text-sm text-text-secondary mt-2 leading-relaxed">
               Glass cards sit over glows or ink panels. Text on glass retains 4.5:1 minimum contrast.

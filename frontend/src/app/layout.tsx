@@ -42,7 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${hanken.variable} ${instrument.variable} ${jetbrains.variable}`}
+      className={`${hanken.variable} ${instrument.variable} ${jetbrains.variable} scroll-smooth motion-reduce:scroll-auto`}
     >
       <body className="antialiased min-h-screen text-text">
         <AuthProvider>{children}</AuthProvider>

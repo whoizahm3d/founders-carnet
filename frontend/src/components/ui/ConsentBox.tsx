@@ -8,6 +8,7 @@ export interface ConsentBoxProps {
   onChange: (checked: boolean) => void;
   label: string;
   details?: string;
+  children?: React.ReactNode;
   className?: string;
   disabled?: boolean;
 }
@@ -18,6 +19,7 @@ export function ConsentBox({
   onChange,
   label,
   details,
+  children,
   className = '',
   disabled = false,
 }: ConsentBoxProps) {
@@ -62,10 +64,10 @@ export function ConsentBox({
         >
           {label}
         </label>
-        {details && (
-          <p className="font-sans text-xs text-text-secondary leading-relaxed mt-1">
-            {details}
-          </p>
+        {(children || details) && (
+          <div className="font-sans text-xs text-text-secondary leading-relaxed mt-1">
+            {children ?? details}
+          </div>
         )}
       </div>
     </div>

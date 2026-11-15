@@ -30,7 +30,7 @@ export function FormattedHeading({
   if (words.length <= italicWordsCount) {
     return (
       <span className={className}>
-        <span className={`font-serif italic ${onGradient ? 'text-[#F5C842]' : 'text-accent'}`}>
+        <span className={`font-serif italic font-normal tracking-normal ${onGradient ? 'text-carnet-yellow' : 'text-accent'}`}>
           {text}
         </span>
       </span>
@@ -43,7 +43,7 @@ export function FormattedHeading({
   return (
     <span className={className}>
       {baseWords}{' '}
-      <span className={`font-serif italic font-normal ${onGradient ? 'text-[#F5C842]' : 'text-accent'}`}>
+      <span className={`font-serif italic font-normal tracking-normal ${onGradient ? 'text-carnet-yellow' : 'text-accent'}`}>
         {italicWords}
       </span>
     </span>

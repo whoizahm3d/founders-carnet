@@ -34,6 +34,8 @@ const config: Config = {
           subtle: '#ECEAE5',
           row: '#E6E5E2',
         },
+        'carnet-yellow': '#F5C842',
+        'carnet-dark': '#130100',
         disabled: {
           DEFAULT: '#E3E2DF',
         },
@@ -73,6 +75,26 @@ const config: Config = {
         card: '24px',
         pill: '9999px',
       },
+      width: {
+        'auth-card': '480px',
+        badge: '36px',
+        'badge-sm': '28px',
+      },
+      height: {
+        badge: '36px',
+        'badge-sm': '28px',
+      },
+      minHeight: {
+        control: '48px',
+        hero: '720px',
+        'hero-desktop': '820px',
+      },
+      scale: {
+        '98': '0.98',
+      },
+      maxWidth: {
+        'auth-card': '480px',
+      },
       spacing: {
         '0': '0px',
         '0.5': '2px',
@@ -95,6 +117,9 @@ const config: Config = {
       },
       backdropBlur: {
         glass: '12px',
+      },
+      transitionTimingFunction: {
+        carnet: 'cubic-bezier(0.22, 1, 0.36, 1)',
       },
     },
   },

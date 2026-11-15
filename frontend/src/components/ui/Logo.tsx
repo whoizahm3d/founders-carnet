@@ -42,7 +42,7 @@ export function Logo({
       <LogoMark size={size} />
       {showWordmark && (
         <span
-          className={`font-sans font-semibold tracking-[-0.01em] text-base leading-none ${
+          className={`font-sans font-semibold tracking-[-0.01em] text-base leading-none whitespace-nowrap ${
             inverted ? 'text-white' : 'text-ink'
           }`}
         >
