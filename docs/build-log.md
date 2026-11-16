@@ -791,3 +791,40 @@ One entry per finished piece of work, newest first. This is what we use to write
   - `npm run build` completed in 13.2s, 27/27 static pages generated.
 - **Cut or partial:** Section 6 (Product Preview) remains deferred per Step 3c instructions.
 - **Differs from the report?** No.
+
+## 2026-11-15: Initial frontend Playwright tests and CI suite (Ali, with Gemini)
+
+- **Feature and IDs:** FT-02, FT-03, FT-09, FT-10, FR-17, FR-22 (Automated frontend verification and CI gates).
+- **Built:**
+  - Added `test:e2e` script to `frontend/package.json` utilizing the existing Playwright devDependency.
+  - Configured `frontend/playwright.config.ts` for automated test server start on port 3000.
+  - Added FT-02 test (`frontend/tests/ft-02-register-consent.spec.ts`) verifying the registration consent requirement (FR-17).
+  - Added FT-03 test (`frontend/tests/ft-03-register-roles.spec.ts`) verifying the registration role dropdown excludes the admin role (FR-22).
+  - Added FT-09 test (`frontend/tests/ft-09-mobile-viewport.spec.ts`) verifying zero horizontal overflow at 390px across all built pages (/, /login, /register, /privacy, /terms).
+  - Created `docs/frontend-test-log.md` recording test execution results and the combined FT-10 CI check note.
+- **Tested:**
+  - Ran `npm run test:e2e`: all 7 test cases passed.
+  - Ran FT-10 verification commands: `npm run lint` passed (0 errors), `npx tsc --noEmit` passed (0 errors), and `npm run build` passed (27 of 27 static pages generated).
+- **Cut or partial:** Vitest and Testing Library packages were not approved yet because the screens that need them (such as the talent dashboard for FT-06 and the compliance assistant for FT-07) are not built yet. FT-01, FT-04, FT-05, and FT-08 wait for their respective screens to be built.
+- **Differs from the report?** No.
+
+## 2026-11-16: Rebuild Founder Dashboard from design reference (Ali, with Gemini)
+
+- **Feature and IDs:** Founder Dashboard, FR-1, FR-2, FR-3, FR-7, FR-10, FR-15, NFR-6 (Founder workspace overview, AI-evaluated readiness rubric, next action checklist, pitch feedback logs, and matches preview).
+- **Built:**
+  - Rebuilt `/founder/dashboard` in `frontend/src/app/(dashboard)/founder/dashboard/page.tsx` following the accepted design reference (`founder_dashboard_bilal_ahmed`) and DESIGN.md tokens.
+  - Added typed fixtures in `frontend/src/fixtures/founder-dashboard.ts` covering company overview, 7-dimension readiness rubric with next actions, next action items, pitch diagnostic logs, and investor and mentor match candidates.
+  - Sub-header bar with breadcrumb and interactive toggle between Active dashboard and First-time onboarding checklist.
+  - Hero monolith card in ink black with dynamic 1.0 to 5.0 readiness rubric ruler, progress bar, tier landmark, and principle disclaimer: "A rubric guide, not a funding probability."
+  - Read-only Rubric Breakdown and Evaluation dialog per FR-2 displaying 7 dimensions (Problem clarity, Market definition, Differentiation, Business model, Traction, Team, Scalability) with scores, one-line descriptions, and explicit next actions. Scores are evaluated by the system (language model) and cannot be edited by the founder. Accessible dialog with Escape key close and labelled controls.
+  - Two-column asymmetric layout with Next actions (7 cols) supporting completion checkboxes, and Recent pitch feedback (5 cols) displaying plain simulation notices without AI badges or sparkles.
+  - Match preview section with 1 featured investor card (Ayesha Qureshi, 6 cols) and 2 standard cards (Hamza Iqbal, Sana Rauf, 3 cols each) featuring profile similarity percentages, tags, rationale, stateful match request buttons, and contact hiding before mutual acceptance per FR-7 and NFR-6.
+  - First-time onboarding empty state view with 3 foundational steps and locked introductions callout.
+- **Tested:**
+  - `npm run lint` passed with 0 errors (1 unused variable warning in placeholder admin dashboard).
+  - `npx tsc --noEmit` passed with 0 errors.
+  - `npm run build` completed successfully, generating 27 of 27 static pages.
+  - `npm run test:e2e` passed (7 of 7 Playwright tests).
+  - Viewport verification at 1440px and 390px confirmed zero horizontal overflow (scrollWidth equals clientWidth).
+- **Cut or partial:** Aggregated dashboard state, dynamic rubric saving, and match requests operate on typed fixtures; backend endpoints for these are not built yet.
+- **Differs from the report?** Yes; tracked in `docs/pending-report-changes.md` (2026-11-16 entry).
