@@ -2,6 +2,28 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-17: Founder Dashboard Playwright tests and report raw material (Ali, with Gemini)
+
+- **Feature and IDs:** FT-01 (FR-23), FT-09 dashboard (NFR-10), FT-11 (FR-2), FT-12 (FR-7, NFR-6). Report raw material for the Founder Dashboard.
+- **Part 1 — Tests built:**
+  - `frontend/tests/ft-01-founder-auth-redirect.spec.ts`: Verifies that signing in with the founder sample account lands on `/founder/dashboard` and that navigating to any other role dashboard URL redirects the founder back. Covers FR-23 (role-limited routing via signed token).
+  - `frontend/tests/ft-09-founder-dashboard-viewport.spec.ts`: Verifies no horizontal scroll on `/founder/dashboard` at 390 px and 1440 px. Extends the existing FT-09 suite to cover the new dashboard page.
+  - `frontend/tests/ft-11-readiness-rubric-dialog.spec.ts`: Verifies the rubric breakdown dialog shows exactly 7 read-only dimensions (each with score, description, and next action), no founder-editable controls, Escape key close, and Close button close. Covers FR-2.
+  - `frontend/tests/ft-12-pitch-feedback-match-privacy.spec.ts`: Verifies the pitch feedback panel shows the plain language model simulation notice and no AI branding, and that no match card exposes an email address or telephone number. Covers FR-7 and NFR-6.
+  - Locator corrections made iteratively from Playwright ARIA snapshot inspection: button text corrected from "View rubric breakdown" to "Inspect rubric breakdown"; match section locator corrected from "Matches ready for introduction" to "Investor and Mentor matches"; score count scoped to `div.divide-y > div` rows to exclude the composite score banner; "Munshi Books" locator changed to `.first()` to avoid strict-mode violation.
+  - FR/NFR IDs verified against `docs/report/main.tex`: FR-2 at line 601, FR-7 at line 618, FR-23 at line 594, NFR-6 at line 662 all confirmed correct. FR-11 and FR-12 removed from page comments in prior step as they mapped to placement fees and OAuth verification, not to routing or contact hiding.
+- **Part 2 — Report raw material:**
+  - Created `docs/report-text/` directory (new).
+  - Created `docs/report-text/frontend-dashboard.md` containing: a 150-word implementation paragraph describing the dashboard panels, fixture data, and backend endpoints needed; test case tables for FT-01, FT-09 dashboard, FT-11, and FT-12 with tester and reviewer rotation (Ali Ahmad, Shahzeb Imran, Taha Nawaz); test metrics (12 executed, 12 passed, 0 failed, 0.00 % defect density); and a limitations paragraph covering fixture data, no backend connection, no component tests, possible pitch-score dimension mismatch, and UI-only contact reveal.
+  - `docs/frontend-test-log.md` updated with execution rows for FT-01, FT-09 dashboard, FT-11, FT-12, and the 2026-11-17 FT-10 CI commands (lint, tsc, build).
+- **Tested:**
+  - `npm run test:e2e`: 12 of 12 tests passed.
+  - `npm run lint`: 0 errors (1 pre-existing unused variable warning in placeholder admin dashboard).
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 27 of 27 static pages generated successfully (Next.js 16.4.6).
+- **Cut or partial:** No existing test files were changed. The screen was not edited to make tests pass. No packages were installed.
+- **Differs from the report?** No.
+
 ## 2026-11-15: Auth and button fix pass (Antigravity)
 
 - **Feature and IDs:** Auth UX and design system polish (no FR/NFR directly; supports FR-1 login, FR-2 register)
