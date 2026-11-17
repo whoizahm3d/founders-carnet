@@ -40,7 +40,7 @@ export function PublicFooter({ basePath, variant = 'default' }: PublicFooterProp
               <Link
                 key={link.label}
                 href={link.href}
-                className="hover:text-white transition-colors whitespace-nowrap"
+                className="inline-flex items-center min-h-control px-2 py-3 hover:text-white transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-control"
               >
                 {link.label}
               </Link>
@@ -74,7 +74,7 @@ export function PublicFooter({ basePath, variant = 'default' }: PublicFooterProp
             <Link
               key={link.label}
               href={link.href}
-              className="hover:text-white transition-colors whitespace-nowrap"
+              className="inline-flex items-center min-h-control px-2 py-3 hover:text-white transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-control"
             >
               {link.label}
             </Link>

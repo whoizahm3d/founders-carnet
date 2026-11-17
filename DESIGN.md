@@ -120,7 +120,7 @@ Structure to copy:
 What makes it work: plain text buttons with no decoration, no icons in circles, hairline rows, tags that describe the data, small numbers, lots of white space, and only the ink card for contrast.
 
 Rules that override the reference where it broke our rules (remove these from any screen that has them):
-- No "SECP", "PECA", "Compliant", "Registered", "Attested", "Exemption" or "Charter" text, no advisory or legal notice card, no "Sovereign" wording, no cohort label ("Cohort 2026.Q1 Active"), no "Active & Matching" status chips.
+- No "PECA", "Compliant", "Registered", "Attested", "Exemption" or "Charter" text, no advisory or legal notice card, no "Sovereign" wording, no cohort label ("Cohort 2026.Q1 Active"), no "Active & Matching" status chips.
 - No invented stat such as "94% Rubric elevation". Stats are plain counts that exist in the data (inbound requests, active mentees, and similar).
 - No green dots, no "Strict Sovereign Screening" chip.
 - Small inline arrow glyphs inside ink pills are fine. The circular arrow badge is used on one main action per screen only.

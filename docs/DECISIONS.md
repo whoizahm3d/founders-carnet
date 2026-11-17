@@ -604,3 +604,13 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 **Why:** This supports NFR-2 and NFR-19 while keeping private request content out of operational records and honoring the account deletion flow in NFR-11.
 
 **Follow-ups:** Update the report's gateway description to specify sanitized metadata rather than prompt/evidence persistence and describe the 24-hour user-scoped cache and its deletion cleanup.
+
+## 2026-11-17: Remove cohort metrics, stage label, and vetted-investor claim from Founder Dashboard
+
+**Context:** The Founder Dashboard prototype displayed a "Cohort target" stat, an "SME bookings" stat, a "Series Seed" stage label in the breadcrumb, and a "Visible to vetted investors" badge subline. None of these appears in DESIGN.md as a required element, and they all constitute either invented statistics or premature claims about investor access.
+
+**Decision:** Remove the "Cohort target" and "SME bookings" pill block entirely. Simplify the breadcrumb to "Founder / Dashboard" with no stage suffix. Keep only the "Verified profile" text in the verification badge; remove the "Visible to vetted investors" subline. These fields are absent from the production fixture and from the page component.
+
+**Why:** DESIGN.md prohibits invented statistics, cohort labels, and vetted investor claims on the Founder Dashboard. Including them would misrepresent the platform state to the user and to any evaluator reading the report. The report's figure descriptions must match what the screen actually shows.
+
+**Follow-ups:** Update the report figure captions that reference a cohort stat block or a "Series Seed" breadcrumb label. See `docs/pending-report-changes.md` (2026-11-17 entry).

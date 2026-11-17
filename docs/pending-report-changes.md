@@ -66,3 +66,6 @@ These items need a decision before the report can be finalised. They are listed 
 
 - Pill buttons: arrow badge shows on hover and focus (always on touch), not at rest. Report prototypes show it at rest.
 - Login: no role dropdown. Mock mode picks the role from the email prefix. Mock banner can be hidden with NEXT_PUBLIC_HIDE_MOCK_BANNER.
+
+| 2026-11-17 | Founder Dashboard breadcrumb and stats block | Report says (or figure shows) a stage suffix "Series Seed" in the breadcrumb and a "Cohort target / SME bookings" stats row. | Implementation shows "Founder / Dashboard" with no stage suffix and no stats block. Update any figure caption or prose that references those elements. See DECISIONS.md 2026-11-17 entry. |
+| 2026-11-17 | Verification badge subline | Report figure may show "Visible to vetted investors" beneath the badge. | Implementation shows only "Verified profile". Update any caption that references the vetted-investor subline. |

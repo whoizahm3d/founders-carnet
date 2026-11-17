@@ -201,7 +201,7 @@ Other items (spec-kit and the per-person installs) are listed in `THIRD_PARTY.md
 - Page background is one token in `globals.css`: `radial-gradient(circle at 85% 15%, #F5C842 0%, #FF8A2B 30%, #C4451A 55%, #3A1206 100%) fixed`. Same on every screen.
 - Fonts via `next/font/google`: Hanken Grotesk (text), Instrument Serif italic (last one or two words of page and card titles only), JetBrains Mono (uppercase small labels, nav, dates, status chips).
 - Icons are inline SVG components in `src/components/ui/icons`.
-- Overrides: rule 2 also allows numerals at 72 and 96 and mono at 12 to 13. Rule 3 is replaced by the font list above. Rule 4 is replaced by the page background token, the only gradient allowed. Rule 11 is amended: no SECP, PSEB, FBR or PECA mentions in the UI.
+- Overrides: rule 2 also allows numerals at 72 and 96 and mono at 12 to 13. Rule 3 is replaced by the font list above. Rule 4 is replaced by the page background token, the only gradient allowed. Rule 11 is amended: SECP, PSEB and FBR may appear only as plain context or a field label such as "SECP registration number", never as endorsement, compliance or certification. PECA stays out of the UI.
 - `ROLE_NAVIGATION` is the only nav source. Admin has Console only; appeals are tabs inside it.
 - Ignore the old `docs/design/stitch/` path.
 
@@ -233,7 +233,7 @@ Other items (spec-kit and the per-person installs) are listed in `THIRD_PARTY.md
 - Stop after every step. The user commits.
 - Paste the raw output of `npx tsc --noEmit`, `npm run lint` and `npm run build`, never a summary. Do not report a check you did not run.
 - Do not claim a screen matches its reference unless you compared it with screen.png. List the differences you could not remove.
-- Before finishing a step, search frontend/src for SECP, PSEB, FBR, PECA, NFR, "AI-assisted", "AI-generated", "powered by", compliant, secure, encrypted and certified. Fix hits in the files you touched and list the rest.
+- Before finishing a step, search frontend/src for PECA, NFR, any SECP, PSEB or FBR text that implies endorsement or compliance, "AI-assisted", "AI-generated", "powered by", compliant, secure, encrypted and certified. Fix hits in the files you touched and list the rest.
 - Fix every new lint warning you introduce.
 
 ## Copy punctuation

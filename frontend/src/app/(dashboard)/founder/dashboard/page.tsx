@@ -82,14 +82,14 @@ export default function FounderDashboardPage() {
     <div className="flex flex-col w-full max-w-[1200px] mx-auto space-y-8 pb-12 antialiased">
       {/* 1. Sub-Header Bar: Breadcrumb and View Mode Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-pill bg-white/70 backdrop-blur-md text-text-secondary font-mono text-xs uppercase tracking-[0.05em] border border-hairline-subtle shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-            <span>Executive Carnet</span>
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-pill bg-white/95 backdrop-blur-md border border-hairline-subtle shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+          <span className="font-mono text-xs uppercase tracking-[0.05em] text-text font-medium">
+            Founder
           </span>
-          <span className="text-text-muted text-xs">/</span>
-          <span className="font-mono text-xs uppercase tracking-[0.05em] text-text-secondary font-medium">
-            {data.company.hubLocation}
+          <span className="text-text-muted text-xs font-mono">/</span>
+          <span className="font-mono text-xs uppercase tracking-[0.05em] text-ink font-bold">
+            Dashboard
           </span>
         </div>
 
@@ -99,7 +99,7 @@ export default function FounderDashboardPage() {
           aria-label="Dashboard view mode"
           className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1.5 rounded-pill border border-hairline-subtle shadow-sm self-start sm:self-auto"
         >
-          <span className="font-mono text-xs uppercase tracking-[0.05em] text-text-secondary pl-2.5 pr-1 font-medium select-none">
+          <span className="font-mono text-xs uppercase tracking-[0.05em] text-text pl-2.5 pr-1 font-semibold select-none">
             View:
           </span>
           <button
@@ -128,17 +128,13 @@ export default function FounderDashboardPage() {
       {/* 2. Hero Greeting Section */}
       <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-2">
         <div className="space-y-3 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-pill bg-white/90 backdrop-blur border border-hairline-subtle shadow-sm">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-pill bg-white/95 backdrop-blur border border-hairline-subtle shadow-sm">
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
             </span>
-            <span className="font-mono text-xs uppercase tracking-[0.05em] font-semibold text-accent">
+            <span className="font-mono text-xs uppercase tracking-[0.05em] font-bold text-accent-deep">
               {data.company.verificationBadgeText}
-            </span>
-            <span className="text-text-muted text-xs">·</span>
-            <span className="font-sans text-xs text-text-secondary">
-              {data.company.verificationSubline}
             </span>
           </div>
 
@@ -156,27 +152,6 @@ export default function FounderDashboardPage() {
             · {data.company.sectorAndStage} · Track your readiness, next actions, and investor matches.
           </p>
         </div>
-
-        {/* Quick Meta Metrics Pill */}
-        <div className="flex items-center gap-4 bg-white/90 backdrop-blur p-3.5 px-5 rounded-2xl border border-hairline-subtle shadow-sm self-start lg:self-auto">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.05em] text-text-muted">
-              Cohort target
-            </p>
-            <p className="font-sans text-sm font-semibold text-ink">
-              {data.company.cohortTarget}
-            </p>
-          </div>
-          <div className="w-px h-8 bg-hairline" />
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.05em] text-text-muted">
-              SME bookings
-            </p>
-            <p className="font-sans text-sm font-semibold text-accent">
-              {data.company.activeCorridors}
-            </p>
-          </div>
-        </div>
       </section>
 
       {/* VIEW A: ACTIVE DASHBOARD */}
@@ -187,10 +162,6 @@ export default function FounderDashboardPage() {
             aria-label="Readiness Rubric Overview"
             className="relative w-full rounded-card bg-ink text-canvas p-6 sm:p-8 lg:p-10 shadow-card overflow-hidden"
           >
-            {/* Ambient decorative glow spheres */}
-            <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-gradient-to-br from-accent/20 to-transparent blur-3xl pointer-events-none" />
-            <div className="absolute left-1/3 -bottom-20 w-80 h-80 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
-
             <div className="relative z-10 flex flex-col justify-between space-y-8">
               {/* Top Meta Row */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
@@ -228,7 +199,7 @@ export default function FounderDashboardPage() {
                     {/* Ruler Track Base */}
                     <div className="w-full h-3 rounded-pill bg-neutral-800 relative overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-accent via-[#E5884B] to-[#F5C842] rounded-pill transition-all duration-500"
+                        className="h-full bg-accent rounded-pill transition-all duration-500"
                         style={{
                           width: `${getProgressPercent(currentCompositeScore)}%`,
                         }}
@@ -252,13 +223,13 @@ export default function FounderDashboardPage() {
                     <div className="relative w-full flex justify-between font-mono text-xs uppercase tracking-[0.05em] text-canvas/50 pt-3">
                       <div className="flex flex-col items-start">
                         <span className="font-semibold text-canvas/80">1.0</span>
-                        <span className="text-[10px] text-canvas/40 mt-0.5 lowercase">
+                        <span className="hidden sm:inline text-[10px] text-canvas/40 mt-0.5 lowercase">
                           foundational
                         </span>
                       </div>
                       <div className="flex flex-col items-center">
                         <span className="font-semibold text-canvas/80">2.0</span>
-                        <span className="text-[10px] text-canvas/40 mt-0.5 lowercase">
+                        <span className="hidden sm:inline text-[10px] text-canvas/40 mt-0.5 lowercase">
                           emerging
                         </span>
                       </div>
@@ -266,19 +237,19 @@ export default function FounderDashboardPage() {
                         <span className="font-semibold text-white">
                           {currentCompositeScore.toFixed(1)}
                         </span>
-                        <span className="text-[10px] text-[#E5884B] font-semibold mt-0.5 lowercase">
+                        <span className="hidden sm:inline text-[10px] text-[#E5884B] font-semibold mt-0.5 lowercase">
                           {getTier(currentCompositeScore)}
                         </span>
                       </div>
                       <div className="flex flex-col items-center">
                         <span className="font-semibold text-canvas/80">4.0</span>
-                        <span className="text-[10px] text-canvas/40 mt-0.5 lowercase">
+                        <span className="hidden sm:inline text-[10px] text-canvas/40 mt-0.5 lowercase">
                           scale
                         </span>
                       </div>
                       <div className="flex flex-col items-end">
                         <span className="font-semibold text-canvas/80">5.0</span>
-                        <span className="text-[10px] text-canvas/40 mt-0.5 lowercase">
+                        <span className="hidden sm:inline text-[10px] text-canvas/40 mt-0.5 lowercase">
                           institutional
                         </span>
                       </div>
@@ -324,10 +295,10 @@ export default function FounderDashboardPage() {
                     Next actions
                   </h2>
                   <p className="font-sans text-xs sm:text-sm text-text-secondary">
-                    Prioritized actions to strengthen investor underwriting
+                    Prioritized actions to strengthen your profile for investors
                   </p>
                 </div>
-                <span className="px-3 py-1 rounded-pill bg-accent-wash text-accent-deep font-mono text-xs uppercase tracking-[0.05em] font-semibold">
+                <span className="whitespace-nowrap px-3 py-1 rounded-pill bg-accent-wash text-accent-deep font-mono text-xs uppercase tracking-[0.05em] font-semibold">
                   {pendingActionsCount} pending
                 </span>
               </div>
@@ -381,8 +352,7 @@ export default function FounderDashboardPage() {
               <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-fill text-text-secondary font-sans text-xs">
                 <span className="font-mono text-accent font-bold text-sm">↑</span>
                 <span>
-                  Completing these items can improve your composite score by up to{' '}
-                  <strong className="text-ink font-semibold">+0.4</strong>.
+                  Completing these items helps strengthen your readiness assessment score.
                 </span>
               </div>
             </section>
@@ -460,10 +430,13 @@ export default function FounderDashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
               <div className="space-y-1">
                 <h2 className="font-sans text-2xl font-bold text-white">
-                  Investor and Mentor matches
+                  Investor and mentor{' '}
+                  <span className="font-serif italic font-normal text-[#F5C842]">
+                    matches
+                  </span>
                 </h2>
                 <p className="font-sans text-sm text-white/80">
-                  Ranked by thesis fit and profile similarity. Contact details remain locked until mutual acceptance.
+                  Ranked by thesis fit and profile similarity. Contact details stay hidden until both sides accept.
                 </p>
               </div>
               <Link
@@ -501,8 +474,13 @@ export default function FounderDashboardPage() {
                               </p>
                             </div>
                           </div>
-                          <div className="px-3 py-1 rounded-pill bg-emerald-50 text-emerald-800 font-mono text-xs uppercase tracking-[0.05em] font-bold">
-                            {match.similarityScore}% similarity
+                          <div className="flex flex-col items-end">
+                            <span className="px-3 py-1 rounded-pill bg-emerald-50 text-emerald-800 font-mono text-xs uppercase tracking-[0.05em] font-bold">
+                              {match.similarityScore}% similarity
+                            </span>
+                            <span className="font-mono text-[10px] text-text-muted uppercase tracking-[0.05em] mt-0.5">
+                              profile similarity
+                            </span>
                           </div>
                         </div>
 
@@ -558,8 +536,13 @@ export default function FounderDashboardPage() {
                         <div className="w-10 h-10 rounded-full bg-fill flex items-center justify-center font-bold text-sm text-ink">
                           {match.initials}
                         </div>
-                        <div className="px-2.5 py-0.5 rounded-pill bg-fill text-text-secondary font-mono text-xs font-bold">
-                          {match.similarityScore}% match
+                        <div className="flex flex-col items-end">
+                          <span className="px-2.5 py-0.5 rounded-pill bg-fill text-text-secondary font-mono text-xs font-bold">
+                            {match.similarityScore}% similarity
+                          </span>
+                          <span className="font-mono text-[10px] text-text-muted uppercase tracking-[0.05em] mt-0.5">
+                            profile similarity
+                          </span>
                         </div>
                       </div>
 
@@ -751,8 +734,11 @@ export default function FounderDashboardPage() {
               </span>
             </div>
             <h3 className="font-sans text-xl font-bold text-ink mt-1">
-              7 Core Evaluation Dimensions
+              7 core evaluation dimensions
             </h3>
+            <p className="font-mono text-xs text-text-muted mt-1">
+              Written by a language model simulation
+            </p>
           </div>
 
           {/* Modeled Composite Score Banner */}
