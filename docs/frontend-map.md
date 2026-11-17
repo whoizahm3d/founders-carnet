@@ -58,9 +58,9 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 - **PageHeader / FormattedHeading** `PageHeader.tsx`: props: `text` `italicWordsCount` `onGradient`
 - **TopNav** `TopNav.tsx`: dashboard top bar; props: `user` `onLogout`; renders ROLE_NAVIGATION items + mobile menu trigger + Karachi time. Nav pills hidden below `xl` (1280 px), mobile hamburger shown below `xl`. Each nav pill and the date pill carry `whitespace-nowrap` to prevent wrapping at any supported viewport.
 - **MenuOverlay** `MenuOverlay.tsx`: full-screen mobile menu; props: `isOpen` `onClose` `items` `user` `onLogout`
-- **DashboardLayout** `DashboardLayout.tsx`: wraps all role routes; reads `useAuth`, guards unauthenticated users and cross-role routes, renders TopNav + Footer
+- **DashboardLayout** `DashboardLayout.tsx`: wraps all role routes; reads `useAuth`, guards unauthenticated users and cross-role routes, renders TopNav + PublicFooter compact variant
 - **Sidebar** `Sidebar.tsx`: present but unused in current routing; kept for reference
-- **Footer** `Footer.tsx`: minimal ink band used inside dashboard layouts
+- **Footer** `Footer.tsx`: reuses PublicFooter compact variant with inverted logo, text-white/70, 48px touch targets and focus-visible rings across all dashboard screens
 
 ---
 
