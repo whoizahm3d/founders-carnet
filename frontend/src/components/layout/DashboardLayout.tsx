@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { TopNav } from '@/components/layout/TopNav';
-import { Footer } from '@/components/layout/Footer';
+import { PublicFooter } from '@/components/layout/PublicFooter';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -53,8 +53,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* Footer */}
-      <Footer />
+      {/* Footer: compact PublicFooter variant */}
+      <PublicFooter variant="compact" />
     </div>
   );
 }
