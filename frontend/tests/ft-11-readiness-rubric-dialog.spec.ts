@@ -31,7 +31,8 @@ test.describe('FT-11: Readiness Rubric Dialog Read-Only Evaluation (FR-2)', () =
     // 2. Dialog visibility check
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible();
-    await expect(dialog.locator('text=7 Core Evaluation Dimensions')).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: /7 core evaluation dimensions/i })).toBeVisible();
+    await expect(dialog.locator('text=Written by a language model simulation')).toBeVisible();
 
     // 3. Verify all 7 dimensions exist with score, description/reasoning, and next action
     const expectedDimensions = [

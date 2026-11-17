@@ -13,7 +13,6 @@ test.describe('FT-01: Founder Authentication and Role Guard (FR-23)', () => {
 
     // 3. Confirm redirection to founder dashboard
     await expect(page).toHaveURL('/founder/dashboard');
-    await expect(page.locator('text=Executive Carnet')).toBeVisible();
     await expect(page.locator('text=Munshi Books').first()).toBeVisible();
 
     // 4. Attempt to navigate directly to talent dashboard URL

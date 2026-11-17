@@ -14,8 +14,8 @@ export interface FounderCompanyMeta {
   companyName: string;
   sectorAndStage: string;
   hubLocation: string;
-  cohortTarget: string;
-  activeCorridors: string;
+  cohortTarget?: string;
+  activeCorridors?: string;
   isVerified: boolean;
   verificationBadgeText: string;
   verificationSubline: string;
@@ -99,12 +99,10 @@ export const INITIAL_FOUNDER_DASHBOARD_DATA: FounderDashboardData = {
     founderName: 'Bilal Ahmed',
     companyName: 'Munshi Books',
     sectorAndStage: 'Seed fintech, Karachi',
-    hubLocation: 'Karachi Hub · Series Seed',
-    cohortTarget: 'Q1 2027 Seed',
-    activeCorridors: '14 Active Corridors',
+    hubLocation: 'Karachi Hub',
     isVerified: true,
     verificationBadgeText: 'Verified profile',
-    verificationSubline: 'Visible to vetted investors',
+    verificationSubline: 'Verified profile',
   },
   readiness: {
     compositeScore: 3.1,
@@ -215,7 +213,7 @@ export const INITIAL_FOUNDER_DASHBOARD_DATA: FounderDashboardData = {
       sessionTitle: 'AI Investor Mock #4',
       score: 3.0,
       maxScore: 5.0,
-      gainNote: '+0.2 gained on Unit Economics',
+      gainNote: 'Focus area: Unit Economics',
       simulationMark: 'Written by a language model simulation',
     },
     {
@@ -224,7 +222,7 @@ export const INITIAL_FOUNDER_DASHBOARD_DATA: FounderDashboardData = {
       sessionTitle: 'AI Investor Mock #3',
       score: 2.8,
       maxScore: 5.0,
-      gainNote: '+0.3 gained on Market Sizing',
+      gainNote: 'Focus area: Market Sizing',
       simulationMark: 'Written by a language model simulation',
     },
     {
@@ -245,7 +243,7 @@ export const INITIAL_FOUNDER_DASHBOARD_DATA: FounderDashboardData = {
       role: 'Investor',
       titleAndFirm: 'Partner · Indus Valley Capital, Karachi',
       similarityScore: 92,
-      tags: ['Fintech', 'Seed stage', 'Ticket: PKR 10M–30M'],
+      tags: ['Fintech', 'Seed stage', 'Ticket: PKR 10M-30M'],
       whyMatch: 'High thesis alignment for SME ledger automation, multi-branch cashflow oversight, and Pakistani B2B invoicing rails.',
       contactPolicy: 'Contact revealed upon mutual accept',
       isFeatured: true,

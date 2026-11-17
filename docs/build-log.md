@@ -850,3 +850,39 @@ One entry per finished piece of work, newest first. This is what we use to write
   - Viewport verification at 1440px and 390px confirmed zero horizontal overflow (scrollWidth equals clientWidth).
 - **Cut or partial:** Aggregated dashboard state, dynamic rubric saving, and match requests operate on typed fixtures; backend endpoints for these are not built yet.
 - **Differs from the report?** Yes; tracked in `docs/pending-report-changes.md` (2026-11-16 entry).
+
+## 2026-11-17: Fix pass on Founder Dashboard (Ali, with Gemini)
+
+- **Feature and IDs:** FR-2, FR-7, NFR-6 (Founder Dashboard fix pass: overflow, gradients, contrast, invented content, match labels, rubric dialog, viewport tests).
+- **Built:**
+  - `frontend/src/components/layout/TopNav.tsx`: nav pills breakpoint changed from `md` to `xl` (1280 px); date pill breakpoint from `lg` to `xl`; `whitespace-nowrap` added to all nav pill links and date pill. Verified no wrapped nav items and no overflow at 390, 768, 1024, 1280, and 1440 px.
+  - `frontend/src/app/(dashboard)/founder/dashboard/page.tsx`:
+    - Breadcrumb rebuilt as a single white/95 glass pill "Founder / Dashboard" with `text-text` labels (contrast 17.72:1).
+    - "Visible to vetted investors" subline removed from verification badge; badge text "Verified profile" with `text-accent-deep` on white/95 background (contrast 5.51:1).
+    - "Cohort target" and "SME bookings" pill block removed.
+    - Both decorative gradient divs (absolute glow blobs) removed per DESIGN.md Rule 4.
+    - Readiness slider fill changed from gradient to flat `bg-accent`.
+    - Scale ruler text labels hidden below `sm` breakpoint; numbers visible at all sizes.
+    - Next actions footnote: `+0.4` delta removed; plain prose only.
+    - "investor underwriting" replaced with "strengthen your profile for investors".
+    - `whitespace-nowrap` on "N pending" pill.
+    - Matches heading: "Investor and mentor *matches*"; caption: "Contact details stay hidden until both sides accept."
+    - All match cards: `{match.similarityScore}% similarity` with `profile similarity` sub-label; no `% match` text.
+    - Rubric dialog title: `7 core evaluation dimensions` (sentence case).
+    - Rubric dialog: "Written by a language model simulation" notice added.
+  - `frontend/src/fixtures/founder-dashboard.ts`: `hubLocation` simplified to `'Karachi Hub'`; `verificationSubline` updated; pitch feedback `gainNote` fields use "Focus area:" prefix; match tag en dash replaced with hyphen; `cohortTarget` and `activeCorridors` made optional.
+  - `frontend/tests/ft-09-founder-dashboard-viewport.spec.ts`: added 768 px and 1024 px overflow tests (alongside existing 1440 px and mobile-viewport tests).
+  - `frontend/tests/ft-11-readiness-rubric-dialog.spec.ts`: dialog heading assertion updated to sentence-case title; "Written by a language model simulation" assertion added.
+  - `frontend/tests/ft-01-founder-auth-redirect.spec.ts`: removed stale "Executive Carnet" text assertion.
+  - `scripts/capture_founder_dashboard.mjs`: rubric screenshot viewport changed to 1440x1400 to show all 7 dimensions.
+- **Tested:**
+  - `npx tsc --noEmit` passed with 0 errors.
+  - `npm run lint` passed with 0 errors (1 pre-existing unused-variable warning in admin dashboard, unrelated).
+  - `npm run build` passed: 27 of 27 static routes generated.
+  - `npm run test:e2e` passed: 14 of 14 Playwright tests.
+  - Overflow confirmed `false` at 390, 768, 1024, 1280, and 1440 px via both Playwright tests and production capture script.
+  - Contrast measured at 1440x900, 768x1024, and 390x844: all labels pass 4.5:1 (lowest: verification badge 5.51:1, nav label Profile 4.58:1).
+  - Screenshots saved to `frontend/screenshots/` (5 files, deviceScaleFactor 2).
+  - Banned-word sweep (em/en dashes, PECA, NFR, AI-generated, powered by, compliant, secure, encrypted, certified) across all 7 touched files: 0 hits after fixture en dash fix.
+- **Cut or partial:** None. All 10 items completed.
+- **Differs from the report?** Removal of "Cohort target", "SME bookings", and the "Series Seed" stage label from the breadcrumb differs from any report section describing those fields. Added entry to `docs/DECISIONS.md` and row to `docs/pending-report-changes.md` (see below).

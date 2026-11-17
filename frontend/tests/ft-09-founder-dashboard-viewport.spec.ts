@@ -47,6 +47,58 @@ test.describe('FT-09 (Dashboard): Mobile and Desktop Viewport Overflow (Usabilit
     expect(scrollX).toBe(0);
   });
 
+  test('/founder/dashboard has no horizontal scroll at 768 px', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    const response = await page.goto('/founder/dashboard', { waitUntil: 'domcontentloaded' });
+    expect(response?.status()).toBe(200);
+
+    await expect(page.locator('text=Munshi Books').first()).toBeVisible();
+    await page.waitForTimeout(500);
+
+    const metrics = await page.evaluate(() => {
+      const root = document.documentElement;
+      const body = document.body;
+      return {
+        rootClientWidth: root.clientWidth,
+        rootScrollWidth: root.scrollWidth,
+        bodyScrollWidth: body.scrollWidth,
+      };
+    });
+
+    expect(metrics.rootScrollWidth).toBeLessThanOrEqual(metrics.rootClientWidth);
+    expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(768);
+
+    await page.evaluate(() => window.scrollTo(200, 0));
+    const scrollX = await page.evaluate(() => window.scrollX || window.pageXOffset || 0);
+    expect(scrollX).toBe(0);
+  });
+
+  test('/founder/dashboard has no horizontal scroll at 1024 px', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    const response = await page.goto('/founder/dashboard', { waitUntil: 'domcontentloaded' });
+    expect(response?.status()).toBe(200);
+
+    await expect(page.locator('text=Munshi Books').first()).toBeVisible();
+    await page.waitForTimeout(500);
+
+    const metrics = await page.evaluate(() => {
+      const root = document.documentElement;
+      const body = document.body;
+      return {
+        rootClientWidth: root.clientWidth,
+        rootScrollWidth: root.scrollWidth,
+        bodyScrollWidth: body.scrollWidth,
+      };
+    });
+
+    expect(metrics.rootScrollWidth).toBeLessThanOrEqual(metrics.rootClientWidth);
+    expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(1024);
+
+    await page.evaluate(() => window.scrollTo(200, 0));
+    const scrollX = await page.evaluate(() => window.scrollX || window.pageXOffset || 0);
+    expect(scrollX).toBe(0);
+  });
+
   test('/founder/dashboard has no horizontal scroll at 1440 px', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const response = await page.goto('/founder/dashboard', { waitUntil: 'domcontentloaded' });

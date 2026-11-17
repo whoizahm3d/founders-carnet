@@ -56,7 +56,7 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 - **AuthLayout** `src/app/(auth)/layout.tsx`: splits viewport: hero panel left, form card right
 - **AuthHeroPanel** `src/components/auth/AuthHeroPanel.tsx`: gradient artwork panel rendered inside AuthLayout
 - **PageHeader / FormattedHeading** `PageHeader.tsx`: props: `text` `italicWordsCount` `onGradient`
-- **TopNav** `TopNav.tsx`: dashboard top bar; props: `user` `onLogout`; renders ROLE_NAVIGATION items + mobile menu trigger + Karachi time
+- **TopNav** `TopNav.tsx`: dashboard top bar; props: `user` `onLogout`; renders ROLE_NAVIGATION items + mobile menu trigger + Karachi time. Nav pills hidden below `xl` (1280 px), mobile hamburger shown below `xl`. Each nav pill and the date pill carry `whitespace-nowrap` to prevent wrapping at any supported viewport.
 - **MenuOverlay** `MenuOverlay.tsx`: full-screen mobile menu; props: `isOpen` `onClose` `items` `user` `onLogout`
 - **DashboardLayout** `DashboardLayout.tsx`: wraps all role routes; reads `useAuth`, guards unauthenticated users and cross-role routes, renders TopNav + Footer
 - **Sidebar** `Sidebar.tsx`: present but unused in current routing; kept for reference
@@ -69,7 +69,30 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 - **`src/lib/auth.ts`**: `loginApi`, `registerApi`, `authStorage`, `buildMockUser`, `nameFromEmail` fallback; mock mode active when `NEXT_PUBLIC_USE_MOCK !== 'false'`
 - **`src/lib/navigation.ts`**: `ROLE_NAVIGATION: Record<UserRole, {label, items}>` keyed by `founder` `talent` `mentor` `investor` `admin`; `NavItem: {label, href, icon?}`
 - **`src/context/AuthContext.tsx`**: `AuthProvider`, `AuthContext`, `useAuth`
-- **`src/fixtures/founder-dashboard.ts`**: `INITIAL_FOUNDER_DASHBOARD_DATA` for `/founder/dashboard` (company meta, 7-dimension readiness rubric, next actions, pitch feedback logs, matches preview, onboarding checklist)
+- **`src/fixtures/founder-dashboard.ts`**: `INITIAL_FOUNDER_DASHBOARD_DATA` for `/founder/dashboard` (company meta, 7-dimension readiness rubric, next actions, pitch feedback logs, matches preview, onboarding checklist). `cohortTarget` and `activeCorridors` are optional fields. `hubLocation` is `'Karachi Hub'` (no stage suffix). Match tag ticker ranges use a hyphen separator (not an en dash). Pitch feedback `gainNote` fields use `'Focus area: ...'` format without numeric deltas.
+
+---
+
+## Founder Dashboard (`/founder/dashboard`)
+
+**File:** `frontend/src/app/(dashboard)/founder/dashboard/page.tsx`
+
+**Key changes (2026-11-17 fix pass):**
+- Breadcrumb: single white/95 glass pill "Founder / Dashboard"; both labels use `text-text` (ink); contrast 17.72:1.
+- Verification badge: `text-accent-deep` on white/95 background; shows "Verified profile" only; contrast 5.51:1. "Visible to vetted investors" subline removed.
+- "Cohort target" and "SME bookings" block removed (invented content; not in DESIGN.md).
+- Decorative gradient divs (absolute glow blobs) removed; both violated DESIGN.md Rule 4.
+- Readiness slider fill: `bg-accent` (flat); was `bg-gradient-to-r from-accent via-[...] to-[...]`.
+- Scale ruler labels: `hidden sm:inline` on text labels so only numbers show below `sm`.
+- Next actions footnote: no numeric delta; plain prose only.
+- "investor underwriting" replaced with "strengthen your profile for investors".
+- `{pendingActionsCount} pending` pill: `whitespace-nowrap`.
+- Matches section heading: "Investor and mentor *matches*" (italic serif on last word); caption: "Contact details stay hidden until both sides accept."
+- Match cards: `{match.similarityScore}% similarity` with `profile similarity` sub-label on all cards (no `% match` text).
+- Rubric dialog title: `7 core evaluation dimensions` (sentence case).
+- Rubric dialog: `Written by a language model simulation` notice added below h3.
+
+**Overflow (confirmed 2026-11-17):** `scrollWidth === innerWidth` at 390, 768, 1024, 1280, and 1440 px.
 
 ---
 

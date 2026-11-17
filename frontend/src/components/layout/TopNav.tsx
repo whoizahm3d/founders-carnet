@@ -74,14 +74,14 @@ export function TopNav({ user, onLogout }: TopNavProps) {
           </div>
 
           {/* Center: Desktop Nav Pills */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden xl:flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`font-mono text-[13px] uppercase tracking-[0.05em] px-3.5 py-1.5 rounded-pill transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent ${
+                  className={`whitespace-nowrap font-mono text-[13px] uppercase tracking-[0.05em] px-3 py-1.5 rounded-pill transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent ${
                     isActive
                       ? 'bg-ink text-white font-semibold shadow-sm'
                       : 'text-text-secondary hover:text-ink hover:bg-fill/60'
@@ -98,7 +98,7 @@ export function TopNav({ user, onLogout }: TopNavProps) {
             {karachiTime && (
               <div
                 title="Karachi Local Time"
-                className="hidden lg:flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.05em] text-text-secondary px-3 py-1 rounded-pill glass-chip"
+                className="hidden xl:flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.05em] text-text-secondary px-3 py-1 rounded-pill glass-chip whitespace-nowrap"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 <span>{karachiTime}</span>
@@ -129,7 +129,7 @@ export function TopNav({ user, onLogout }: TopNavProps) {
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open mobile navigation"
-              className="md:hidden p-2 rounded-full hover:bg-fill text-ink focus:outline-none focus:ring-2 focus:ring-accent"
+              className="xl:hidden p-2 rounded-full hover:bg-fill text-ink focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <MenuIcon size={20} />
             </button>
