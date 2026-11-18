@@ -250,8 +250,8 @@ export const INITIAL_FOUNDER_DASHBOARD_DATA: FounderDashboardData = {
     },
     {
       id: 'match-2',
-      name: 'Hamza Iqbal',
-      initials: 'HI',
+      name: 'Asad Khan',
+      initials: 'AK',
       role: 'Mentor',
       titleAndFirm: 'Mentor · Ex-VP Product Finja',
       similarityScore: 88,

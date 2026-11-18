@@ -19,7 +19,8 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 | `/founder/pitch` | `src/app/(dashboard)/founder/pitch/page.tsx` |
 | `/founder/feedback` | `src/app/(dashboard)/founder/feedback/page.tsx` |
 | `/founder/matches` | `src/app/(dashboard)/founder/matches/page.tsx` |
-| `/talent/*` | `src/app/(dashboard)/talent/` (dashboard, profile, resume, jobs, matches) |
+| `/talent/dashboard` | `src/app/(dashboard)/talent/dashboard/page.tsx` |
+| `/talent/*` | `src/app/(dashboard)/talent/` (profile, resume, jobs, matches) |
 | `/mentor/*` | `src/app/(dashboard)/mentor/` (dashboard, profile, sessions, startups, feedback) |
 | `/investor/*` | `src/app/(dashboard)/investor/` (dashboard, profile, pipeline, matches) |
 | `/admin/*` | `src/app/(dashboard)/admin/` (dashboard, users, analytics) |
@@ -69,7 +70,8 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 - **`src/lib/auth.ts`**: `loginApi`, `registerApi`, `authStorage`, `buildMockUser`, `nameFromEmail` fallback; mock mode active when `NEXT_PUBLIC_USE_MOCK !== 'false'`
 - **`src/lib/navigation.ts`**: `ROLE_NAVIGATION: Record<UserRole, {label, items}>` keyed by `founder` `talent` `mentor` `investor` `admin`; `NavItem: {label, href, icon?}`
 - **`src/context/AuthContext.tsx`**: `AuthProvider`, `AuthContext`, `useAuth`
-- **`src/fixtures/founder-dashboard.ts`**: `INITIAL_FOUNDER_DASHBOARD_DATA` for `/founder/dashboard` (company meta, 7-dimension readiness rubric, next actions, pitch feedback logs, matches preview, onboarding checklist). `cohortTarget` and `activeCorridors` are optional fields. `hubLocation` is `'Karachi Hub'` (no stage suffix). Match tag ticker ranges use a hyphen separator (not an en dash). Pitch feedback `gainNote` fields use `'Focus area: ...'` format without numeric deltas.
+- **`src/fixtures/founder-dashboard.ts`**: `INITIAL_FOUNDER_DASHBOARD_DATA` for `/founder/dashboard` (company meta, 7-dimension readiness rubric, next actions, pitch feedback logs, matches preview, onboarding checklist). `cohortTarget` and `activeCorridors` are optional fields. `hubLocation` is `'Karachi Hub'` (no stage suffix). Match tag ticker ranges use a hyphen separator (not an en dash). Pitch feedback `gainNote` fields use `'Focus area: ...'` format without numeric deltas. Mentor match 2 updated to Asad Khan to prevent namespace collision with talent persona.
+- **`src/fixtures/talent-dashboard.ts`**: `INITIAL_TALENT_DASHBOARD_DATA` for `/talent/dashboard` (Hamza Iqbal profile, Lahore, 3 operational counts: applications submitted, introductions accepted, startup matches; recommended roles with PKR salary ranges; tracked applications with Applied/In review/Introduction accepted statuses; founding team matches; resume analysis with mandatory simulation notice; onboarding checklist).
 
 ---
 
@@ -93,6 +95,28 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 - Rubric dialog: `Written by a language model simulation` notice added below h3.
 
 **Overflow (confirmed 2026-11-17):** `scrollWidth === innerWidth` at 390, 768, 1024, 1280, and 1440 px.
+
+---
+
+## Talent Dashboard (`/talent/dashboard`)
+
+**File:** `frontend/src/app/(dashboard)/talent/dashboard/page.tsx`
+**Reference:** `frontend/design_reference/talent_dashboard_hamza_iqbal/`
+**Legacy CSS Module:** `frontend/src/app/(dashboard)/talent/dashboard/TalentDashboard.module.css` (retained on disk, unimported)
+
+**Key architecture and features (2026-11-19):**
+- Breadcrumb: single white/95 glass pill "Talent / Dashboard" with `text-text` and `text-ink` labels.
+- View mode switcher: `Active dashboard` vs `First-time onboarding` (persists state locally without backend dependency).
+- Hero section: "Welcome back, *Hamza*" with Instrument Serif italic on `Hamza` in `text-carnet-yellow` (`#F5C842`). Subtitle: "Backend developer, Lahore. Track your applications, interviews, and roles that match your profile across Pakistan."
+- Profile completeness: interactive bar and GitHub link modal triggering instant update to 100%.
+- Ink Monolith Card: "Operational summary", counts ledger (3 applications submitted, 1 introductions accepted, 8 startup matches) with active Lahore profile indicator.
+- Recommended roles: "Roles that match your *profile*", 4 roles (Munshi Books, Finja, Ravi Health, Mehran Works) with PKR salary ranges, profile similarity label shown once, and "Apply now" button with circular badge.
+- Role Details: reusable `Dialog` component displaying role summary, stack alignment, PKR range, and similarity.
+- Founding team matches: "Founding team *matches*", Pakistani startups looking for technical co-builders with introduction request actions.
+- Tracked applications: "Tracked *applications*", 3 real applications with statuses: `Applied`, `In review`, `Introduction accepted`.
+- Resume analysis: structured competencies, refinement bullets, and mandatory attribution notice: *"Written by a language model simulation"*.
+- Privacy disclosure: "Contact details stay hidden until both sides accept." on all role cards and match sections. Zero contact details exposed.
+- State handling: Empty, loading, and error states supported.
 
 ---
 

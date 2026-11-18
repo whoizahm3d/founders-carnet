@@ -886,3 +886,20 @@ One entry per finished piece of work, newest first. This is what we use to write
   - Banned-word sweep (em/en dashes, PECA, NFR, AI-generated, powered by, compliant, secure, encrypted, certified) across all 7 touched files: 0 hits after fixture en dash fix.
 - **Cut or partial:** None. All 10 items completed.
 - **Differs from the report?** Removal of "Cohort target", "SME bookings", and the "Series Seed" stage label from the breadcrumb differs from any report section describing those fields. Added entry to `docs/DECISIONS.md` and row to `docs/pending-report-changes.md` (see below).
+
+## 2026-11-19: Build Talent Dashboard at /talent/dashboard (Gemini)
+
+- **Feature and IDs:** Talent Dashboard, FR-7, FR-22, FR-23, NFR-6.
+- **Built:**
+  - `frontend/src/fixtures/talent-dashboard.ts`: Created typed initial fixtures (`INITIAL_TALENT_DASHBOARD_DATA`) for talent persona Hamza Iqbal in Lahore. Included 3-stat operational counts (applications submitted, introductions accepted, startup matches), 4 recommended engineering roles with transparent PKR compensation ranges, tracked applications with statuses (`Applied`, `In review`, `Introduction accepted`), founding team matches, structured resume analysis with mandatory simulation notice, and 5-step onboarding checklist.
+  - `frontend/src/app/(dashboard)/talent/dashboard/page.tsx`: Rebuilt screen adhering to DESIGN.md v3.9.2 and `talent_dashboard_hamza_iqbal` visual reference. Retired import of legacy `TalentDashboard.module.css` (retained on disk). Built glass breadcrumb ("Talent / Dashboard"), active dashboard vs onboarding view switcher, greeting ("Welcome back, *Hamza*") with Instrument Serif italic on yellow, operational summary monolith card, "Roles that match your *profile*" with "Apply now" (circular arrow badge) and "View details" actions, founding team matches with mutual consent introduction requests, tracked applications, structured resume competencies/suggestions with plain "Written by a language model simulation" notice, and mutual consent contact privacy disclosure ("Contact details stay hidden until both sides accept.").
+  - `frontend/src/fixtures/founder-dashboard.ts`: Renamed mentor match 2 from Hamza Iqbal to Asad Khan (same role line) to resolve collision with the talent persona.
+  - `frontend/tests/ft-12-pitch-feedback-match-privacy.spec.ts`: Updated mentor match candidate assertion to Asad Khan.
+  - `frontend/tests/ft-talent-dashboard.spec.ts`: Added Playwright test specs covering FT-01 (role authentication and redirect guard), FT-09 (zero horizontal overflow at 390px, 768px, 1024px, and 1440px), FT-06 (language model simulation notice and absence of AI badges), and FT-04 (contact privacy concealment).
+  - `docs/frontend-map.md`: Updated route mapping, fixtures, and added Talent Dashboard section.
+  - `docs/pending-report-changes.md`: Logged backend gap for talent dashboard aggregation and application endpoints.
+- **Tested:**
+  - Statuses stay "Not executed" per instruction (user will run tests, lint, tsc, and build).
+- **Cut or partial:** None. Operates on typed fixtures pending backend API implementation.
+- **Differs from the report?** Yes; tracked in `docs/pending-report-changes.md` (2026-11-19 entry).
+
