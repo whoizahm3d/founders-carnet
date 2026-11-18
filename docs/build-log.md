@@ -2,6 +2,17 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-19: Dashboard fix pass (Gemini)
+
+- **Feature and IDs:** Founder Dashboard match badges, Talent hero copy, mock user display names.
+- **Built:**
+  - `frontend/src/app/(dashboard)/founder/dashboard/page.tsx`: Added `Badge` import. All three match cards (featured card and two secondary cards) now use `<Badge variant="default" className="font-bold">{match.similarityScore}%</Badge>`. Removed the word "similarity" from badge text. The "profile similarity" caption underneath each card is unchanged and present on all three.
+  - `frontend/src/app/(dashboard)/talent/dashboard/page.tsx`: Removed the word "interviews" from the hero subtitle (line 144). New text: "Backend developer, Lahore. Track your applications and roles that match your profile across Pakistan."
+  - `frontend/src/lib/auth.ts`: Added `MOCK_DISPLAY_NAMES` lookup table giving founder the name "Bilal Ahmed" (already in founder fixture) and talent the name "Hamza Rauf". `buildMockUser` now resolves `fullName` as `fullName || MOCK_DISPLAY_NAMES[role] || nameFromEmail(email)`. Mentor, investor, and admin are unaffected and fall through to `nameFromEmail`.
+- **Tested:** Not run per instruction. Statuses stay "Not executed".
+- **Cut or partial:** None.
+- **Differs from the report?** No.
+
 ## 2026-11-17: Founder Dashboard Playwright tests and report raw material (Ali, with Gemini)
 
 - **Feature and IDs:** FT-01 (FR-23), FT-09 dashboard (NFR-10), FT-11 (FR-2), FT-12 (FR-7, NFR-6). Report raw material for the Founder Dashboard.

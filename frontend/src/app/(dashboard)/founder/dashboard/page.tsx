@@ -15,6 +15,7 @@ import {
   INITIAL_FOUNDER_DASHBOARD_DATA,
 } from '@/fixtures/founder-dashboard';
 import { Dialog } from '@/components/ui/Dialog';
+import { Badge } from '@/components/ui/Badge';
 import {
   ArrowRightIcon,
   LockIcon,
@@ -475,9 +476,9 @@ export default function FounderDashboardPage() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end">
-                            <span className="px-3 py-1 rounded-pill bg-emerald-50 text-emerald-800 font-mono text-xs uppercase tracking-[0.05em] font-bold">
-                              {match.similarityScore}% similarity
-                            </span>
+                            <Badge variant="default" className="font-bold">
+                              {match.similarityScore}%
+                            </Badge>
                             <span className="font-mono text-[10px] text-text-muted uppercase tracking-[0.05em] mt-0.5">
                               profile similarity
                             </span>
@@ -537,9 +538,9 @@ export default function FounderDashboardPage() {
                           {match.initials}
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className="px-2.5 py-0.5 rounded-pill bg-fill text-text-secondary font-mono text-xs font-bold">
-                            {match.similarityScore}% similarity
-                          </span>
+                          <Badge variant="default" className="font-bold">
+                            {match.similarityScore}%
+                          </Badge>
                           <span className="font-mono text-[10px] text-text-muted uppercase tracking-[0.05em] mt-0.5">
                             profile similarity
                           </span>
