@@ -1,46 +1,29 @@
-# Proposed gold-question chunk mappings
+# Verified gold-question chunk mappings
 
-All mappings below are unverified. They are proposed from the current section-aware chunk output and must be confirmed against the source PDFs before their chunk IDs are added to `gold_questions.jsonl`.
-
-Duplicate notice: q021 overlaps with q014, which asks for the purpose of the SECP Regulatory Sandbox. q021 remains a distinct requested development question.
-
-## q021
-
-- Status: unverified
-- Proposed chunk id: `Regulatory Sandbox Guidelines 2019 (SECP).pdf:3:1`
-- Document: Regulatory Sandbox Guidelines, 2019
-- Page: 3
-- Heading path: `Section 1 - Introduction, Objective and Scope`
-- First 300 characters:
-
-```text
-Section 1 - Introduction, Objective and Scope
-i. Regulatory Sandbox is a tailored regulatory environment for conducting limited scale, live tests
-of innovative products, services, processes, and/ or business models in a controlled environment
-for a limited period of time so as to assess their viabil
-```
+All mappings below were confirmed against the source PDFs and are recorded in `gold_questions.jsonl`.
 
 ## q022
 
-- Status: unverified
-- Proposed chunk id: `Regulatory Sandbox Guidelines 2019 (SECP).pdf:4:4`
+- Status: verified
+- Chunk id: `Regulatory Sandbox Guidelines 2019 (SECP).pdf:3:3`
 - Document: Regulatory Sandbox Guidelines, 2019
-- Page: 4
-- Heading path: `Section 3 - Process for Seeking Permission for Promoting Innovation > Subsections (7), (1), (2), (3), (4), (5), (6), (7), (8), (9), (1), (2)`
+- Page: 3
+- Heading path: `Section 3 - Process for Seeking Permission for Promoting Innovation`
 - First 300 characters:
 
 ```text
 Section 3 - Process for Seeking Permission for Promoting Innovation
-(7) The Applicant shall also submit a projected plan and clear strategy for exiting the
-Regulatory Sandbox which shall include:
-(a) A clear intent and methodology to scale-up the solution in order to access a larger
-market at the e
+i. The Regulatory Sandbox shall be operated in accordance with the cohort approach i.e. an
+experimentation cycle will be evaluated and finalized before the commencement of next
+experimentation cycle.
+
+ii. It will be prerogative of t
 ```
 
 ## q023
 
-- Status: unverified
-- Proposed chunk id: `Regulatory Sandbox Guidelines 2019 (SECP).pdf:6:5`
+- Status: verified
+- Chunk id: `Regulatory Sandbox Guidelines 2019 (SECP).pdf:6:5`
 - Document: Regulatory Sandbox Guidelines, 2019
 - Page: 6
 - Heading path: `Section 3 - Process for Seeking Permission for Promoting Innovation > Subsections (3), (4), (5), (1), (2), (3), (4), (5)`
@@ -58,8 +41,8 @@ markets;
 
 ## q024
 
-- Status: unverified
-- Proposed chunk id: `Regulatory Sandbox Guidelines 2019 (SECP).pdf:4:4`
+- Status: verified
+- Chunk id: `Regulatory Sandbox Guidelines 2019 (SECP).pdf:4:4`
 - Document: Regulatory Sandbox Guidelines, 2019
 - Page: 4
 - Heading path: `Section 3 - Process for Seeking Permission for Promoting Innovation > Subsections (7), (1), (2), (3), (4), (5), (6), (7), (8), (9), (1), (2)`
@@ -75,8 +58,8 @@ market at the e
 
 ## q025
 
-- Status: unverified
-- Proposed chunk id: `Iris FAQs (FBR).pdf:2:1`
+- Status: verified
+- Chunk id: `Iris FAQs (FBR).pdf:2:1`
 - Document: Iris FAQs
 - Page: 2
 - Heading path: `Iris FAQs`
@@ -94,8 +77,8 @@ To e-enroll yourself, follow these steps:
 
 ## q026
 
-- Status: unverified
-- Proposed chunk id: `Iris FAQs (FBR).pdf:2:1`
+- Status: verified
+- Chunk id: `Iris FAQs (FBR).pdf:2:1`
 - Document: Iris FAQs
 - Page: 2
 - Heading path: `Iris FAQs`
@@ -113,8 +96,8 @@ To e-enroll yourself, follow these steps:
 
 ## q027
 
-- Status: unverified
-- Proposed chunk id: `Iris FAQs (FBR).pdf:6:5`
+- Status: verified
+- Chunk id: `Iris FAQs (FBR).pdf:6:5`
 - Document: Iris FAQs
 - Page: 6
 - Heading path: `Iris FAQs`

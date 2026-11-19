@@ -5,9 +5,9 @@ One entry per finished piece of work, newest first. This is what we use to write
 ## 2026-11-19: Expand compliance evaluation development questions (Codex)
 
 - **Feature and IDs:** Compliance assistant evaluation, FR-8, NFR-12, NFR-13, NFR-14, NFR-20.
-- **Built:** Added seven requested answerable questions, q021 through q027, to the development split. Added unverified proposed chunk mappings in `rag/evaluation/gold_verification.md`; `supporting_chunk_ids` remain empty. Recorded that the development split now has 13 questions and requires a fresh development retrieval run and threshold tuning.
+- **Built:** Added six requested answerable questions, q022 through q027, to the development split. Confirmed their chunk mappings in `rag/evaluation/gold_verification.md` and recorded them in `supporting_chunk_ids`. Recorded that the development split now has 12 questions and requires a fresh development retrieval run and threshold tuning.
 - **Tested:** JSONL schema and split counts checked locally. No evaluation, test split, model download, or gold-answer generation was run.
-- **Cut or partial:** All seven chunk mappings await source-PDF confirmation.
+- **Cut or partial:** No evaluation has been re-run after the development split expansion.
 - **Differs from the report?** The committed gold set is now 27 questions, rather than the playbook's approximate 80-question plan. The reason and required re-run are recorded in `docs/DECISIONS.md`.
 
 ## 2026-11-19: Dashboard fix pass (Gemini)

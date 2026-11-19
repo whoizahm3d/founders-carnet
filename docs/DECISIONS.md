@@ -6,9 +6,9 @@
 
 **What we tried:** We ran dense, BM25 and hybrid retrieval on the original 6-question development split using MPNet and multilingual E5. The test split was not run.
 
-**What we found:** Seven new answerable questions were written after that first development run. Adding them grows the development split from 6 to 13 questions. The test split remains unchanged at 14 questions.
+**What we found:** Six new answerable questions were written after that first development run. Adding them grows the development split from 6 to 12 questions. The test split remains unchanged at 14 questions.
 
-**Decision:** Add the seven new answerable questions to the development split only. Re-run the development retrieval evaluation and tune abstention thresholds again before relying on any development metrics. Do not change or run the test split.
+**Decision:** Add the six new answerable questions to the development split only. Re-run the development retrieval evaluation and tune abstention thresholds again before relying on any development metrics. Do not change or run the test split.
 
 **Why:** The prior development metrics and tuned thresholds were based on six questions, so they do not measure the expanded development set. Preserving the test split protects its held-out status.
 
