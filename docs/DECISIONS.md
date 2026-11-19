@@ -1,5 +1,19 @@
 # Decisions log
 
+## 2026-11-19: Expand the compliance evaluation development split
+
+**Context:** The compliance RAG evaluation uses a fixed development and test split. The first development retrieval run used 6 development questions and 14 held-out test questions.
+
+**What we tried:** We ran dense, BM25 and hybrid retrieval on the original 6-question development split using MPNet and multilingual E5. The test split was not run.
+
+**What we found:** Seven new answerable questions were written after that first development run. Adding them grows the development split from 6 to 13 questions. The test split remains unchanged at 14 questions.
+
+**Decision:** Add the seven new answerable questions to the development split only. Re-run the development retrieval evaluation and tune abstention thresholds again before relying on any development metrics. Do not change or run the test split.
+
+**Why:** The prior development metrics and tuned thresholds were based on six questions, so they do not measure the expanded development set. Preserving the test split protects its held-out status.
+
+**Follow-ups:** Confirm each proposed chunk mapping against its source PDF, re-run the development retrieval comparison without downloading models, regenerate the evaluation result files and RESULTS.md, and state in the report that the original development figures and thresholds were superseded.
+
 ## 2026-11-15: Social auth options (LinkedIn, Google, GitHub) and demographic field handling in /login and /register
 
 **Context:** The report specifies FR-22 (social sign in via LinkedIn and email) and omits Google and GitHub, while prototype reference screens show Google and GitHub options. Furthermore, the backend registration schema requires `full_name`, but the prototype and DESIGN.md v3.9 intentionally omit Full Name, Profession, and Age fields from the auth cards.
