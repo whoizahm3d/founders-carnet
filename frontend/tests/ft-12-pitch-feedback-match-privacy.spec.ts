@@ -39,7 +39,7 @@ test.describe('FT-12: Pitch Simulation Notices and Match Privacy Guard (FR-7, NF
 
     // Verify candidate cards are rendered
     await expect(matchSection.locator('text=Ayesha Qureshi')).toBeVisible();
-    await expect(matchSection.locator('text=Hamza Iqbal')).toBeVisible();
+    await expect(matchSection.locator('text=Asad Khan')).toBeVisible();
     await expect(matchSection.locator('text=Sana Rauf')).toBeVisible();
 
     // Verify contact policy disclosures are rendered

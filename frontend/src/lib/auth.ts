@@ -68,12 +68,17 @@ function nameFromEmail(email: string): string {
     .join(' ');
 }
 
+const MOCK_DISPLAY_NAMES: Partial<Record<UserRole, string>> = {
+  founder: 'Bilal Ahmed',
+  talent: 'Hamza Rauf',
+};
+
 function buildMockUser(email: string, role: UserRole, fullName?: string): User {
   return {
     id: `mock-${role}-${email.toLowerCase()}`,
     email,
     role,
-    fullName: fullName || nameFromEmail(email),
+    fullName: fullName || MOCK_DISPLAY_NAMES[role] || nameFromEmail(email),
     isVerified: true,
     createdAt: new Date().toISOString(),
   };

@@ -2,6 +2,17 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-19: Dashboard fix pass (Gemini)
+
+- **Feature and IDs:** Founder Dashboard match badges, Talent hero copy, mock user display names.
+- **Built:**
+  - `frontend/src/app/(dashboard)/founder/dashboard/page.tsx`: Added `Badge` import. All three match cards (featured card and two secondary cards) now use `<Badge variant="default" className="font-bold">{match.similarityScore}%</Badge>`. Removed the word "similarity" from badge text. The "profile similarity" caption underneath each card is unchanged and present on all three.
+  - `frontend/src/app/(dashboard)/talent/dashboard/page.tsx`: Removed the word "interviews" from the hero subtitle (line 144). New text: "Backend developer, Lahore. Track your applications and roles that match your profile across Pakistan."
+  - `frontend/src/lib/auth.ts`: Added `MOCK_DISPLAY_NAMES` lookup table giving founder the name "Bilal Ahmed" (already in founder fixture) and talent the name "Hamza Rauf". `buildMockUser` now resolves `fullName` as `fullName || MOCK_DISPLAY_NAMES[role] || nameFromEmail(email)`. Mentor, investor, and admin are unaffected and fall through to `nameFromEmail`.
+- **Tested:** Not run per instruction. Statuses stay "Not executed".
+- **Cut or partial:** None.
+- **Differs from the report?** No.
+
 ## 2026-11-17: Founder Dashboard Playwright tests and report raw material (Ali, with Gemini)
 
 - **Feature and IDs:** FT-01 (FR-23), FT-09 dashboard (NFR-10), FT-11 (FR-2), FT-12 (FR-7, NFR-6). Report raw material for the Founder Dashboard.
@@ -886,3 +897,20 @@ One entry per finished piece of work, newest first. This is what we use to write
   - Banned-word sweep (em/en dashes, PECA, NFR, AI-generated, powered by, compliant, secure, encrypted, certified) across all 7 touched files: 0 hits after fixture en dash fix.
 - **Cut or partial:** None. All 10 items completed.
 - **Differs from the report?** Removal of "Cohort target", "SME bookings", and the "Series Seed" stage label from the breadcrumb differs from any report section describing those fields. Added entry to `docs/DECISIONS.md` and row to `docs/pending-report-changes.md` (see below).
+
+## 2026-11-19: Build Talent Dashboard at /talent/dashboard (Gemini)
+
+- **Feature and IDs:** Talent Dashboard, FR-7, FR-22, FR-23, NFR-6.
+- **Built:**
+  - `frontend/src/fixtures/talent-dashboard.ts`: Created typed initial fixtures (`INITIAL_TALENT_DASHBOARD_DATA`) for talent persona Hamza Iqbal in Lahore. Included 3-stat operational counts (applications submitted, introductions accepted, startup matches), 4 recommended engineering roles with transparent PKR compensation ranges, tracked applications with statuses (`Applied`, `In review`, `Introduction accepted`), founding team matches, structured resume analysis with mandatory simulation notice, and 5-step onboarding checklist.
+  - `frontend/src/app/(dashboard)/talent/dashboard/page.tsx`: Rebuilt screen adhering to DESIGN.md v3.9.2 and `talent_dashboard_hamza_iqbal` visual reference. Retired import of legacy `TalentDashboard.module.css` (retained on disk). Built glass breadcrumb ("Talent / Dashboard"), active dashboard vs onboarding view switcher, greeting ("Welcome back, *Hamza*") with Instrument Serif italic on yellow, operational summary monolith card, "Roles that match your *profile*" with "Apply now" (circular arrow badge) and "View details" actions, founding team matches with mutual consent introduction requests, tracked applications, structured resume competencies/suggestions with plain "Written by a language model simulation" notice, and mutual consent contact privacy disclosure ("Contact details stay hidden until both sides accept.").
+  - `frontend/src/fixtures/founder-dashboard.ts`: Renamed mentor match 2 from Hamza Iqbal to Asad Khan (same role line) to resolve collision with the talent persona.
+  - `frontend/tests/ft-12-pitch-feedback-match-privacy.spec.ts`: Updated mentor match candidate assertion to Asad Khan.
+  - `frontend/tests/ft-talent-dashboard.spec.ts`: Added Playwright test specs covering FT-01 (role authentication and redirect guard), FT-09 (zero horizontal overflow at 390px, 768px, 1024px, and 1440px), FT-06 (language model simulation notice and absence of AI badges), and FT-04 (contact privacy concealment).
+  - `docs/frontend-map.md`: Updated route mapping, fixtures, and added Talent Dashboard section.
+  - `docs/pending-report-changes.md`: Logged backend gap for talent dashboard aggregation and application endpoints.
+- **Tested:**
+  - Statuses stay "Not executed" per instruction (user will run tests, lint, tsc, and build).
+- **Cut or partial:** None. Operates on typed fixtures pending backend API implementation.
+- **Differs from the report?** Yes; tracked in `docs/pending-report-changes.md` (2026-11-19 entry).
+
