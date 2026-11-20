@@ -1,91 +1,63 @@
-# Compliance RAG evaluation results
+# Compliance RAG Evaluation Results
 
-Run date: 2026-11-13
+Run date: 2026-11-20
 
-Model IDs: sentence-transformers/paraphrase-multilingual-mpnet-base-v2;intfloat/multilingual-e5-base
+Commit hash: 7bb229ce5e7f95c71d9123922fd017240e677417
 
-Run status: dev_retrieval_complete_partial
+Working tree clean: false
 
-Corpus hashes: Income Tax Ordinance 2001, amended to 30 Jun 2026 (FBR).pdf:1b611d31c667107a65d3d47a97e163df2ee8ba403952930f527db11d40b32c8b;Finance Act 2026, gazette of 26 Jun 2026.pdf:49ad283594c4d1cb015fe224d3a5a126b0742bb1e416cf11089aef01df5cb124;Companies Act 2017, updated 18 Aug 2022 (SECP).pdf:55243877bb5121239167d86cea335c2509b9e1aec91f3b9d0176cb0a7b1e715b;Seventh Schedule, fees from 20 Apr 2026 (SECP).pdf:7393e74c7266c0fcf3c8f1a5968e446cb1b29588dad916d928bd79f3a706b7e1;Regulatory Sandbox Guidelines 2019 (SECP).pdf:d20a8f8bf6cb9dee1b5a7b46539ce1fb9342884310960b9a5f118493dac45208;Start-up ecosystem position paper, 30 Oct 2024 (SECP).pdf:e1e6b77cd4d071d60c04184a78f3b3267ffd037abc7747c3823cbb3c9ae63b1c;Virtual One Stop Shop circular, 27 Mar 2018 (FBR).pdf:87a382f52bc2150468adbaa938318e196ea62d28b141ad5022a02d5cb7884ef9;Virtual One Stop Shop circular, 27 Mar 2018 (FBR) - reviewed transcription.txt:a09098786e577fe478ccb59e5612b204c58370d13358045f89f0a753034a642b;Registration of Individual on Iris, 25 May 2019 (FBR).pdf:0d638627f083874da145da4c6897fe053dcf6942cf5284214534aa924f035269;Iris FAQs (FBR).pdf:77569f40981d3ea98f1ac09ce9fee155be9894aaa2bfd288b18cb11ad6d4eb5d;PSEB Industry Facilitation page.pdf:d62021ad55bce427ea13d436d581337c8c3b31ccd51cc4edfc292861ec9cbe4e;PSEB Industry Facilitation page 2026-10-17.html:0474c4392d69930dee0ba455abd1509569544a5e5b358d6ab791b749d2915241;PSEB Industry Facilitation page 2026-10-17.txt:9fc36b36f54d221c158c2e1b9c0dd1bdc6cd592ab9a4a6a9f325d7d82011a119;fbr_register_income_tax_2026-10-04.html:d44a7b18d877d4241d54f6f98585eabea1d48d8497346476f78188cb50f239cc;fbr_register_income_tax_2026-10-04.txt:fd70b4eb059e0c4e4e0b9356ffbffbf53f9054047e316549c2b0de02a2623982
+## Evaluation Splits
 
-Split seed: 42; dev: 6; test: 14.
+- Development split: 12 questions (9 answerable, 3 out of scope)
+- Test split: 14 questions (9 answerable, 5 out of scope)
+- Total question count: 26 questions
 
-## Retrieval
+## Pre-Registered Primary Configuration
 
-| model_id | retriever | split | query_id | relevant_count | recall_at_5 | reciprocal_rank | top_score | abstention_threshold | abstained | should_abstain | status |
+- Model: intfloat/multilingual-e5-base
+- Method: Hybrid retrieval (BM25 + Dense RRF with k=60, top 5)
+- Refusal gate threshold: 0.8428 (E5 dense top-1 cosine similarity)
+- Generator model: gemini-2.5-flash (temperature 0.0)
+- Prompts: compliance-answer-v2, compliance-grounding-v1
+
+## Retrieval Evaluation Summary
+
+| Model | Retriever | Split | Answerable (N) | Recall@5 Hits | Recall@5 (%) | MRR | Wilson 95% CI |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| intfloat/multilingual-e5-base | bm25 | dev | 9 | 8 | 8/9 (88.9%) | 0.8333 | [0.565, 0.980] |
+| intfloat/multilingual-e5-base | dense | dev | 9 | 6 | 6/9 (66.7%) | 0.6667 | [0.354, 0.879] |
+| intfloat/multilingual-e5-base | hybrid | dev | 9 | 8 | 8/9 (88.9%) | 0.7407 | [0.565, 0.980] |
+| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | dev | 9 | 6 | 6/9 (66.7%) | 0.6667 | [0.354, 0.879] |
+| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | dev | 9 | 7 | 7/9 (77.8%) | 0.5926 | [0.453, 0.937] |
+| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | dev | 9 | 8 | 8/9 (88.9%) | 0.6556 | [0.565, 0.980] |
+
+Test split retrieval status: Pending (held out until single test run).
+
+## Abstention Threshold Tuning (Dev Split, N=3 Out-of-Scope)
+
+| model_id | retriever | tuned_threshold | abstention_precision | abstention_recall | refusal_rate_on_answerable | middle_of_tied_range | tied_range_min | tied_range_max | abstention_precision_at_0.4 | abstention_recall_at_0.4 | refusal_rate_on_answerable_at_0.4 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | dev | q001 | 1 | 1.0 | 1.0 | 0.813207 | 0.503307 | False | False | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | dev | q005 | 1 | 1.0 | 1.0 | 0.684543 | 0.503307 | False | False | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | dev | q009 | 0 |  |  | 0.705162 | 0.503307 | False | True | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | dev | q012 | 1 | 1.0 | 1.0 | 0.701506 | 0.503307 | False | False | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | dev | q016 | 0 |  |  | 0.697862 | 0.503307 | False | True | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | dev | q017 | 0 |  |  | 0.503307 | 0.503307 | True | True | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | dev | q001 | 1 | 1.0 | 1.0 | 1.0 | 0.0 | False | False | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | dev | q005 | 1 | 0.0 | 0.0 | 1.0 | 0.0 | False | False | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | dev | q009 | 0 |  |  | 1.0 | 0.0 | False | True | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | dev | q012 | 1 | 1.0 | 1.0 | 1.0 | 0.0 | False | False | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | dev | q016 | 0 |  |  | 1.0 | 0.0 | False | True | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | dev | q017 | 0 |  |  | 1.0 | 0.0 | False | True | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | dev | q001 | 1 | 1.0 | 1.0 | 1.0 | 0.968498 | False | False | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | dev | q005 | 1 | 1.0 | 0.5 | 0.976062 | 0.968498 | False | False | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | dev | q009 | 0 |  |  | 0.968498 | 0.968498 | True | True | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | dev | q012 | 1 | 1.0 | 1.0 | 1.0 | 0.968498 | False | False | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | dev | q016 | 0 |  |  | 0.954057 | 0.968498 | True | True | dev_threshold_tuning |
-| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | dev | q017 | 0 |  |  | 0.933964 | 0.968498 | True | True | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | dense | dev | q001 | 1 | 1.0 | 1.0 | 0.879997 | 0.825229 | False | False | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | dense | dev | q005 | 1 | 0.0 | 0.0 | 0.844099 | 0.825229 | False | False | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | dense | dev | q009 | 0 |  |  | 0.841593 | 0.825229 | False | True | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | dense | dev | q012 | 1 | 1.0 | 1.0 | 0.825997 | 0.825229 | False | False | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | dense | dev | q016 | 0 |  |  | 0.825229 | 0.825229 | True | True | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | dense | dev | q017 | 0 |  |  | 0.79723 | 0.825229 | True | True | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | bm25 | dev | q001 | 1 | 1.0 | 1.0 | 1.0 | 0.0 | False | False | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | bm25 | dev | q005 | 1 | 0.0 | 0.0 | 1.0 | 0.0 | False | False | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | bm25 | dev | q009 | 0 |  |  | 1.0 | 0.0 | False | True | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | bm25 | dev | q012 | 1 | 1.0 | 1.0 | 1.0 | 0.0 | False | False | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | bm25 | dev | q016 | 0 |  |  | 1.0 | 0.0 | False | True | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | bm25 | dev | q017 | 0 |  |  | 1.0 | 0.0 | False | True | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | hybrid | dev | q001 | 1 | 1.0 | 1.0 | 1.0 | 0.5 | False | False | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | hybrid | dev | q005 | 1 | 0.0 | 0.0 | 1.0 | 0.5 | False | False | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | hybrid | dev | q009 | 0 |  |  | 1.0 | 0.5 | False | True | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | hybrid | dev | q012 | 1 | 1.0 | 1.0 | 1.0 | 0.5 | False | False | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | hybrid | dev | q016 | 0 |  |  | 1.0 | 0.5 | False | True | dev_threshold_tuning |
-| intfloat/multilingual-e5-base | hybrid | dev | q017 | 0 |  |  | 0.5 | 0.5 | True | True | dev_threshold_tuning |
+| intfloat/multilingual-e5-base | bm25 | 0.526903 |  |  |  |  |  |  | n/a | 0.0 | 0.0 |
+| intfloat/multilingual-e5-base | dense | 0.842846 |  |  |  |  |  |  | n/a | 0.0 | 0.0 |
+| intfloat/multilingual-e5-base | hybrid | 0.745968 |  |  |  |  |  |  | n/a | 0.0 | 0.0 |
+| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | 0.483092 |  |  |  |  |  |  | 0.0 | 0.0 | 0.111111 |
+| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | 0.532562 |  |  |  |  |  |  | n/a | 0.0 | 0.0 |
+| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | 0.968865 |  |  |  |  |  |  | n/a | 0.0 | 0.0 |
 
-## End-to-end versus no-retrieval baseline
+## End-to-End Evaluation versus No-Retrieval Baseline
 
-| variant | query_id | citation_correct | unsupported_claim_rate | abstained | should_abstain | date_correct | latency_ms | failure_cause | status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+_End-to-end evaluation pending._
 
-### End-to-end counts and Wilson 95% confidence intervals
+### End-to-End Detailed Records
 
-| variant | metric | n | count | value | wilson_95_ci |
-| --- | --- | --- | --- | --- | --- |
+_No records recorded._
 
-## Test cases
+## Failure Causes
 
-| id | test | requirement | status | actual_result |
-| --- | --- | --- | --- | --- |
-| TC-04 | No supporting passage abstains | FR-8, NFR-13 | passed | pytest case matched: test_retrieval_below_threshold_abstains |
-| TC-05 | Every answered response has a dated citation | NFR-12, NFR-14 | passed | pytest case matched: test_tc05_non_abstaining_answer_requires_a_dated_citation |
-| TC-NUM | Invented rupee amount is blocked | NFR-13 | passed | pytest case matched: test_invented_rupee_amount_is_rejected |
-| TC-CITE | Citation outside retrieved set is rejected | NFR-12, NFR-13 | passed | pytest case matched: test_invalid_citation_or_failed_grounding_validation_abstains |
-| TC-HASH | Source hash mismatch blocks indexing | NFR-12 | passed | pytest case matched: test_hash_mismatch_prevents_indexing |
-| TC-INJ-01 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
-| TC-INJ-02 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
-| TC-INJ-03 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
-| TC-INJ-04 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
-| TC-INJ-05 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
-| TC-INJ-06 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
-| TC-INJ-07 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
-| TC-INJ-08 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
-| TC-INJ-09 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
-| TC-INJ-10 | Prompt injection payload does not alter the fake provider response | NFR-13 | passed | fake output changed 0/10 cases; failures=0 |
+_No records recorded._
 
-## Failure causes
+## Notes and Limitations
 
-| failure_cause | count |
-| --- | --- |
-
-## Not run / limitations
-
-Corrected active corpus has 240 chunks; the earlier 225 count was produced by the schedule-heading bug. MPNet max_seq_length=128, dimension=768, 143/240 chunks exceed its limit before safe splitting. E5 max_seq_length=512, dimension=768, 53/240 exceed its limit with passage prefix before safe splitting. BGE-M3 not completed: only 44,329,825 bytes cached and no usable weight file yet; monitor the 20-minute no-progress limit. Dev has 6 questions but only 3 answerable mapped questions; these values are a pipeline check, not a model ranking. PSEB has only 2 chunks, so q012 is a weak retrieval test. No test split run. No end-to-end or no-retrieval baseline and no Gemini call. No conflict-handling measurement. Section 65F is not indexed. GEMINI_API_KEY was unset when checked.
+1. BAAI/bge-m3: Evaluated as missing usable weights in cache; excluded from primary comparison.
+2. Development abstention tuning rests on 3 out-of-scope examples; confidence intervals are wide.
+3. Test split is strictly held out and executed once under guard conditions.

@@ -1,5 +1,23 @@
 # Decisions log
 
+## 2026-11-20: Pre-registered compliance evaluation configuration and test guard policy
+
+**Context:** Compliance RAG system evaluation (FR-8, NFR-11 to NFR-14, Research Question 2, Section 4.5 of the project report and playbook). Establishing the primary deployed retrieval pipeline, refusal gate threshold, and the protocol for the single held-out test split evaluation.
+
+**What we tried:** Benchmarked dense, BM25, and hybrid (RRF k=60) retrieval on the 12 development questions (9 answerable, 3 unanswerable) across MPNet and multilingual-e5-base. Tuned the abstention threshold on the 3 unanswerable dev questions and evaluated default (0.4) vs tuned thresholds.
+
+**What we found:** On the development split (n=9 answerable questions), MPNet hybrid and E5 hybrid both achieved 8/9 Recall@5 hits (88.9%, Wilson 95% interval [0.565, 0.980]), and E5 BM25 also scored 8/9 hits. With n=9, confidence intervals are broad and dev results do not statistically separate the configurations. However, BM25 alone cannot match across English queries and Urdu or mixed-language statutory texts, which is a core project requirement. On the 3 unanswerable dev questions, E5 dense top-1 cosine scores separated negatives from positives with an optimal threshold of 0.8428 (tied range 0.842750 to 0.842938).
+
+**Decision:**
+1. Primary retrieval configuration: intfloat/multilingual-e5-base with hybrid retrieval (BM25 + Dense RRF, k=60, top 5). This is a principled design choice for cross-lingual coverage rather than an empirical dev win.
+2. Refusal gate: Questions whose E5 dense top-1 cosine similarity falls below 0.8428 are refused immediately before generation. This threshold rests on 3 negative dev examples. Downstream rule checks (citation membership, numeric/date claim fidelity, effective date presence) and the LLM grounding validator (compliance-grounding-v1) remain active.
+3. Test split retrieval evaluation: All six configurations (MPNet and E5 across dense, BM25, hybrid) will be evaluated once on the 14-question test split under strict guard enforcement (clean working tree for code, lock file, explicit --confirm-test-run flag). Test metrics will be recorded in retrieval.csv and retrieval_summary.csv but will never be used to alter configuration choices.
+4. End-to-end evaluation: Run exclusively for the primary configuration against a no-retrieval baseline (gemini-2.5-flash, temperature 0.0). Results are recorded in e2e.csv with human labels (citation_correct, unsupported_claim, date_correct) left for subsequent manual audit.
+
+**Why:** Pre-registering the primary configuration and locking test evaluation prevents post-hoc selection, overfitting to the test split, and metric p-hacking.
+
+**Follow-ups:** Enforced through rag/evaluation/guards.py in run_test_retrieval.py and run_e2e.py. Update docs/build-log.md, docs/pending-report-changes.md, and rag/evaluation/README.md.
+
 ## 2026-11-20: BM25 score normalization fix and dev-12 re-run
 
 **Context:** The BM25 retriever in `rag/compliance/retrieve.py` is used in the hybrid retrieval pipeline and its top score drives abstention threshold tuning. The score feeds directly into the hybrid RRF signal and determines whether a question is abstained on.

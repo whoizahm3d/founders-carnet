@@ -332,19 +332,23 @@ def tune_abstention(
     abstain_precision = (
         true_pos_abstain / (true_pos_abstain + false_pos_abstain)
         if (true_pos_abstain + false_pos_abstain) > 0
-        else 0.0
+        else "n/a"
+    )
+
+    precision_04_value = (
+        precision_04 if tot_ref_04 > 0 else "n/a"
     )
 
     tuning_info = {
         "default_threshold_0.4": DEFAULT_THRESHOLD,
-        "abstention_precision_at_0.4": round(precision_04, 6),
+        "abstention_precision_at_0.4": precision_04_value if isinstance(precision_04_value, str) else round(precision_04_value, 6),
         "abstention_recall_at_0.4": round(recall_04, 6),
         "refusal_rate_on_answerable_at_0.4": round(refusal_rate_ans_04, 6),
         "tuned_threshold": round(chosen, 6),
         "selection_note": note,
         "perfect_separation_thresholds": perfect_sep,
         "best_balanced_accuracy": round(best_metric, 6),
-        "abstention_precision_on_unanswerable": round(abstain_precision, 6),
+        "abstention_precision_on_unanswerable": abstain_precision if isinstance(abstain_precision, str) else round(abstain_precision, 6),
         "abstention_recall_on_unanswerable": round(abstain_recall, 6),
         "n_unanswerable_dev": negatives,
         "n_answerable_dev": positives,
@@ -505,6 +509,144 @@ def regenerate_metadata_and_tuning_only() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Retrieval execution for a single model
+# ---------------------------------------------------------------------------
+
+def run_retrieval_for_model(
+    model_id: str,
+    questions: list[dict],
+    base_chunks: list,
+    thresholds: dict[str, float] | None = None,
+    split: str = "dev",
+    status: str = "dev12_threshold_tuning",
+    model=None,
+) -> tuple[list[dict], dict, dict]:
+    """Run dense, bm25, and hybrid retrieval for a single model on questions.
+
+    Parameters
+    ----------
+    model_id:
+        HuggingFace model ID.
+    questions:
+        List of question dictionaries.
+    base_chunks:
+        Corpus base chunks.
+    thresholds:
+        Optional dictionary of retriever_name -> threshold. If None,
+        thresholds are tuned against questions (dev split behavior).
+    split:
+        Split name label for rows.
+    status:
+        Status string for rows.
+    model:
+        Optional pre-loaded SentenceTransformer instance.
+
+    Returns
+    -------
+    tuple of (retrieval_rows, tuning_dict, model_stats)
+    """
+    if model is None:
+        model = load_model(model_id)
+    max_seq = int(model.max_seq_length)
+    dim = model.get_sentence_embedding_dimension()
+    limit = chunk_token_limit(model_id, model)
+
+    exceeding = count_exceeding_chunks(model_id, model, base_chunks)
+    model_chunks = split_chunks_for_model(base_chunks, model.tokenizer, limit)
+    n_passages = len(model_chunks)
+
+    model_stats = {
+        "max_seq": max_seq,
+        "dim": dim,
+        "n_exceeding": exceeding,
+        "n_passages": n_passages,
+    }
+
+    print(f"  {exceeding}/240 base chunks exceed max_seq_length; {n_passages} passages after split.")
+    passage_vecs = encode_passages(model, model_id, [c.text for c in model_chunks])
+    embedded = tuple(
+        SimpleNamespace(
+            id=i,
+            chunk_id=c.chunk_id,
+            text=c.text,
+            embedding=vec,
+        )
+        for i, (c, vec) in enumerate(zip(model_chunks, passage_vecs))
+    )
+
+    per_retriever_scores: dict[str, dict[str, float]] = {
+        "dense": {}, "bm25": {}, "hybrid": {}
+    }
+    per_retriever_ranked: dict[str, dict[str, tuple]] = {
+        "dense": {}, "bm25": {}, "hybrid": {}
+    }
+
+    for q in questions:
+        qvec = encode_query(model, model_id, [q["question"]])[0]
+        # Dense
+        dense_results = numpy_dense(qvec, embedded, top_k=5)
+        per_retriever_scores["dense"][q["id"]] = dense_results[0].score if dense_results else 0.0
+        per_retriever_ranked["dense"][q["id"]] = dense_results
+
+        # BM25
+        bm25_results = bm25(q["question"], embedded, top_k=5)
+        per_retriever_scores["bm25"][q["id"]] = bm25_results[0].score if bm25_results else 0.0
+        per_retriever_ranked["bm25"][q["id"]] = bm25_results
+
+        # Hybrid RRF k=60
+        hybrid_results = hybrid(
+            q["question"], qvec, embedded,
+            top_k=5, rrf_k=60, dense_retriever=numpy_dense
+        )
+        per_retriever_scores["hybrid"][q["id"]] = hybrid_results[0].score if hybrid_results else 0.0
+        per_retriever_ranked["hybrid"][q["id"]] = hybrid_results
+
+    abstention_thresholds = {}
+    tuning_dict = {}
+    if thresholds is None:
+        for retriever_name in ("dense", "bm25", "hybrid"):
+            scores = per_retriever_scores[retriever_name]
+            should_abstain = {q["id"]: q["should_abstain"] for q in questions}
+            threshold, tuning_info = tune_abstention(scores, should_abstain)
+            abstention_thresholds[retriever_name] = threshold
+            tuning_dict[(model_id, retriever_name)] = tuning_info
+    else:
+        abstention_thresholds = thresholds
+
+    retrieval_rows = []
+    for retriever_name in ("dense", "bm25", "hybrid"):
+        threshold = abstention_thresholds[retriever_name]
+        for q in questions:
+            ranked_results = per_retriever_ranked[retriever_name][q["id"]]
+            top_score = per_retriever_scores[retriever_name][q["id"]]
+            relevant = tuple(canonical_id(cid) for cid in q["chunk_ids"])
+            top5_ids = [canonical_id(r.chunk.chunk_id) for r in ranked_results]
+
+            if relevant:
+                recall, rr = recall_mrr(top5_ids, relevant)
+            else:
+                recall, rr = "", ""
+
+            retrieval_rows.append({
+                "model_id": model_id,
+                "retriever": retriever_name,
+                "split": split,
+                "query_id": q["id"],
+                "relevant_count": len(set(relevant)),
+                "recall_at_5": recall,
+                "reciprocal_rank": rr,
+                "top_score": round(top_score, 6),
+                "abstention_threshold": round(threshold, 6),
+                "abstained": top_score < threshold,
+                "should_abstain": q["should_abstain"],
+                "status": status,
+                "top5_chunk_ids": "|".join(top5_ids),
+            })
+
+    return retrieval_rows, tuning_dict, model_stats
+
+
+# ---------------------------------------------------------------------------
 # Full development evaluation
 # ---------------------------------------------------------------------------
 
@@ -518,97 +660,17 @@ def run_dev_evaluation() -> None:
 
     for model_id in MODEL_IDS:
         print(f"\nEvaluating model: {model_id}")
-        model = load_model(model_id)
-        max_seq = int(model.max_seq_length)
-        dim = model.get_sentence_embedding_dimension()
-        limit = chunk_token_limit(model_id, model)
-
-        exceeding = count_exceeding_chunks(model_id, model, base_chunks)
-        model_chunks = split_chunks_for_model(base_chunks, model.tokenizer, limit)
-        n_passages = len(model_chunks)
-
-        model_stats[model_id] = {
-            "max_seq": max_seq,
-            "dim": dim,
-            "n_exceeding": exceeding,
-            "n_passages": n_passages,
-        }
-
-        print(f"  {exceeding}/240 base chunks exceed max_seq_length; {n_passages} passages after split.")
-        passage_vecs = encode_passages(model, model_id, [c.text for c in model_chunks])
-        embedded = tuple(
-            SimpleNamespace(
-                id=i,
-                chunk_id=c.chunk_id,
-                text=c.text,
-                embedding=vec,
-            )
-            for i, (c, vec) in enumerate(zip(model_chunks, passage_vecs))
+        m_rows, m_tuning, m_stats = run_retrieval_for_model(
+            model_id=model_id,
+            questions=questions,
+            base_chunks=base_chunks,
+            thresholds=None,
+            split="dev",
+            status="dev12_threshold_tuning",
         )
-
-        per_retriever_scores: dict[str, dict[str, float]] = {
-            "dense": {}, "bm25": {}, "hybrid": {}
-        }
-        per_retriever_ranked: dict[str, dict[str, tuple]] = {
-            "dense": {}, "bm25": {}, "hybrid": {}
-        }
-
-        for q in questions:
-            qvec = encode_query(model, model_id, [q["question"]])[0]
-            # Dense
-            dense_results = numpy_dense(qvec, embedded, top_k=5)
-            per_retriever_scores["dense"][q["id"]] = dense_results[0].score if dense_results else 0.0
-            per_retriever_ranked["dense"][q["id"]] = dense_results
-
-            # BM25
-            bm25_results = bm25(q["question"], embedded, top_k=5)
-            per_retriever_scores["bm25"][q["id"]] = bm25_results[0].score if bm25_results else 0.0
-            per_retriever_ranked["bm25"][q["id"]] = bm25_results
-
-            # Hybrid RRF k=60
-            hybrid_results = hybrid(
-                q["question"], qvec, embedded,
-                top_k=5, rrf_k=60, dense_retriever=numpy_dense
-            )
-            per_retriever_scores["hybrid"][q["id"]] = hybrid_results[0].score if hybrid_results else 0.0
-            per_retriever_ranked["hybrid"][q["id"]] = hybrid_results
-
-        abstention_thresholds = {}
-        for retriever_name in ("dense", "bm25", "hybrid"):
-            scores = per_retriever_scores[retriever_name]
-            should_abstain = {q["id"]: q["should_abstain"] for q in questions}
-            threshold, tuning_info = tune_abstention(scores, should_abstain)
-            abstention_thresholds[retriever_name] = threshold
-            all_tuning[(model_id, retriever_name)] = tuning_info
-
-        for retriever_name in ("dense", "bm25", "hybrid"):
-            threshold = abstention_thresholds[retriever_name]
-            for q in questions:
-                ranked_results = per_retriever_ranked[retriever_name][q["id"]]
-                top_score = per_retriever_scores[retriever_name][q["id"]]
-                relevant = tuple(canonical_id(cid) for cid in q["chunk_ids"])
-                top5_ids = [canonical_id(r.chunk.chunk_id) for r in ranked_results]
-
-                if relevant:
-                    recall, rr = recall_mrr(top5_ids, relevant)
-                else:
-                    recall, rr = "", ""
-
-                all_rows.append({
-                    "model_id": model_id,
-                    "retriever": retriever_name,
-                    "split": "dev",
-                    "query_id": q["id"],
-                    "relevant_count": len(set(relevant)),
-                    "recall_at_5": recall,
-                    "reciprocal_rank": rr,
-                    "top_score": round(top_score, 6),
-                    "abstention_threshold": round(threshold, 6),
-                    "abstained": top_score < threshold,
-                    "should_abstain": q["should_abstain"],
-                    "status": "dev12_threshold_tuning",
-                    "top5_chunk_ids": "|".join(top5_ids),
-                })
+        all_rows.extend(m_rows)
+        all_tuning.update(m_tuning)
+        model_stats[model_id] = m_stats
 
     # Write retrieval.csv
     fieldnames = [
@@ -623,40 +685,47 @@ def run_dev_evaluation() -> None:
         writer.writerows(all_rows)
 
     # Write retrieval_summary.csv
-    write_retrieval_summary(all_rows, questions)
+    write_retrieval_summary(all_rows, questions, split="dev")
     write_abstention_tuning_csv(all_tuning)
     write_run_metadata(model_stats)
 
 
-def write_retrieval_summary(all_rows: list[dict], questions: list[dict]) -> None:
+def compute_summary_rows(
+    all_rows: list[dict],
+    questions: list[dict],
+    split: str = "dev",
+) -> list[dict]:
+    """Compute summary metrics with Wilson 95% confidence intervals."""
     answerable_ids = {q["id"] for q in questions if q["answerable"]}
-    path = RESULTS / "retrieval_summary.csv"
-    fieldnames = [
-        "model_id", "retriever", "split",
-        "n_answerable", "n_unanswerable",
-        "recall_at_5_hits", "recall_at_5", "mrr",
-        "wilson_lower_95", "wilson_upper_95",
-    ]
-    rows = []
     groups: dict[tuple, list[dict]] = {}
     for row in all_rows:
         key = (row["model_id"], row["retriever"])
         groups.setdefault(key, []).append(row)
 
+    rows = []
     for (model_id, retriever), group_rows in sorted(groups.items()):
         answerable_rows = [r for r in group_rows if r["query_id"] in answerable_ids]
         n_answerable = len(answerable_rows)
         n_unanswerable = len(group_rows) - n_answerable
-        hits = sum(1 for r in answerable_rows if r["recall_at_5"] != "" and float(r["recall_at_5"]) > 0)
-        total_recall = sum(float(r["recall_at_5"]) for r in answerable_rows if r["recall_at_5"] != "")
-        total_rr = sum(float(r["reciprocal_rank"]) for r in answerable_rows if r["reciprocal_rank"] != "")
+        hits = sum(
+            1 for r in answerable_rows
+            if r["recall_at_5"] != "" and float(r["recall_at_5"]) > 0
+        )
+        total_recall = sum(
+            float(r["recall_at_5"]) for r in answerable_rows
+            if r["recall_at_5"] != ""
+        )
+        total_rr = sum(
+            float(r["reciprocal_rank"]) for r in answerable_rows
+            if r["reciprocal_rank"] != ""
+        )
         recall_at_5 = total_recall / n_answerable if n_answerable else 0.0
         mrr = total_rr / n_answerable if n_answerable else 0.0
         lo, hi = wilson_ci(hits, n_answerable)
         rows.append({
             "model_id": model_id,
             "retriever": retriever,
-            "split": "dev",
+            "split": split,
             "n_answerable": n_answerable,
             "n_unanswerable": n_unanswerable,
             "recall_at_5_hits": hits,
@@ -665,6 +734,22 @@ def write_retrieval_summary(all_rows: list[dict], questions: list[dict]) -> None
             "wilson_lower_95": round(lo, 6),
             "wilson_upper_95": round(hi, 6),
         })
+    return rows
+
+
+def write_retrieval_summary(
+    all_rows: list[dict],
+    questions: list[dict],
+    split: str = "dev",
+) -> None:
+    path = RESULTS / "retrieval_summary.csv"
+    fieldnames = [
+        "model_id", "retriever", "split",
+        "n_answerable", "n_unanswerable",
+        "recall_at_5_hits", "recall_at_5", "mrr",
+        "wilson_lower_95", "wilson_upper_95",
+    ]
+    rows = compute_summary_rows(all_rows, questions, split=split)
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()

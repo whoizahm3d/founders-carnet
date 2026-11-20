@@ -2,6 +2,24 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-20: Pre-registered compliance evaluation harness, test guards, and end-to-end pipeline
+
+- **Feature and IDs:** Compliance assistant evaluation, FR-8, NFR-11, NFR-12, NFR-13, NFR-14, NFR-20, Research Question 2.
+- **Built:**
+  - `rag/evaluation/guards.py`: Enforces three conditions for test execution: (1) git working tree clean for .py code under rag/ and backend/, ignoring .md files, results, and caches; (2) lock file does not exist; (3) explicit --confirm-test-run flag is provided.
+  - `rag/evaluation/run_test_retrieval.py`: Test retrieval runner executing all six configurations (MPNet and E5 across dense, BM25, hybrid) on the 14 held-out test questions under test guard enforcement. Appends test results to `retrieval.csv` and Wilson confidence intervals to `retrieval_summary.csv`.
+  - `rag/evaluation/run_e2e.py`: End-to-end evaluation runner for the primary pre-registered configuration (multilingual-e5-base hybrid, refusal gate at 0.8428 E5 dense top-1 cosine, grounded generation, rule checks for citations, numbers, dates, and LLM grounding validation) against a no-retrieval baseline (temperature 0.0, empty passages). Writes `e2e.csv` with human labels (citation_correct, unsupported_claim, date_correct) left empty. Supports `--provider fake` (deterministic local execution) and `--provider gemini` (environment API key, strict quota handling, disk cache). Refuses `--split test` without guard conditions.
+  - `rag/evaluation/make_report.py`: Extended to generate `RESULTS.md` strictly from CSVs with counts next to percentages, explicit labeling of dev (12 questions: 9 answerable, 3 out of scope) and test (14 questions: 9 answerable, 5 out of scope), and "pending" placeholders for unexecuted components. Zero em dashes and en dashes.
+  - `rag/tests/test_evaluation_guards.py`: Unit test suite covering working tree cleanliness filtering, lock rejection, confirmation flag requirement, refusal gate boundary (0.8428 vs 0.8427), fake provider contracts, and e2e CSV schema.
+  - Exact reproduction commands:
+    - E2E dev evaluation: `rag/.venv/Scripts/python.exe rag/evaluation/run_e2e.py --split dev --provider fake`
+    - Test retrieval evaluation (user only): `rag/.venv/Scripts/python.exe rag/evaluation/run_test_retrieval.py --confirm-test-run`
+    - Generate report: `rag/.venv/Scripts/python.exe rag/evaluation/make_report.py`
+    - Guard unit tests: `rag/.venv/Scripts/python.exe -m pytest rag/tests/test_evaluation_guards.py`
+- **Tested:** Ran full pytest suite in `rag/` (42 pre-existing tests + 11 new guard tests = 53 passed). Verified guard rejection when --confirm-test-run is omitted. Executed dry run of `run_e2e.py --split dev --provider fake`.
+- **Cut or partial:** Test split held out and not run. Human label columns in `e2e.csv` left empty for human scoring.
+- **Differs from the report?** Yes. Primary retrieval configuration pre-registered as multilingual-e5-base hybrid (RRF k=60, top 5); refusal gate threshold pre-registered at 0.8428 on 3 negative dev examples; end-to-end comparison restricted to primary configuration vs no-retrieval baseline; test split evaluation protected by single-run lock. Recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`.
+
 ## 2026-11-20: Compliance evaluation dev-12 re-run and BM25 score normalization fix
 
 - **Feature and IDs:** Compliance assistant evaluation, FR-8, NFR-12, NFR-13, NFR-14, NFR-20.
