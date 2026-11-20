@@ -57,14 +57,18 @@ def bm25(
         return ()
     model = BM25Plus(tokenized)
     scores = model.get_scores(query_tokens)
-    maximum = max(scores, default=0.0)
-    if maximum <= 0.0:
+    unique_tokens = set(query_tokens)
+    max_possible = sum(
+        (model.idf.get(token) or 0.0) * (model.k1 + 1.0 + model.delta)
+        for token in unique_tokens
+    )
+    if max_possible <= 0.0:
         return ()
     ranked = [
-        RetrievedChunk(chunk, float(score / maximum) if maximum > 0 else 0.0, "bm25")
+        RetrievedChunk(chunk, min(1.0, float(score / max_possible)), "bm25")
         for index, (chunk, score) in enumerate(zip(chunks, scores, strict=True))
         if set(query_tokens).intersection(tokenized[index])
-        and (float(score / maximum) if maximum > 0 else 0.0) >= minimum_score
+        and min(1.0, float(score / max_possible)) >= minimum_score
     ]
     ranked.sort(key=lambda item: (-item.score, item.chunk.id))
     return tuple(ranked[:_top_k(top_k)])
