@@ -2,6 +2,22 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-20: Compliance evaluation dev-12 re-run and BM25 score normalization fix
+
+- **Feature and IDs:** Compliance assistant evaluation, FR-8, NFR-12, NFR-13, NFR-14, NFR-20.
+- **Built:**
+  - Archived old 6-question development results by renaming to `retrieval_dev6_superseded.csv`.
+  - Fixed BM25 score normalization bug in `rag/compliance/retrieve.py` `bm25()`: replaced in-query maximum normalization (`score / max(scores)`) with theoretical upper bound (`sum(IDF(token) * (k1 + 1 + delta))`). Added regression test in `rag/tests/test_retrieve.py`.
+  - Updated `rag/tests/test_evaluation.py` to match the 26-question set and (12, 14) dev/test split.
+  - Re-ran dense, BM25, and hybrid (RRF k=60) retrieval on all 12 development questions for MPNet and multilingual-e5-base.
+  - Promoted standalone evaluation harness to `rag/evaluation/run_dev_retrieval.py` with `--split` argument that enforces `--split dev` and rejects `test`.
+  - Exact reproduction command: `rag/.venv/Scripts/python.exe rag/evaluation/run_dev_retrieval.py --split dev` (or `--regenerate-metadata-only` to refresh tuning and metadata without re-encoding).
+  - Wrote `rag/evaluation/results/retrieval.csv` (72 rows), `rag/evaluation/results/retrieval_summary.csv` (Recall@5, MRR, Wilson 95% CI on answerable questions), and `rag/evaluation/results/abstention_tuning.csv` (including default threshold 0.4 precision/recall/refusal rate metrics, tuned thresholds, perfect separation thresholds, and precision/recall on unanswerable questions).
+  - Updated `rag/evaluation/results/split_sizes.csv` (dev=12, test=14, total=26) and `rag/evaluation/results/run_metadata.csv` (status=dev12_complete, recording exceeding chunk counts 143/240 -> 718 passages for MPNet, 53/240 -> 301 passages for E5, git commit hash, and working_tree_clean=false).
+- **Tested:** Ran full pytest suite for `rag/` from `rag/` directory with `rag/.venv`.
+- **Cut or partial:** BGE-M3 skipped (no usable weights). Test split held out (not run). No end-to-end LLM generation or conflict handling run.
+- **Differs from the report?** Yes. Development split expanded from 6 to 12 questions; BM25 normalization method updated to theoretical upper bound; tuned thresholds supersede the preliminary 6-question values. Recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`.
+
 ## 2026-11-19: Expand compliance evaluation development questions (Codex)
 
 - **Feature and IDs:** Compliance assistant evaluation, FR-8, NFR-12, NFR-13, NFR-14, NFR-20.

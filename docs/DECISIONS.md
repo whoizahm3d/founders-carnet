@@ -1,5 +1,19 @@
 # Decisions log
 
+## 2026-11-20: BM25 score normalization fix and dev-12 re-run
+
+**Context:** The BM25 retriever in `rag/compliance/retrieve.py` is used in the hybrid retrieval pipeline and its top score drives abstention threshold tuning. The score feeds directly into the hybrid RRF signal and determines whether a question is abstained on.
+
+**What we tried:** Inspected the original `bm25()` function in `rag/compliance/retrieve.py`. The old normalization divided each BM25Plus raw score by `max(scores)`, which forces the top result of every query to score exactly 1.0 regardless of actual match quality.
+
+**What we found:** Scores normalized to the query-specific maximum are not comparable across queries. Every query's top result gets 1.0, so the abstention threshold cannot distinguish a strong match from a weak one. After the fix, the BM25 top score for a question like q017 (outside corpus) is visibly lower than for q001 (strong lexical match). The old retrieval results show all BM25 top scores as 1.0, confirming the bug.
+
+**Decision:** Replace the in-query maximum normalization with a theoretical upper bound: `sum(IDF(token) * (k1 + 1 + delta) for token in unique_query_tokens)`. This bound is the maximum score any single document could receive for the query given the corpus IDF values, so scores are calibrated and cross-query comparable. All returned scores are still clamped to [0, 1].
+
+**Why:** Cross-query comparable BM25 scores are required for the hybrid abstention threshold to generalize. With the old normalization the threshold had no signal from BM25 top scores.
+
+**Follow-ups:** Dev-12 re-run results (retrieval.csv, retrieval_summary.csv, abstention_tuning.csv) supersede the dev-6 results archived as `retrieval_dev6_superseded.csv`. The report must reflect the new BM25 normalization method and the tuned abstention threshold from the dev-12 run. Update pending-report-changes.md.
+
 ## 2026-11-19: Expand the compliance evaluation development split
 
 **Context:** The compliance RAG evaluation uses a fixed development and test split. The first development retrieval run used 6 development questions and 14 held-out test questions.

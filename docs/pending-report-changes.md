@@ -70,10 +70,13 @@ These items need a decision before the report can be finalised. They are listed 
 | 2026-11-17 | Founder Dashboard breadcrumb and stats block | Report says (or figure shows) a stage suffix "Series Seed" in the breadcrumb and a "Cohort target / SME bookings" stats row. | Implementation shows "Founder / Dashboard" with no stage suffix and no stats block. Update any figure caption or prose that references those elements. See DECISIONS.md 2026-11-17 entry. |
 | 2026-11-17 | Verification badge subline | Report figure may show "Visible to vetted investors" beneath the badge. | Implementation shows only "Verified profile". Update any caption that references the vetted-investor subline. |
 | 2026-11-19 | Talent dashboard fixtures and missing endpoints | Section 4.8 describes talent dashboard with job listings, application tracking, resume feedback, and founding team matches backed by backend endpoints | Talent dashboard operates on typed fixtures (`src/fixtures/talent-dashboard.ts`) pending backend endpoints: `GET /api/v1/talent/dashboard`, `POST /api/v1/talent/applications`, `POST /api/v1/talent/resume/analyze`, and `POST /api/v1/talent/matches/{id}/request` | `main.tex` Section 4.8 and Chapter 5 backend API endpoints | to add |
+| 2026-11-20 | BM25 score normalization method changed | Report does not describe a specific BM25 normalization method | BM25 scores are now normalized by theoretical upper bound (sum of IDF*(k1+1+delta) over unique query tokens) rather than query-specific maximum. dev-6 retrieval results are superseded by dev-12 results. | main.tex Chapter 6 retrieval method and results | 2026-11-20 BM25 score normalization fix and dev-12 re-run |
+| 2026-11-20 | Dev split size changed from 6 to 12 | Report says or implies 6 development questions | Development split is now 12 questions (9 answerable, 3 unanswerable); test split unchanged at 14. Tuned thresholds from dev-12 supersede preliminary dev-6 values. | main.tex Chapter 6 results and evaluation setup | 2026-11-20 BM25 score normalization fix and dev-12 re-run |
 
 ## Chapter 6 rewrite notes (added 2026-11-20, apply after the RAG evaluation finishes)
 
 ### Compliance assistant text
+
 - Chunking is 500-token target, section-aware, no overlap, no character cap. A long clause stays whole. Already fixed at main.tex line 1616. Re-search main.tex for 1200, 150 char and 225 after every edit. The corpus is 240 chunks.
 - Storage: use "stored with its embedding in a pgvector column of the database" (table compliance_chunks, ComplianceChunk.embedding). On SQLite the column falls back to JSON.
 - Retrieval: the pgvector cosine_distance query (compliance_retrieval.py lines 143 to 147) is accurate for PostgreSQL. The Python cosine_similarity is the SQLite test fallback only.
@@ -81,33 +84,44 @@ These items need a decision before the report can be finalised. They are listed 
 - The 0.4 similarity threshold in the retrieval sentence must be replaced with the threshold tuned on the dev split after the re-run.
 
 ### Matching text
+
 - Profile embeddings are stored in a pgvector column, but ranking is done in Python (intelligence.py line 221). Do not say pgvector retrieves candidates. Write that database-side pgvector search with hard filters is planned.
 
 ### Test section and status (main.tex around lines 1638 to 2039)
+
 - Counts: replace 67 tests with the real total at rewrite time (last seen 135 backend plus 41 RAG, 176). Re-run pytest and use the real output.
 - Playwright frontend tests now exist, so "do not cover the web client" is stale.
 - Rebuild the "still open" list from endpoints and tests. Tables already exist for verification, signals, appeals, decisions, profile reports, job listings, saves, applications, resume optimizations and market research. A table is not proof the feature works.
 - The SQLite caveat is already in the report. Add that vector search is also untested against PostgreSQL.
 
 ### Question set wording
+
 - Replace gold with question set in main.tex: glossary line 322, line 417, phase table line 1622 ("gold set in preparation"), FYP-2 plan line 1659. Update the status to the real one once the set is frozen.
 - Repo file names (gold_questions.jsonl, gold_verification.md) stay as they are. Describe them in prose as the question set.
 
 ### Results chapter
+
 - Question set: 26 questions, 12 dev and 14 test (9 answerable and 5 out of scope in test). q021 was dropped as a duplicate of q014. Test labels for q013 and q014 were corrected before any test run.
 - The first dev figures (6 questions) and thresholds are superseded by the re-run on 12.
 - Report counts next to percentages and Wilson intervals. State that the sample is small. Never write a bare percentage.
-- MPNet embeds only the first 128 tokens, 143 of 240 chunks are truncated, and chunks are 350 to 760 tokens. Expect MPNet to do worse than E5 on late-in-chunk answers (for example q024 and q026). Report it as a finding.
+- Chunks are split per model to fit max_seq_length (MPNet: 143/240 chunks exceed 128 tokens, 718 passages after splitting; E5: 53/240 exceed 510, 301 passages). The two models therefore search different passage sets, so differences between them mix model quality with passage size. Passages are split, not truncated. At n=9 answerable dev questions no model or method is shown to be better.
 - BGE-M3 was skipped because no usable weights were available. Say so.
 - No accuracy claim without a results CSV.
 
 ### Known chunk issues (fix after the evaluation, not before, because chunk ids must stay stable)
+
 - Heading paths are garbled, for example "Subsections (7), (1), (2) ..." on 4:4 and 6:5.
 - Encoding artifacts in extracted text (the replacement character, lost parentheticals).
 
 ### Whole-report items
+
 - chapter7.tex draft is stale. Rewrite it from the repo, insert as Chapter 6, renumber the conclusion to Chapter 7, then update the abstract, executive summary and conclusion.
 - Pitch score 3 versus 4 mismatch note.
 - Turnitin reports to the library.
 - Run live PostgreSQL with pgvector once (docker compose, Alembic migrations, index the corpus, one end-to-end question) before the demo.
 - Create the shared team email for SECURITY.md and CODE_OF_CONDUCT.
+
+### Per-model passage splitting (added 2026-11-20)
+- Production and evaluation both split chunks per embedding model (corpus_indexer.py -> prepare_chunks -> split_chunks_for_model). Stored rows are passages (MPNet 718, E5 301), not the 240 chunks.
+- main.tex line 1616: after "about 500 tokens" add that passages are split further to fit the embedding model's input limit.
+- Check that user-facing citations show the parent section and not "Continuation N/M" or a :continuation-N chunk id.
