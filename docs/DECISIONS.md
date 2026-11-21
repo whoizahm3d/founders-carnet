@@ -678,3 +678,9 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 **Why:** DESIGN.md prohibits invented statistics, cohort labels, and vetted investor claims on the Founder Dashboard. Including them would misrepresent the platform state to the user and to any evaluator reading the report. The report's figure descriptions must match what the screen actually shows.
 
 **Follow-ups:** Update the report figure captions that reference a cohort stat block or a "Series Seed" breadcrumb label. See `docs/pending-report-changes.md` (2026-11-17 entry).
+
+## 2026-11-22: Corpus hashes are LF-normalized
+- Context: CI (Linux) failed with a SHA-256 mismatch on fbr_register_income_tax_2026-10-04.txt. Git stores the file with LF, while the Windows working copy is converted to CRLF, and the manifest held the CRLF hash.
+- Decision: the manifest stores the SHA-256 of the LF-normalized content. verify_corpus_file normalizes CRLF to LF before hashing, so Windows and Linux agree.
+- Scope: only rag/corpus_manifest.md changed (one hash). The text, chunks, question set and dev results are unchanged.
+- Note: run_metadata.csv and the constant in run_dev_retrieval.py keep the old CRLF hash as a historical record of the dev run.
