@@ -1,0 +1,9 @@
+...............................................................          [100%]
+============================== warnings summary ===============================
+tests/test_evaluation_guards.py::test_rehearse_reproduces_stored_dev_hit_counts
+tests/test_evaluation_guards.py::test_rehearse_reproduces_stored_dev_hit_counts
+  E:\Documents\advanced_statistics\fyp\founders-carnet\rag\evaluation\run_dev_retrieval.py:551: FutureWarning: The `get_sentence_embedding_dimension` method has been renamed to `get_embedding_dimension`.
+    dim = model.get_sentence_embedding_dimension()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+63 passed, 2 warnings in 752.86s (0:12:32)
