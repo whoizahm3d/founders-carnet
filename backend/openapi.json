@@ -52,6 +52,37 @@
         "title": "AdminAppealRead",
         "type": "object"
       },
+      "AdminStatsRead": {
+        "properties": {
+          "decisions_last_7_days": {
+            "title": "Decisions Last 7 Days",
+            "type": "integer"
+          },
+          "pending_appeals": {
+            "title": "Pending Appeals",
+            "type": "integer"
+          },
+          "pending_verification_queue": {
+            "title": "Pending Verification Queue",
+            "type": "integer"
+          },
+          "users_by_role": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Users By Role",
+            "type": "object"
+          }
+        },
+        "required": [
+          "users_by_role",
+          "pending_verification_queue",
+          "pending_appeals",
+          "decisions_last_7_days"
+        ],
+        "title": "AdminStatsRead",
+        "type": "object"
+      },
       "AdminVerificationDecisionWrite": {
         "additionalProperties": false,
         "properties": {
@@ -207,6 +238,28 @@
           "reason"
         ],
         "title": "AdminVerificationSignalRead",
+        "type": "object"
+      },
+      "AuthSessionResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "token_type": {
+            "default": "bearer",
+            "title": "Token Type",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRead"
+          }
+        },
+        "required": [
+          "access_token",
+          "user"
+        ],
+        "title": "AuthSessionResponse",
         "type": "object"
       },
       "CitationResult": {
@@ -1595,12 +1648,26 @@
             "type": "number"
           },
           "secp_entity_name": {
-            "title": "Secp Entity Name",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secp Entity Name"
           },
           "secp_registration_number": {
-            "title": "Secp Registration Number",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secp Registration Number"
           },
           "signals": {
             "additionalProperties": true,
@@ -1676,16 +1743,30 @@
             "type": "boolean"
           },
           "secp_entity_name": {
-            "maxLength": 255,
-            "minLength": 2,
-            "title": "Secp Entity Name",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secp Entity Name"
           },
           "secp_registration_number": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Secp Registration Number",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secp Registration Number"
           },
           "trust_notice_accepted": {
             "title": "Trust Notice Accepted",
@@ -1695,9 +1776,7 @@
         "required": [
           "processing_consent_accepted",
           "trust_notice_accepted",
-          "portfolio_url",
-          "secp_entity_name",
-          "secp_registration_number"
+          "portfolio_url"
         ],
         "title": "ProfileVerificationWrite",
         "type": "object"
@@ -2290,6 +2369,121 @@
         "title": "StartupUpdate",
         "type": "object"
       },
+      "StartupVerificationDecisionWrite": {
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "title": "StartupVerificationDecisionWrite",
+        "type": "object"
+      },
+      "StartupVerificationRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By User Id"
+          },
+          "startup_id": {
+            "title": "Startup Id",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "startup_id",
+          "status",
+          "note",
+          "reason",
+          "reviewed_by_user_id",
+          "created_at",
+          "reviewed_at"
+        ],
+        "title": "StartupVerificationRead",
+        "type": "object"
+      },
+      "StartupVerificationRequestWrite": {
+        "properties": {
+          "note": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "StartupVerificationRequestWrite",
+        "type": "object"
+      },
       "TalentJobApplicationRead": {
         "properties": {
           "cover_letter": {
@@ -2588,6 +2782,78 @@
         ],
         "title": "VerificationAppealWrite",
         "type": "object"
+      },
+      "VerificationDecisionRead": {
+        "properties": {
+          "band": {
+            "enum": [
+              "high",
+              "review",
+              "low"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "title": "Decision",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reviewer_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer User Id"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "signals": {
+            "additionalProperties": true,
+            "title": "Signals",
+            "type": "object"
+          },
+          "threshold_version": {
+            "title": "Threshold Version",
+            "type": "string"
+          },
+          "verification_id": {
+            "title": "Verification Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "verification_id",
+          "reviewer_user_id",
+          "decision",
+          "reason",
+          "score",
+          "band",
+          "signals",
+          "threshold_version",
+          "created_at"
+        ],
+        "title": "VerificationDecisionRead",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -2625,20 +2891,103 @@
         "summary": "Health Check"
       }
     },
+    "/api/v1/admin/startups/verification-queue": {
+      "get": {
+        "operationId": "startup_verification_queue_api_v1_admin_startups_verification_queue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StartupVerificationRead"
+                  },
+                  "title": "Response Startup Verification Queue Api V1 Admin Startups Verification Queue Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Startup Verification Queue",
+        "tags": [
+          "startup verification"
+        ]
+      }
+    },
+    "/api/v1/admin/startups/{request_id}/decision": {
+      "post": {
+        "operationId": "decide_startup_verification_api_v1_admin_startups__request_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartupVerificationDecisionWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartupVerificationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Startup Verification",
+        "tags": [
+          "startup verification"
+        ]
+      }
+    },
     "/api/v1/admin/stats": {
       "get": {
-        "description": "Admin-only endpoint for the first access-control slice.\n\nFR-23, NFR-5.",
+        "description": "Return live account and review counts for the admin console (FR-26).",
         "operationId": "admin_stats_api_v1_admin_stats_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Admin Stats Api V1 Admin Stats Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AdminStatsRead"
                 }
               }
             },
@@ -2651,6 +3000,105 @@
           }
         ],
         "summary": "Admin Stats"
+      }
+    },
+    "/api/v1/admin/verification/decisions": {
+      "get": {
+        "operationId": "read_decision_log_api_v1_admin_verification_decisions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "verification_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verification Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reviewer_user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reviewer User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VerificationDecisionRead"
+                  },
+                  "title": "Response Read Decision Log Api V1 Admin Verification Decisions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Decision Log",
+        "tags": [
+          "admin verification"
+        ]
       }
     },
     "/api/v1/admin/verification/review-queue": {
@@ -2776,7 +3224,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserRead"
+                  "$ref": "#/components/schemas/AuthSessionResponse"
                 }
               }
             },
@@ -3153,6 +3601,108 @@
         "summary": "Update Startup",
         "tags": [
           "founders"
+        ]
+      }
+    },
+    "/api/v1/founders/me/startups/{startup_id}/verification-request": {
+      "get": {
+        "operationId": "read_startup_verification_api_v1_founders_me_startups__startup_id__verification_request_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "startup_id",
+            "required": true,
+            "schema": {
+              "title": "Startup Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartupVerificationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Startup Verification",
+        "tags": [
+          "startup verification"
+        ]
+      },
+      "post": {
+        "operationId": "request_startup_verification_api_v1_founders_me_startups__startup_id__verification_request_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "startup_id",
+            "required": true,
+            "schema": {
+              "title": "Startup Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartupVerificationRequestWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartupVerificationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Startup Verification",
+        "tags": [
+          "startup verification"
         ]
       }
     },
@@ -3698,6 +4248,30 @@
       }
     },
     "/api/v1/matching/me/profile": {
+      "get": {
+        "operationId": "read_ecosystem_profile_api_v1_matching_me_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EcosystemProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Ecosystem Profile",
+        "tags": [
+          "startup intelligence"
+        ]
+      },
       "put": {
         "operationId": "save_ecosystem_profile_api_v1_matching_me_profile_put",
         "requestBody": {
@@ -4689,6 +5263,30 @@
       }
     },
     "/api/v1/talent/me/profile": {
+      "get": {
+        "operationId": "read_talent_profile_api_v1_talent_me_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TalentProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Talent Profile",
+        "tags": [
+          "startup intelligence"
+        ]
+      },
       "put": {
         "operationId": "save_talent_profile_api_v1_talent_me_profile_put",
         "requestBody": {
@@ -4917,6 +5515,63 @@
           }
         ],
         "summary": "Appeal Auto Rejection",
+        "tags": [
+          "profile verification"
+        ]
+      }
+    },
+    "/api/v1/verification/profiles/{profile_user_id}/block": {
+      "post": {
+        "operationId": "block_profile_api_v1_verification_profiles__profile_user_id__block_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_user_id",
+            "required": true,
+            "schema": {
+              "title": "Profile User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileReportWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileReportRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Block Profile",
         "tags": [
           "profile verification"
         ]

@@ -127,7 +127,8 @@ def test_unverified_or_non_owner_founder_cannot_manage_job_listings():
         "employment_type": "job",
         "location": "Lahore",
     })
-    assert unverified_publish.status_code == 404
+    assert unverified_publish.status_code == 403
+    assert unverified_publish.json()["detail"] == "Startup is not verified"
 
     set_startup_verified(startup["id"])
     created = client.post(f"/api/v1/startups/{startup['id']}/jobs", headers=founder, json={

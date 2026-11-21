@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.database import get_db
-from app.models import Base, User
+from app.models import Base, ConsentRecord, User
 from app.security import create_access_token
 from app.services.compliance_assistant import (
     ComplianceAnswerResult,
@@ -72,6 +72,13 @@ def client_and_service():
             role="mentor",
         )
         session.add_all([founder, mentor])
+        session.commit()
+        session.add(ConsentRecord(
+            user_id=founder.id,
+            consent_type="non_essential_processing",
+            consent_version="v1",
+            source="web",
+        ))
         session.commit()
         session.refresh(founder)
         session.refresh(mentor)

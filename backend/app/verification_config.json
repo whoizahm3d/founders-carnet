@@ -1,0 +1,14 @@
+{
+  "version": "verification-v3",
+  "weights": {
+    "linkedin": 0.03,
+    "secp": 0.02,
+    "completeness": 0.65,
+    "github": 0.10,
+    "portfolio": 0.20
+  },
+  "thresholds": {
+    "low": 0.76,
+    "high": 0.90
+  }
+}

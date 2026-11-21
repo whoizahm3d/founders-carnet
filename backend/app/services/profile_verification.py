@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from app.config import Settings
 from app.feature_models import EcosystemProfile
 from app.services.secp_check import SecpCheckResult
-from app.verification_schemas import PortfolioVerdict, VerificationScoringResult
+from app.verification_schemas import PortfolioVerdict, VerificationScoringResult, VerificationSignalDetail
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,8 @@ def score_profile_verification(
     role: str,
     linkedin_connected: bool,
     secp_result: SecpCheckResult,
+    secp_entity_name: str | None,
+    secp_registration_number: str | None,
     github_url: str | None,
     portfolio_result: PortfolioVerdict,
     portfolio_reason: str,
@@ -49,7 +51,10 @@ def score_profile_verification(
         "secp_cross_check": SignalValue(
             score=secp_result.score,
             outcome=secp_result.outcome,
-            input_snapshot={"entity_name": "submitted", "registration_number": "submitted"},
+            input_snapshot={
+                "entity_name": secp_entity_name or "not_provided",
+                "registration_number": secp_registration_number or "not_provided",
+            },
             reason=secp_result.reason,
         ),
         "profile_completeness": SignalValue(
@@ -88,16 +93,16 @@ def score_profile_verification(
         else "review"
     )
 
-    # The SECP cross-check is a manual reviewer step; profile completeness or a link alone
-    # must not establish a legal entity's identity.
-    status = "auto_rejected" if band == "low" else "auto_verified" if band == "high" and secp_result.outcome == "verified" else "pending_review"
+    # A high aggregate band is an automatic profile result; the manual SECP signal remains
+    # visible in the immutable log so a reviewer can revoke an incorrect result (FR-12, FR-14).
+    status = "auto_rejected" if band == "low" else "auto_verified" if band == "high" else "pending_review"
     if band == "low":
         reason = "The collected signals are below the verification threshold. " + "; ".join(
             value.reason for value in signal_values.values()
         )
     elif band == "high":
         reason = "The signals score highly. " + (
-            "The SECP check is recorded as verified." if status == "auto_verified" else "A manual SECP cross-check is still required."
+            "The SECP signal remains recorded for reviewer follow-up." if status == "auto_verified" else "A manual SECP cross-check is still required."
         )
     else:
         reason = "The collected signals need human review. " + "; ".join(
@@ -118,4 +123,13 @@ def score_profile_verification(
         signals={name: value.outcome for name, value in signal_values.items()},
         reason=reason,
         threshold_version=threshold_version,
+        signal_details={
+            name: VerificationSignalDetail(
+                score=value.score,
+                outcome=value.outcome,
+                input_snapshot=value.input_snapshot,
+                reason=value.reason,
+            )
+            for name, value in signal_values.items()
+        },
     )

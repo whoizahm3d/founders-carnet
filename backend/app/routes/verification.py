@@ -3,14 +3,14 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.dependencies import get_current_user, require_roles
+from app.dependencies import ensure_processing_consent, get_current_user, require_roles
 from app.feature_models import (
     EcosystemProfile,
     ProfileReport,
@@ -25,8 +25,10 @@ from app.services.feature_ai import get_gateway
 from app.services.llm_gateway import GeminiGateway
 from app.services.portfolio_verification import FirecrawlPortfolioFetcher, PortfolioFetchError, get_portfolio_fetcher
 from app.services.profile_verification import score_profile_verification
+from app.services.secp_check import SecpCheckResult
 from app.services.secp_check import SecpChecker, get_secp_checker
 from app.models import OAuthIdentity
+from app.rate_limiter import AI_LIMIT, limiter
 from app.verification_schemas import (
     PortfolioLinkAssessment,
     ProfileReportRead,
@@ -48,7 +50,9 @@ SecpCheckerDep = Annotated[SecpChecker, Depends(get_secp_checker)]
 
 
 @router.post("/me", response_model=ProfileVerificationRead, status_code=status.HTTP_201_CREATED)
+@limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
 def submit_verification(
+    request: Request,
     payload: ProfileVerificationWrite,
     user: VerificationUser,
     session: SessionDep,
@@ -56,6 +60,7 @@ def submit_verification(
     secp_checker: SecpCheckerDep,
     portfolio_fetcher: Annotated[FirecrawlPortfolioFetcher, Depends(get_portfolio_fetcher)],
 ) -> ProfileVerificationRead:
+    ensure_processing_consent(session, user.id)
     if user.role not in {"mentor", "investor", "talent"}:
         raise HTTPException(status_code=403, detail="This role cannot request verification")
     if not payload.processing_consent_accepted or not payload.trust_notice_accepted:
@@ -68,6 +73,10 @@ def submit_verification(
     )
     if ecosystem_profile is None:
         raise HTTPException(status_code=409, detail="Create a matching profile before requesting verification")
+    if user.role != "talent" and (
+        payload.secp_entity_name is None or payload.secp_registration_number is None
+    ):
+        raise HTTPException(status_code=422, detail="SECP entity details are required for this role")
     existing = session.scalar(
         select(ProfileVerification.id).where(ProfileVerification.user_id == user.id)
     )
@@ -124,15 +133,18 @@ def submit_verification(
             OAuthIdentity.provider == "linkedin",
         )
     ) is not None
-    secp_result = secp_checker.check(
-        payload.secp_entity_name.strip(),
-        payload.secp_registration_number.strip(),
+    secp_result = (
+        SecpCheckResult(outcome="not_provided", score=0.0, reason="Talent profiles do not have a SECP entity signal.")
+        if user.role == "talent"
+        else secp_checker.check(payload.secp_entity_name, payload.secp_registration_number)
     )
     result = score_profile_verification(
         ecosystem_profile,
         role=user.role,
         linkedin_connected=linkedin_connected,
         secp_result=secp_result,
+        secp_entity_name=payload.secp_entity_name if user.role != "talent" else None,
+        secp_registration_number=payload.secp_registration_number if user.role != "talent" else None,
         github_url=talent_profile.github_url if talent_profile else None,
         portfolio_result=assessment.result,
         portfolio_reason=assessment.reason,
@@ -142,8 +154,8 @@ def submit_verification(
     verification = ProfileVerification(
         user_id=user.id,
         portfolio_url=str(payload.portfolio_url),
-        secp_entity_name=payload.secp_entity_name.strip(),
-        secp_registration_number=payload.secp_registration_number.strip(),
+        secp_entity_name=payload.secp_entity_name if user.role != "talent" else None,
+        secp_registration_number=payload.secp_registration_number if user.role != "talent" else None,
         status=result.status,
         score=result.score,
         band=result.band,
@@ -158,50 +170,15 @@ def submit_verification(
     )
     session.add(verification)
     session.flush()
-    signal_definitions = {
-        "linkedin_oauth": {
-            "score": 1.0 if linkedin_connected else 0.0,
-            "outcome": "connected" if linkedin_connected else "not_connected",
-            "input_snapshot": {"provider": "linkedin", "identity_present": linkedin_connected},
-            "reason": "A LinkedIn OAuth identity is linked." if linkedin_connected else "No LinkedIn OAuth identity is linked.",
-        },
-        "secp_cross_check": {
-            "score": secp_result.score,
-            "outcome": secp_result.outcome,
-            "input_snapshot": {
-                "entity_name": payload.secp_entity_name.strip(),
-                "registration_number": payload.secp_registration_number.strip(),
-            },
-            "reason": secp_result.reason,
-        },
-        "profile_completeness": {
-            "score": result.signals["profile_completeness"] == "complete",
-            "outcome": result.signals["profile_completeness"],
-            "input_snapshot": {"profile_id": ecosystem_profile.id},
-            "reason": "The matching profile completeness rule was evaluated.",
-        },
-        "github_for_talent": {
-            "score": bool(talent_profile and talent_profile.github_url),
-            "outcome": result.signals["github_for_talent"],
-            "input_snapshot": {"github_url_present": bool(talent_profile and talent_profile.github_url), "role": user.role},
-            "reason": "The optional GitHub link rule was evaluated.",
-        },
-        "portfolio_link": {
-            "score": {"consistent": 1.0, "insufficient": 0.5, "inconsistent": 0.0}[assessment.result],
-            "outcome": assessment.result,
-            "input_snapshot": {"portfolio_url": str(payload.portfolio_url)},
-            "reason": assessment.reason,
-        },
-    }
-    for signal_name, signal in signal_definitions.items():
+    for signal_name, signal in result.signal_details.items():
         session.add(
             VerificationSignal(
                 verification_id=verification.id,
                 signal_name=signal_name,
-                input_snapshot=signal["input_snapshot"],
-                score=float(signal["score"]),
-                outcome=signal["outcome"],
-                reason=signal["reason"],
+                input_snapshot=signal.input_snapshot,
+                score=signal.score,
+                outcome=signal.outcome,
+                reason=signal.reason,
             )
         )
     session.add(
@@ -240,6 +217,7 @@ def appeal_auto_rejection(
     user: VerificationUser,
     session: SessionDep,
 ) -> ProfileVerificationRead:
+    ensure_processing_consent(session, user.id)
     verification = session.scalar(
         select(ProfileVerification).where(ProfileVerification.user_id == user.id)
     )
@@ -306,25 +284,74 @@ def report_profile(
         reporter_user_id=user.id,
         target_user_id=profile_user_id,
         reason=payload.reason.strip(),
+        kind="report",
     )
-    verification.status = "pending_review"
-    verification.reason = "A user report requires human review."
-    verification.rescore_locked = True
     session.add(report)
+    _record_profile_report_decision(session, verification, kind="report")
+    session.commit()
+    session.refresh(report)
+    return ProfileReportRead(id=report.id)
+
+
+@router.post(
+    "/profiles/{profile_user_id}/block",
+    response_model=ProfileReportRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def block_profile(
+    profile_user_id: int,
+    payload: ProfileReportWrite,
+    user: ReportUser,
+    session: SessionDep,
+) -> ProfileReportRead:
+    if profile_user_id == user.id:
+        raise HTTPException(status_code=400, detail="You cannot block your own profile")
+    verification = session.scalar(
+        select(ProfileVerification).where(ProfileVerification.user_id == profile_user_id)
+    )
+    if verification is None:
+        raise HTTPException(status_code=404, detail="Verified profile not found")
+    duplicate = session.scalar(
+        select(ProfileReport.id).where(
+            ProfileReport.reporter_user_id == user.id,
+            ProfileReport.target_user_id == profile_user_id,
+        )
+    )
+    if duplicate is not None:
+        raise HTTPException(status_code=409, detail="You have already reported or blocked this profile")
+    block = ProfileReport(
+        reporter_user_id=user.id,
+        target_user_id=profile_user_id,
+        reason=payload.reason.strip(),
+        kind="block",
+    )
+    session.add(block)
+    _record_profile_report_decision(session, verification, kind="block")
+    session.commit()
+    session.refresh(block)
+    return ProfileReportRead(id=block.id)
+
+
+def _record_profile_report_decision(
+    session: Session, verification: ProfileVerification, *, kind: str
+) -> None:
+    reviewable_states = {"verified", "auto_verified", "pending_review"}
+    if verification.status in reviewable_states:
+        verification.status = "pending_review"
+        verification.reason = f"A user {kind} requires human review."
+    verification.rescore_locked = True
+    decision = "blocked_for_review" if kind == "block" else "reported_for_review"
     session.add(
         VerificationDecision(
             verification_id=verification.id,
-            decision="reported_for_review",
-            reason="A user report routed this profile to human review; score is locked.",
+            decision=decision,
+            reason=f"A user {kind} was recorded; the profile score is locked from rescoring.",
             score=verification.score,
             band=verification.band,
             signals=verification.signals,
             threshold_version=verification.threshold_version,
         )
     )
-    session.commit()
-    session.refresh(report)
-    return ProfileReportRead(id=report.id)
 
 
 def _verification_read(session: Session, verification: ProfileVerification) -> ProfileVerificationRead:

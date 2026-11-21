@@ -1,6 +1,8 @@
 """Background work for profile embeddings and scheduled account deletion."""
 
 from datetime import datetime, timezone
+import hashlib
+import logging
 
 from celery.utils.log import get_task_logger
 from sqlalchemy import select
@@ -12,10 +14,12 @@ from app.models import User
 from app.services.feature_ai import get_encoder
 from app.services.llm_cache import clear_structured_response_cache
 from app.services.matching import profile_match_text
+from app.services.corpus_indexer import main as index_corpus_main
 from app.services.resume_optimizer import delete_resume_pdf
 
 
 logger = get_task_logger(__name__)
+standard_logger = logging.getLogger(__name__)
 
 # Keep these module-level dependencies replaceable for isolated task tests.
 database_session_factory = SessionLocal
@@ -41,12 +45,54 @@ def regenerate_ecosystem_profile_embedding(profile_id: int) -> str:
         if profile is None:
             return "missing"
 
+        text = profile_match_text(profile)
+        source_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
         encoder = configured_encoder_factory()
-        vector = encoder.encode([profile_match_text(profile)])[0]
+        if profile.source_hash == source_hash and profile.embedding_model == encoder.model_name:
+            return "skipped"
+        vector = encoder.encode([text])[0]
         profile.embedding = list(vector)
         profile.embedding_model = encoder.model_name
+        profile.source_hash = source_hash
         session.commit()
         return "updated"
+
+
+@celery_app.task(name="app.tasks.regenerate_stale_embeddings", ignore_result=True,
+                 autoretry_for=(Exception,), retry_backoff=True, retry_backoff_max=300, max_retries=5)
+def regenerate_stale_embeddings(batch_size: int = 100) -> dict[str, int]:
+    if not 1 <= batch_size <= 1000:
+        raise ValueError("batch_size must be between 1 and 1000")
+    encoder = configured_encoder_factory()
+    updated = skipped = 0
+    with database_session_factory() as session:
+        profiles = session.scalars(select(EcosystemProfile).order_by(EcosystemProfile.id)).all()
+        pending = []
+        for profile in profiles:
+            source_hash = hashlib.sha256(profile_match_text(profile).encode("utf-8")).hexdigest()
+            if profile.source_hash == source_hash and profile.embedding_model == encoder.model_name:
+                skipped += 1
+                continue
+            pending.append((profile, source_hash))
+        for offset in range(0, len(pending), batch_size):
+            batch = pending[offset:offset + batch_size]
+            vectors = encoder.encode([profile_match_text(profile) for profile, _ in batch])
+            for (profile, source_hash), vector in zip(batch, vectors, strict=True):
+                profile.embedding = list(vector)
+                profile.embedding_model = encoder.model_name
+                profile.source_hash = source_hash
+            updated += len(batch)
+        session.commit()
+    standard_logger.info("Embedding regeneration finished: updated=%d skipped=%d", updated, skipped)
+    return {"updated": updated, "skipped": skipped}
+
+
+@celery_app.task(name="app.tasks.index_compliance_corpus", ignore_result=True,
+                 autoretry_for=(Exception,), retry_backoff=True, retry_backoff_max=300, max_retries=5)
+def index_compliance_corpus() -> dict[str, int]:
+    index_corpus_main()
+    standard_logger.info("Compliance corpus indexing task completed")
+    return {"completed": 1}
 
 
 @celery_app.task(

@@ -3,8 +3,25 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import ConsentRecord, User
 from app.security import decode_access_token, security
+
+
+NON_ESSENTIAL_CONSENT_TYPE = "non_essential_processing"
+
+
+def ensure_processing_consent(db: Session, user_id: int) -> None:
+    consent = (
+        db.query(ConsentRecord)
+        .filter(
+            ConsentRecord.user_id == user_id,
+            ConsentRecord.consent_type == NON_ESSENTIAL_CONSENT_TYPE,
+            ConsentRecord.withdrawn_at.is_(None),
+        )
+        .first()
+    )
+    if consent is None:
+        raise HTTPException(status_code=403, detail="Consent withdrawn")
 
 
 def get_current_user(

@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -23,12 +23,35 @@ from app.verification_schemas import (
     AdminVerificationQueueItem,
     AdminVerificationSignalRead,
     ProfileVerificationRead,
+    VerificationDecisionRead,
 )
 
 
 router = APIRouter(prefix="/api/v1/admin/verification", tags=["admin verification"])
 SessionDep = Annotated[Session, Depends(get_db)]
 AdminUser = Annotated[User, Depends(require_roles("admin"))]
+
+
+@router.get("/decisions", response_model=list[VerificationDecisionRead])
+def read_decision_log(
+    _: AdminUser,
+    session: SessionDep,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    verification_id: int | None = Query(default=None, ge=1),
+    reviewer_user_id: int | None = Query(default=None, ge=1),
+) -> list[VerificationDecisionRead]:
+    query = select(VerificationDecision)
+    if verification_id is not None:
+        query = query.where(VerificationDecision.verification_id == verification_id)
+    if reviewer_user_id is not None:
+        query = query.where(VerificationDecision.reviewer_user_id == reviewer_user_id)
+    rows = session.scalars(
+        query.order_by(VerificationDecision.created_at.desc(), VerificationDecision.id.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    return [VerificationDecisionRead.model_validate(row) for row in rows]
 
 
 @router.get("/review-queue", response_model=list[AdminVerificationQueueItem])

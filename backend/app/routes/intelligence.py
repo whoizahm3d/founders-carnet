@@ -1,16 +1,17 @@
 """Backend APIs for matching, startup readiness, and pitch practice."""
 
 import logging
+import hashlib
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.sql import Select
 from sqlalchemy.orm import Session, load_only
 
 from app.database import get_db
-from app.dependencies import get_current_user, require_roles
+from app.dependencies import ensure_processing_consent, get_current_user, require_roles
 from app.feature_models import EcosystemProfile, MatchRecord, PitchSession, PitchTurn, ProfileVerification, ReadinessAssessment, TalentProfile, VerificationDecision
 from app.feature_schemas import (
     EcosystemProfileRead,
@@ -26,7 +27,8 @@ from app.feature_schemas import (
     TalentProfileRead,
     TalentProfileWrite,
 )
-from app.models import FounderProfile, Startup, User
+from app.models import ConsentRecord, FounderProfile, Startup, User
+from app.rate_limiter import AI_LIMIT, limiter
 from app.tasks import regenerate_ecosystem_profile_embedding
 from app.services.compliance_retrieval import cosine_similarity
 from app.services.feature_ai import get_encoder, get_gateway
@@ -62,6 +64,7 @@ TalentUser = Annotated[User, Depends(require_roles("talent"))]
 
 @router.put("/matching/me/profile", response_model=EcosystemProfileRead)
 def save_ecosystem_profile(payload: EcosystemProfileWrite, user: CurrentUser, db: SessionDep) -> EcosystemProfile:
+    ensure_processing_consent(db, user.id)
     if user.role not in {"mentor", "investor", "talent"}:
         raise HTTPException(status_code=403, detail="This role does not have an ecosystem match profile")
     if payload.ticket_min is not None and payload.ticket_max is not None and payload.ticket_min > payload.ticket_max:
@@ -78,7 +81,13 @@ def save_ecosystem_profile(payload: EcosystemProfileWrite, user: CurrentUser, db
         verification = db.scalar(
             select(ProfileVerification).where(ProfileVerification.user_id == user.id)
         )
-        if verification is not None and verification.status in {"verified", "auto_verified"}:
+        substantive_fields = {"sector", "stages", "skills", "location", "summary", "ticket_min", "ticket_max"}
+        substantive_change = any(getattr(profile, key) != values[key] for key in substantive_fields)
+        if (
+            substantive_change
+            and verification is not None
+            and verification.status in {"verified", "auto_verified"}
+        ):
             verification.status = "pending_review"
             verification.reason = "The matching profile changed and needs a reviewer to re-check it."
             verification.rescore_locked = True
@@ -110,15 +119,28 @@ def save_ecosystem_profile(payload: EcosystemProfileWrite, user: CurrentUser, db
             extra={"profile_id": profile.id, "error_type": type(exc).__name__},
         )
         encoder = get_encoder()
-        profile.embedding = list(encoder.encode([profile_match_text(profile)])[0])
+        source_text = profile_match_text(profile)
+        profile.embedding = list(encoder.encode([source_text])[0])
         profile.embedding_model = encoder.model_name
+        profile.source_hash = hashlib.sha256(source_text.encode("utf-8")).hexdigest()
         db.commit()
         db.refresh(profile)
     return profile
 
 
+@router.get("/matching/me/profile", response_model=EcosystemProfileRead)
+def read_ecosystem_profile(user: CurrentUser, db: SessionDep) -> EcosystemProfile:
+    if user.role not in {"mentor", "investor", "talent"}:
+        raise HTTPException(status_code=403, detail="This role does not have an ecosystem match profile")
+    profile = db.scalar(select(EcosystemProfile).where(EcosystemProfile.user_id == user.id))
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Matching profile not found")
+    return profile
+
+
 @router.put("/talent/me/profile", response_model=TalentProfileRead)
 def save_talent_profile(payload: TalentProfileWrite, user: TalentUser, db: SessionDep) -> TalentProfile:
+    ensure_processing_consent(db, user.id)
     if not payload.consent_accepted:
         raise HTTPException(status_code=400, detail="Talent profile data requires explicit processing consent")
     profile = db.scalar(select(TalentProfile).where(TalentProfile.user_id == user.id))
@@ -139,10 +161,19 @@ def save_talent_profile(payload: TalentProfileWrite, user: TalentUser, db: Sessi
     return profile
 
 
+@router.get("/talent/me/profile", response_model=TalentProfileRead)
+def read_talent_profile(user: TalentUser, db: SessionDep) -> TalentProfile:
+    profile = db.scalar(select(TalentProfile).where(TalentProfile.user_id == user.id))
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Talent profile not found")
+    return profile
+
+
 @router.get("/matching/startups/{startup_id}", response_model=list[MatchRead])
 def recommend_profiles(startup_id: int, user: Founder, db: SessionDep,
                        encoder: EncoderDep,
                        top_k: int = Query(default=3, ge=1, le=3)) -> list[MatchRead]:
+    ensure_processing_consent(db, user.id)
     startup = _owned_startup(db, startup_id, user.id)
     readiness_exists = db.scalar(
         select(ReadinessAssessment.id).where(ReadinessAssessment.startup_id == startup.id).limit(1)
@@ -239,7 +270,15 @@ def list_my_matches(
                 .where(
                     Startup.founder_profile_id == profile.id,
                     EcosystemProfile.is_open.is_(True),
+                    or_(User.role != "mentor", EcosystemProfile.availability != "closed"),
                     User.is_active.is_(True),
+                    exists(
+                        select(ConsentRecord.id).where(
+                            ConsentRecord.user_id == User.id,
+                            ConsentRecord.consent_type == "non_essential_processing",
+                            ConsentRecord.withdrawn_at.is_(None),
+                        )
+                    ),
                     or_(User.role == "talent", ProfileVerification.status.in_(("auto_verified", "verified"))),
                 )
                 .order_by(MatchRecord.score.desc(), MatchRecord.id).offset(offset).limit(limit)
@@ -262,8 +301,6 @@ def list_my_matches(
         ).all()
     responses = []
     for record, candidate, profile in rows:
-        if candidate.role == "mentor" and not profile.is_open:
-            continue
         founder_email = None
         if record.request_status == "accepted" and record.founder_accepted and record.candidate_accepted:
             startup = db.get(Startup, record.startup_id)
@@ -286,6 +323,7 @@ def list_my_matches(
 
 @router.post("/matching/{match_id}/accept", response_model=MatchRead)
 def accept_match(match_id: int, user: CurrentUser, db: SessionDep) -> MatchRead:
+    ensure_processing_consent(db, user.id)
     record, startup, founder, candidate, profile = _load_match_context(db, match_id)
     _require_match_party(user, founder, candidate)
     _ensure_candidate_eligible(db, startup, candidate, profile)
@@ -302,6 +340,8 @@ def accept_match(match_id: int, user: CurrentUser, db: SessionDep) -> MatchRead:
             record.candidate_accepted = True
         db.commit()
         db.refresh(record)
+    elif record.request_status == "pending" and record.requester_user_id == user.id:
+        raise HTTPException(status_code=409, detail="The requester cannot accept their own request")
     elif record.request_status == "pending" and record.requester_user_id != user.id:
         if user.id == founder.user_id:
             record.founder_accepted = True
@@ -320,6 +360,7 @@ def accept_match(match_id: int, user: CurrentUser, db: SessionDep) -> MatchRead:
     status_code=status.HTTP_202_ACCEPTED,
 )
 def request_match(match_id: int, user: CurrentUser, db: SessionDep) -> MatchRead:
+    ensure_processing_consent(db, user.id)
     record, startup, founder, candidate, profile = _load_match_context(db, match_id)
     _require_match_party(user, founder, candidate)
     _ensure_candidate_eligible(db, startup, candidate, profile)
@@ -339,8 +380,10 @@ def request_match(match_id: int, user: CurrentUser, db: SessionDep) -> MatchRead
 
 @router.post("/matching/{match_id}/decline", response_model=MatchRead)
 def decline_match(match_id: int, user: CurrentUser, db: SessionDep) -> MatchRead:
+    ensure_processing_consent(db, user.id)
     record, startup, founder, candidate, profile = _load_match_context(db, match_id)
     _require_match_party(user, founder, candidate)
+    _ensure_candidate_eligible(db, startup, candidate, profile)
 
     if record.request_status == "declined":
         if record.requester_user_id == user.id:
@@ -358,7 +401,9 @@ def decline_match(match_id: int, user: CurrentUser, db: SessionDep) -> MatchRead
 
 
 @router.post("/startups/{startup_id}/readiness", response_model=ReadinessRead, status_code=201)
-def assess_readiness(startup_id: int, user: Founder, db: SessionDep, gateway: GatewayDep) -> ReadinessAssessment:
+@limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
+def assess_readiness(startup_id: int, request: Request, user: Founder, db: SessionDep, gateway: GatewayDep) -> ReadinessAssessment:
+    ensure_processing_consent(db, user.id)
     startup = _owned_startup(db, startup_id, user.id)
     try:
         result = gateway.generate_structured(
@@ -407,7 +452,9 @@ def readiness_history(
 
 
 @router.post("/pitch/sessions", response_model=PitchSessionRead, status_code=201)
-def start_pitch_session(payload: PitchStart, user: Founder, db: SessionDep) -> PitchSessionRead:
+@limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
+def start_pitch_session(payload: PitchStart, request: Request, user: Founder, db: SessionDep) -> PitchSessionRead:
+    ensure_processing_consent(db, user.id)
     startup = _owned_startup(db, payload.startup_id, user.id)
     session = PitchSession(user_id=user.id, startup_id=startup.id, persona=payload.persona,
                            status="active", rubric_version="pitch-v1")
@@ -421,7 +468,9 @@ def start_pitch_session(payload: PitchStart, user: Founder, db: SessionDep) -> P
 
 
 @router.post("/pitch/sessions/{session_id}/turns", response_model=PitchSessionRead)
-def answer_pitch_turn(session_id: int, payload: PitchAnswer, user: Founder, db: SessionDep, gateway: GatewayDep) -> PitchSessionRead:
+@limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
+def answer_pitch_turn(session_id: int, payload: PitchAnswer, request: Request, user: Founder, db: SessionDep, gateway: GatewayDep) -> PitchSessionRead:
+    ensure_processing_consent(db, user.id)
     session = db.scalar(select(PitchSession).where(PitchSession.id == session_id, PitchSession.user_id == user.id))
     if session is None:
         raise HTTPException(status_code=404, detail="Pitch session not found")
@@ -513,6 +562,13 @@ def _matching_candidates_query(
             EcosystemProfile.embedding.is_not(None),
             User.is_active.is_(True),
             User.role.in_(("mentor", "investor", "talent")),
+            exists(
+                select(ConsentRecord.id).where(
+                    ConsentRecord.user_id == User.id,
+                    ConsentRecord.consent_type == "non_essential_processing",
+                    ConsentRecord.withdrawn_at.is_(None),
+                )
+            ),
             or_(User.role == "talent", ProfileVerification.status.in_(("auto_verified", "verified"))),
             func.lower(func.trim(EcosystemProfile.location))
             == startup.location.strip().casefold(),
@@ -569,6 +625,18 @@ def _ensure_candidate_eligible(
     candidate: User,
     profile: EcosystemProfile,
 ) -> None:
+    founder_user_id = db.scalar(
+        select(FounderProfile.user_id).where(FounderProfile.id == startup.founder_profile_id)
+    )
+    active_ids = db.scalars(
+        select(ConsentRecord.user_id).where(
+            ConsentRecord.user_id.in_((candidate.id, founder_user_id)),
+            ConsentRecord.consent_type == "non_essential_processing",
+            ConsentRecord.withdrawn_at.is_(None),
+        )
+    ).all()
+    if candidate.id not in active_ids:
+        raise HTTPException(status_code=404, detail="Match not found")
     if candidate.role in {"mentor", "investor"}:
         verification_status = db.scalar(
             select(ProfileVerification.status).where(ProfileVerification.user_id == candidate.id)

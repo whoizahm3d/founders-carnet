@@ -169,7 +169,6 @@ def test_unverified_mentor_is_hidden_and_profile_edits_return_it_to_review():
     assert client.put("/api/v1/matching/me/profile", headers=mentor, json=profile_payload).status_code == 200
     endpoint = f"/api/v1/matching/startups/{startup['id']}"
     assert client.get(endpoint, headers=founder).json() == []
-
     mark_profile_verified(mentor)
     assert client.get(endpoint, headers=founder).json()[0]["candidate_role"] == "mentor"
 
@@ -181,6 +180,32 @@ def test_unverified_mentor_is_hidden_and_profile_edits_return_it_to_review():
     assert status_response.json()["rescore_locked"] is True
     assert client.get(endpoint, headers=founder).json() == []
 
+
+def test_availability_only_profile_edit_keeps_verified_status_but_substantive_edit_resets_it():
+    mentor = create_user("mentor-availability-edit@example.com", "mentor")
+    payload = {
+        "consent_accepted": True,
+        "sector": "logistics", "stages": ["mvp"], "skills": ["operations"],
+        "availability": "open", "location": "Lahore, Pakistan", "summary": "Logistics mentor.",
+        "is_open": True,
+    }
+    assert client.put("/api/v1/matching/me/profile", headers=mentor, json=payload).status_code == 200
+    assert client.get("/api/v1/matching/me/profile", headers=mentor).status_code == 200
+    mark_profile_verified(mentor)
+
+    availability_change = client.put(
+        "/api/v1/matching/me/profile", headers=mentor,
+        json={**payload, "is_open": False, "availability": "limited"},
+    )
+    assert availability_change.status_code == 200
+    assert client.get("/api/v1/verification/me", headers=mentor).json()["status"] == "verified"
+
+    substantive_change = client.put(
+        "/api/v1/matching/me/profile", headers=mentor,
+        json={**payload, "is_open": False, "availability": "limited", "summary": "Updated founder support."},
+    )
+    assert substantive_change.status_code == 200
+    assert client.get("/api/v1/verification/me", headers=mentor).json()["status"] == "pending_review"
 
 def test_matching_request_can_be_accepted_to_reveal_contacts():
     founder = create_user("founder-request@example.com", "founder")
@@ -203,6 +228,9 @@ def test_matching_request_can_be_accepted_to_reveal_contacts():
     assert request.json()["candidate_accepted"] is False
     assert request.json()["contact_email"] is None
     assert client.post(f"/api/v1/matching/{match_id}/request", headers=founder).status_code == 409
+    assert client.post(f"/api/v1/matching/{match_id}/accept", headers=founder).status_code == 409
+    outsider = create_user("outsider-own-request@example.com", "talent")
+    assert client.post(f"/api/v1/matching/{match_id}/accept", headers=outsider).status_code == 404
 
     accepted = client.post(f"/api/v1/matching/{match_id}/accept", headers=mentor)
     assert accepted.status_code == 200, accepted.text
@@ -257,6 +285,32 @@ def test_closed_mentor_is_not_recommended():
     assert results.json() == []
 
 
+def test_bt08_matching_hard_filters_apply_before_weighted_ranking():
+    """BT-08: geography, eligibility and closed mentor are hard filters; sector/stage remain weighted per DECISIONS 2026-11-10."""
+    founder = create_user("founder-bt08@example.com", "founder")
+    startup = create_startup(founder)
+    matching = create_user("mentor-bt08@example.com", "mentor")
+    wrong_place = create_user("mentor-bt08-place@example.com", "mentor")
+    closed = create_user("mentor-bt08-closed@example.com", "mentor")
+    for person, location, availability in (
+        (matching, "Lahore, Pakistan", "open"),
+        (wrong_place, "Karachi, Pakistan", "open"),
+        (closed, "Lahore, Pakistan", "closed"),
+    ):
+        response = client.put("/api/v1/matching/me/profile", headers=person, json={
+            "consent_accepted": True, "sector": "health", "stages": ["idea"],
+            "skills": ["operations"], "availability": availability,
+            "is_open": availability != "closed", "location": location,
+            "summary": "Profile for BT-08 hard filter coverage.",
+        })
+        assert response.status_code == 200, response.text
+        mark_profile_verified(person)
+    response = client.get(f"/api/v1/matching/startups/{startup['id']}", headers=founder)
+    assert response.status_code == 200, response.text
+    assert response.status_code == 200, response.text
+    assert len(response.json()) == 1
+
+
 def test_talent_profiles_can_match_with_founders():
     founder = create_user("founder-talent@example.com", "founder")
     startup = create_startup(founder)
@@ -267,6 +321,10 @@ def test_talent_profiles_can_match_with_founders():
         "availability": "open", "location": "Lahore, Pakistan", "summary": "Backend engineer for startups.",
     })
     assert profile.status_code == 200, profile.text
+    talent_profile = client.put("/api/v1/talent/me/profile", headers=talent, json={"consent_accepted": True})
+    assert talent_profile.status_code == 200, talent_profile.text
+    assert client.get("/api/v1/talent/me/profile", headers=talent).status_code == 200
+    assert "embedding" not in client.get("/api/v1/matching/me/profile", headers=talent).json()
     results = client.get(f"/api/v1/matching/startups/{startup['id']}", headers=founder)
     assert results.status_code == 200
     assert results.json()[0]["candidate_role"] == "talent"
@@ -335,6 +393,27 @@ def test_closed_mentor_does_not_consume_founder_match_page_limit():
     assert results.status_code == 200
     assert len(results.json()) == 1
     assert results.json()[0]["candidate_user_id"] != closed_mentor_id
+
+
+def test_withdrawn_user_is_excluded_from_new_match_candidates():
+    founder = create_user("founder-consent-match@example.com", "founder")
+    startup = create_startup(founder)
+    mentor = create_user("mentor-consent-match@example.com", "mentor")
+    profile = client.put("/api/v1/matching/me/profile", headers=mentor, json={
+        "consent_accepted": True, "sector": "logistics", "stages": ["mvp"], "skills": ["operations"],
+        "availability": "open", "location": "Lahore, Pakistan", "summary": "Available mentor.",
+    })
+    assert profile.status_code == 200
+    mark_profile_verified(mentor)
+    before = client.get(f"/api/v1/matching/startups/{startup['id']}", headers=founder)
+    assert before.status_code == 200
+    assert len(before.json()) == 1
+
+    withdrawn = client.post("/api/v1/users/me/consent/withdraw", headers=mentor)
+    assert withdrawn.status_code == 200
+    after = client.get(f"/api/v1/matching/startups/{startup['id']}", headers=founder)
+    assert after.status_code == 200
+    assert after.json() == []
 
 
 def test_inactive_candidate_is_not_returned_in_founder_match_list():

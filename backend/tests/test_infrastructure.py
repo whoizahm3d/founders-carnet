@@ -44,3 +44,23 @@ def test_openapi_export_contains_existing_api_routes(tmp_path: Path) -> None:
     assert '"/api/v1/jobs"' in schema
     assert '"/api/v1/verification/me"' in schema
 
+
+def test_unhandled_exception_returns_generic_500_and_logs_server_side(caplog):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    async def broken_endpoint():
+        raise RuntimeError("private stack detail")
+
+    app.add_api_route("/test/unhandled-error", broken_endpoint, methods=["GET"])
+    try:
+        response = TestClient(app, raise_server_exceptions=False).get("/test/unhandled-error")
+    finally:
+        app.router.routes = [route for route in app.router.routes if getattr(route, "path", None) != "/test/unhandled-error"]
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error"}
+    assert "private stack detail" not in response.text
+    assert "private stack detail" in caplog.text
+

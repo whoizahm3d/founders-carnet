@@ -50,6 +50,8 @@ Restore never overwrites a file you still have unless you pass `--force`. Withou
 
 ## 5. Python
 
+For local admin provisioning, from `backend/` run `..\.venv\Scripts\python.exe ..\scripts\create_admin.py admin@example.com "Admin Name"`. It reads `CARNET_ADMIN_PASSWORD` or prompts without echoing it. For the Next.js client, set `CORS_ALLOWED_ORIGINS` to a comma-separated list (default `http://localhost:3000`). Admins are provisioned through this CLI only; the API has no admin registration endpoint.
+
 The report names Python 3.11, Node 24 and PostgreSQL 16 (the Node 20 to 24 change is logged in `docs/DECISIONS.md`, 2026-10-15 and 2026-10-16). FastAPI and sentence-transformers both support 3.11, so all three of you should use it. `CLAUDE.md` has the Python rules Claude follows.
 
 **Check your version** (PowerShell):

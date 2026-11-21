@@ -16,4 +16,5 @@ httpx==0.28.1
 google-genai==2.31.0
 celery==5.5.3
 redis==6.4.0
+slowapi==0.1.10
 -e ../rag

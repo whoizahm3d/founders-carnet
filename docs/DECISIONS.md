@@ -316,3 +316,54 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 **Why:** This supports NFR-2 and NFR-19 while keeping private request content out of operational records and honoring the account deletion flow in NFR-11.
 
 **Follow-ups:** Update the report's gateway description to specify sanitized metadata rather than prompt/evidence persistence and describe the 24-hour user-scoped cache and its deletion cleanup.
+
+## 2026-11-22: Verification score bands with manual SECP follow-up
+
+**Context:** The manual SECP checker always reports `pending_manual_review`, so requiring an SECP `verified` outcome made the high band unable to produce `auto_verified`. Defaults also needed to let a complete profile reach the high band without LinkedIn OAuth.
+
+**Decision:** Keep the SECP check manual and keep its pending result in the signal audit. A high aggregate score becomes `auto_verified`; reviewers retain the decision log and can revoke it later. Store the weights and thresholds in versioned `backend/app/verification_config.json` and include the version and active values in `threshold_version`. Talent has no SECP entity and records `not_provided` with score 0.0. Signal rows are copied from the scoring result so their weighted sum matches the saved total.
+
+**Why:** This makes FR-14's high/review/low bands reachable without claiming an automated legal-record check. The signal remains transparent, the manual review boundary remains explicit, and incomplete profiles can stay in the review band.
+
+**Follow-ups:** Update the report's verification decision flow and signal-score defaults; retain manual SECP review as a reviewer follow-up.
+
+## 2026-11-22: Profile block uses the FR-16 review lock
+
+**Context:** FR-16 requires blocked profiles to go to human review and stop rescoring, while existing report state transitions could overwrite appeal or rejected statuses.
+
+**Decision:** Add a public-role block operation recorded in the existing profile report table with `kind=block`. Only verified, auto-verified, and pending-review cases change to `pending_review`; appeal-pending and final rejected states remain visible. Every report or block locks rescoring and appends a decision-log row.
+
+**Why:** This keeps review state auditable and prevents user reports from hiding a final rejection or an appeal already in progress.
+
+**Follow-ups:** Update the report's FR-16 API and status transition description.
+
+## 2026-11-22: Founder startup verification review queue
+
+**Context:** The job board restricts posting to verified startups, but no current founder-facing process could set `Startup.is_verified`, leaving the FR-24 posting path unreachable outside direct database edits.
+
+**Decision:** Add an owner-only startup verification request and an admin-only review queue. Store each request and reviewer decision in `startup_verification_requests`; approval sets `Startup.is_verified`, while rejection leaves it false.
+
+**Why:** This closes the operational path required to use the already implemented verified-founder job board, while keeping the decision auditable and away from public registration or self-verification.
+
+**Follow-ups:** Update the report's FR-24 workflow and backend API description to include startup verification review.
+
+
+## 2026-11-22: Model-backed data dictionary (Option A)
+
+**Context:** The report schema diagram includes 37 FYP-1 concepts, while the active SQLAlchemy schema has fewer physical tables because several concepts are merged or stored as JSON.
+
+**Decision:** Generate `docs/data_dictionary.md` from the live SQLAlchemy models (Option A), and retain the complete 37-row FYP-1 comparison in `docs/schema_gap_report.md`. Unbuilt concepts remain marked as designed for FYP-2.
+
+**Why:** This keeps physical columns accurate without misrepresenting the report's conceptual schema.
+
+**Follow-ups:** Regenerate the dictionary when model metadata changes.
+
+## 2026-11-22: Idempotent embedding freshness tracking
+
+**Context:** Background profile embeddings could not distinguish unchanged source text from a profile requiring regeneration.
+
+**Decision:** Add nullable `ecosystem_profiles.source_hash` in migration 0015. Embedding tasks compare SHA-256 source text and encoder model before writing, and a batch task repairs missing, stale, or model-mismatched vectors.
+
+**Why:** A nullable migration keeps existing databases upgrade-safe; the batch task fills legacy hashes and is safe to rerun.
+
+**Follow-ups:** Track task outcomes without logging profile content or identifiers.

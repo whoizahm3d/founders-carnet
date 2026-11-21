@@ -1,16 +1,14 @@
 """Founder market research from public web evidence (FR-4, NFR-19)."""
 
-from __future__ import annotations
-
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_roles
+from app.dependencies import ensure_processing_consent, require_roles
 from app.feature_models import MarketResearchReport
 from app.market_research_schemas import (
     CitedStatement,
@@ -19,6 +17,7 @@ from app.market_research_schemas import (
     MarketResearchRequest,
 )
 from app.models import FounderProfile, Startup, User
+from app.rate_limiter import AI_LIMIT, limiter
 from app.services.feature_ai import get_gateway
 from app.services.llm_gateway import GeminiGateway
 from app.services.web_search import FirecrawlSearch, FirecrawlSearchError, get_market_search
@@ -34,13 +33,16 @@ SearchDep = Annotated[FirecrawlSearch, Depends(get_market_search)]
 
 
 @router.post("/market-research", response_model=MarketResearchRead, status_code=status.HTTP_201_CREATED)
+@limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
 def create_market_research(
+    request: Request,
     payload: MarketResearchRequest,
     user: Founder,
     db: SessionDep,
     gateway: GatewayDep,
     search: SearchDep,
 ) -> MarketResearchRead:
+    ensure_processing_consent(db, user.id)
     startup = _owned_startup(db, payload.startup_id, user.id)
     search_query = f"Pakistan {startup.sector} {startup.name} {payload.question}"[:500]
     try:

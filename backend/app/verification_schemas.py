@@ -19,8 +19,8 @@ class ProfileVerificationWrite(BaseModel):
     processing_consent_accepted: bool
     trust_notice_accepted: bool
     portfolio_url: AnyHttpUrl = Field(max_length=2048)
-    secp_entity_name: str = Field(min_length=2, max_length=255)
-    secp_registration_number: str = Field(min_length=1, max_length=100)
+    secp_entity_name: str | None = Field(default=None, min_length=2, max_length=255)
+    secp_registration_number: str | None = Field(default=None, min_length=1, max_length=100)
 
     @field_validator("portfolio_url")
     @classmethod
@@ -44,7 +44,9 @@ class ProfileVerificationWrite(BaseModel):
 
     @field_validator("secp_entity_name", "secp_registration_number")
     @classmethod
-    def strip_required_secp_values(cls, value: str) -> str:
+    def strip_required_secp_values(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         normalized = value.strip()
         if not normalized:
             raise ValueError("SECP entity details cannot be blank")
@@ -62,8 +64,8 @@ class ProfileVerificationRead(BaseModel):
     id: int
     user_id: int
     portfolio_url: str
-    secp_entity_name: str
-    secp_registration_number: str
+    secp_entity_name: str | None
+    secp_registration_number: str | None
     status: ProfileVerificationStatus
     score: float
     band: Literal["high", "review", "low"]
@@ -169,3 +171,33 @@ class VerificationScoringResult(BaseModel):
     signals: dict[str, object]
     reason: str
     threshold_version: str
+    signal_details: dict[str, "VerificationSignalDetail"]
+
+
+class VerificationSignalDetail(BaseModel):
+    score: float = Field(ge=0, le=1)
+    outcome: str
+    input_snapshot: dict[str, object]
+    reason: str
+
+
+class VerificationDecisionRead(BaseModel):
+    id: int
+    verification_id: int
+    reviewer_user_id: int | None
+    decision: str
+    reason: str
+    score: float
+    band: Literal["high", "review", "low"]
+    signals: dict[str, object]
+    threshold_version: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdminStatsRead(BaseModel):
+    users_by_role: dict[str, int]
+    pending_verification_queue: int
+    pending_appeals: int
+    decisions_last_7_days: int

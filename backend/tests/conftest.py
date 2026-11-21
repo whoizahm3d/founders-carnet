@@ -1,4 +1,8 @@
 from collections.abc import Generator
+import os
+
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+os.environ["RATE_LIMIT_STORAGE_URI"] = "memory://"
 
 import pytest
 from sqlalchemy import create_engine

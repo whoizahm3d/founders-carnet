@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import Base, VECTOR_TYPE
@@ -45,6 +45,7 @@ class EcosystemProfile(Base):
     is_open: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     embedding: Mapped[list[float] | None] = mapped_column(VECTOR_TYPE)
     embedding_model: Mapped[str | None] = mapped_column(String(255))
+    source_hash: Mapped[str | None] = mapped_column(String(64))
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
@@ -227,8 +228,8 @@ class ProfileVerification(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     portfolio_url: Mapped[str] = mapped_column(String(2048), nullable=False)
-    secp_entity_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    secp_registration_number: Mapped[str] = mapped_column(String(100), nullable=False)
+    secp_entity_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    secp_registration_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(30), nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     band: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -293,6 +294,7 @@ class ProfileReport(Base):
 
     __tablename__ = "profile_reports"
     __table_args__ = (
+        CheckConstraint("kind IN ('report', 'block')", name="ck_profile_reports_kind"),
         UniqueConstraint("reporter_user_id", "target_user_id", name="uq_profile_reports_reporter_target"),
         Index("ix_profile_reports_target_created", "target_user_id", "created_at"),
     )
@@ -301,6 +303,7 @@ class ProfileReport(Base):
     reporter_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     target_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    kind: Mapped[str] = mapped_column(String(20), default="report", server_default="report", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
@@ -355,3 +358,29 @@ class LLMGatewayCallLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class StartupVerificationRequest(Base):
+    """Reviewer decision for a founder's startup verification request (FR-24)."""
+
+    __tablename__ = "startup_verification_requests"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'approved', 'rejected')", name="ck_startup_verification_status"),
+        Index(
+            "uq_startup_verification_one_open",
+            "startup_id",
+            unique=True,
+            sqlite_where=text("status = 'pending'"),
+            postgresql_where=text("status = 'pending'"),
+        ),
+        Index("ix_startup_verification_status_created", "status", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    startup_id: Mapped[int] = mapped_column(ForeignKey("startups.id", ondelete="CASCADE"), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    note: Mapped[str] = mapped_column(Text, nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text)
+    reviewed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime)
