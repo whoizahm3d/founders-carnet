@@ -56,7 +56,6 @@ from app.services.compliance_assistant import (
     GroundingValidation,
     _numeric_claims_are_supported,
 )
-
 from rag.compliance.chunking import split_chunks_for_model
 from rag.compliance.ingestion import CorpusDocument, parse_manifest
 from rag.compliance.retrieve import (

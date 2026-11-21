@@ -9,7 +9,6 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-
 from rag.evaluation.guards import (
     check_test_run_guards,
     is_git_working_tree_clean_for_code,
@@ -431,7 +430,6 @@ def test_rehearse_reproduces_stored_dev_hit_counts() -> None:
 def test_default_llm_cache_dir_passes_validation_and_is_outside_repo() -> None:
     """Default LLM cache path must be outside repository and pass _validated_cache_root."""
     from app.services.llm_cache import _validated_cache_root
-
     from rag.evaluation.run_e2e import DEFAULT_CACHE_DIR
 
     repo = Path(__file__).resolve().parents[2]
@@ -472,7 +470,6 @@ class _StubClient:
 def test_unadapted_passage_fails_gateway_with_attribute_error() -> None:
     """An unadapted passage with chunk.document as None fails with AttributeError on title."""
     from app.services.llm_gateway import GeminiGateway
-
     from rag.compliance.retrieve import RetrievedChunk
 
     broken_chunk = SimpleNamespace(
@@ -509,7 +506,6 @@ def test_adapted_passage_succeeds_with_real_gateway_prompt_and_draft() -> None:
         _numeric_claims_are_supported,
     )
     from app.services.llm_gateway import GeminiGateway
-
     from rag.compliance.retrieve import RetrievedChunk
     from rag.evaluation.run_dev_retrieval import canonical_id, load_corpus_chunks
     from rag.evaluation.run_e2e import adapt_retrieved_passage, load_manifest_documents
