@@ -9,6 +9,7 @@ from time import perf_counter
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
+from rag.compliance.answer import ANSWER_PROMPT_VERSION, AnswerOutput
 from sqlalchemy.orm import Session
 
 from app.models import ComplianceCitation, ComplianceQuery
@@ -18,8 +19,7 @@ from app.services.compliance_retrieval import (
     retrieve_top_chunks,
 )
 
-
-PROMPT_VERSION = "compliance-answer-v1"
+PROMPT_VERSION = ANSWER_PROMPT_VERSION
 INFORMATIONAL_NOTICE = "This information is not legal or tax advice."
 _ABSTENTION_MESSAGE = "I do not have a supported answer in the indexed corpus."
 _CASE_SPECIFIC_ADVICE = re.compile(
@@ -28,13 +28,13 @@ _CASE_SPECIFIC_ADVICE = re.compile(
     r"\b(?:licen[cs]e|permit|registration)\b",
     re.IGNORECASE,
 )
-_MONEY_OR_RATE = re.compile(r"(?:\d+(?:\.\d+)?\s*%|\b(?:PKR|Rs\.?)\s*[\d,]+)", re.IGNORECASE)
+_MONEY_OR_RATE = re.compile(
+    r"(?:\d+(?:\.\d+)?\s*%|\b(?:PKR|Rs\.?)\s*[\d,]+)", re.IGNORECASE
+)
 logger = logging.getLogger(__name__)
 
 
-class AnswerDraft(BaseModel):
-    answer: str = Field(default="", max_length=6000)
-    citation_chunk_ids: list[str] = Field(default_factory=list, max_length=10)
+AnswerDraft = AnswerOutput
 
 
 class GroundingValidation(BaseModel):
@@ -110,7 +110,9 @@ class ComplianceAnswerService:
         if close is not None:
             close()
 
-    def ask(self, session: Session, *, user_id: int, question: str) -> ComplianceAnswerResult:
+    def ask(
+        self, session: Session, *, user_id: int, question: str
+    ) -> ComplianceAnswerResult:
         normalized_question = question.strip()
         if not normalized_question:
             raise ValueError("Question must not be empty")
@@ -150,7 +152,10 @@ class ComplianceAnswerService:
                 },
             )
             if index_stats.compatible_chunk_count:
-                vectors = self.encoder.encode([normalized_question])
+                encode_query = getattr(
+                    self.encoder, "encode_query", self.encoder.encode
+                )
+                vectors = encode_query([normalized_question])
                 if len(vectors) != 1:
                     raise ValueError("Embedding provider returned an invalid result")
                 passages = retrieve_top_chunks(
@@ -159,6 +164,8 @@ class ComplianceAnswerService:
                     embedding_model=self.embedding_model,
                     top_k=self.top_k,
                     minimum_similarity=self.minimum_similarity,
+                    query=normalized_question,
+                    method="hybrid",
                 )
             else:
                 passages = ()
@@ -198,7 +205,7 @@ class ComplianceAnswerService:
             draft = AnswerDraft.model_validate(
                 self.gateway.generate_answer(normalized_question, passages)
             )
-            if not draft.answer.strip():
+            if draft.abstain or not draft.answer.strip():
                 return self._abstain_after_retrieval(
                     session,
                     user_id=user_id,
@@ -209,7 +216,9 @@ class ComplianceAnswerService:
                 )
             passage_by_id = {passage.chunk.chunk_id: passage for passage in passages}
             cited_ids = tuple(dict.fromkeys(draft.citation_chunk_ids))
-            if not cited_ids or any(chunk_id not in passage_by_id for chunk_id in cited_ids):
+            if not cited_ids or any(
+                chunk_id not in passage_by_id for chunk_id in cited_ids
+            ):
                 return self._abstain_after_retrieval(
                     session,
                     user_id=user_id,
@@ -220,8 +229,21 @@ class ComplianceAnswerService:
                 )
 
             cited_passages = tuple(passage_by_id[chunk_id] for chunk_id in cited_ids)
-            if _MONEY_OR_RATE.search(draft.answer) and any(
-                passage.chunk.document.effective_date is None for passage in cited_passages
+            if not _numeric_claims_are_supported(draft.answer, cited_passages):
+                return self._abstain_after_retrieval(
+                    session,
+                    user_id=user_id,
+                    question=normalized_question,
+                    reason="unsupported_number_or_date",
+                    passages=passages,
+                    started_at=started_at,
+                )
+            if any(
+                not (
+                    getattr(passage.chunk, "effective_date", None)
+                    or passage.chunk.document.effective_date
+                )
+                for passage in cited_passages
             ):
                 return self._abstain_after_retrieval(
                     session,
@@ -233,7 +255,9 @@ class ComplianceAnswerService:
                 )
 
             validation = GroundingValidation.model_validate(
-                self.gateway.validate_answer(normalized_question, draft.answer, cited_passages)
+                self.gateway.validate_answer(
+                    normalized_question, draft.answer, cited_passages
+                )
             )
             if not validation.is_supported:
                 return self._abstain_after_retrieval(
@@ -245,7 +269,9 @@ class ComplianceAnswerService:
                     started_at=started_at,
                 )
 
-            citation_results = tuple(_citation_result(passage) for passage in cited_passages)
+            citation_results = tuple(
+                _citation_result(passage) for passage in cited_passages
+            )
             return self._save_result(
                 session,
                 user_id=user_id,
@@ -260,7 +286,9 @@ class ComplianceAnswerService:
             )
         except Exception as exc:
             if not getattr(exc, "_carnet_generation_failure_logged", False):
-                logger.exception("Compliance answer generation failed for user_id=%s", user_id)
+                logger.exception(
+                    "Compliance answer generation failed for user_id=%s", user_id
+                )
             self._save_failed_query(
                 session,
                 user_id=user_id,
@@ -268,7 +296,9 @@ class ComplianceAnswerService:
                 passage_count=len(passages),
                 started_at=started_at,
             )
-            raise ComplianceServiceUnavailable("Compliance answer generation failed") from exc
+            raise ComplianceServiceUnavailable(
+                "Compliance answer generation failed"
+            ) from exc
 
     def _abstain_after_retrieval(
         self,
@@ -315,14 +345,18 @@ class ComplianceAnswerService:
             abstention_reason=reason,
             passage_count=len(passages),
             latency_ms=max(0, int((perf_counter() - started_at) * 1000)),
-            prompt_version=self.gateway.prompt_version if outcome == "answered" else None,
+            prompt_version=self.gateway.prompt_version
+            if outcome == "answered"
+            else None,
         )
         session.add(query)
         session.flush()
         passage_by_id = {passage.chunk.chunk_id: passage for passage in passages}
         for rank, citation in enumerate(citation_results, start=1):
             chunk = passage_by_id[citation.chunk_id].chunk
-            session.add(ComplianceCitation(query_id=query.id, chunk_id=chunk.id, rank=rank))
+            session.add(
+                ComplianceCitation(query_id=query.id, chunk_id=chunk.id, rank=rank)
+            )
         session.commit()
         session.refresh(query)
         return ComplianceAnswerResult(
@@ -358,11 +392,15 @@ class ComplianceAnswerService:
             )
             session.commit()
         except Exception:
-            logger.exception("Could not record failed compliance query for user_id=%s", user_id)
+            logger.exception(
+                "Could not record failed compliance query for user_id=%s", user_id
+            )
             try:
                 session.rollback()
             except Exception:
-                logger.exception("Could not reset database session after failed query logging")
+                logger.exception(
+                    "Could not reset database session after failed query logging"
+                )
 
 
 def _citation_result(passage: RetrievedChunk) -> CitationResult:
@@ -379,3 +417,54 @@ def _citation_result(passage: RetrievedChunk) -> CitationResult:
         consolidation_date=document.consolidation_date,
         retrieved_at=document.retrieved_at,
     )
+
+
+_NUMERIC_CLAIM_PATTERNS = (
+    re.compile(r"\b(?:PKR|Rs\.?|rupees?)\s*[\d,]+(?:\.\d+)?\b", re.IGNORECASE),
+    re.compile(r"\b\d+(?:[.,]\d+)?\s*%"),
+    re.compile(r"\b(?:section|s\.)\s*\d+[A-Z]?(?:\(\d+[A-Z]?\))*", re.IGNORECASE),
+    re.compile(r"\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b"),
+    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),
+    re.compile(
+        r"\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\b(?:tax year|financial year|FY)\s+\d{4}\b", re.IGNORECASE),
+)
+
+
+def _numeric_claims_are_supported(
+    answer: str, passages: Sequence[RetrievedChunk]
+) -> bool:
+    cited_text = " ".join(
+        " ".join(
+            (
+                passage.chunk.text,
+                str(passage.chunk.section or ""),
+                " ".join(getattr(passage.chunk, "heading_path", ()) or ()),
+                str(
+                    getattr(passage.chunk, "effective_date", None)
+                    or passage.chunk.document.effective_date
+                    or ""
+                ),
+            )
+        )
+        for passage in passages
+    ).casefold()
+    for pattern in _NUMERIC_CLAIM_PATTERNS:
+        for match in pattern.finditer(answer):
+            claim = re.sub(r"\s+", " ", match.group(0)).casefold()
+            compact_claim = re.sub(r"[^a-z0-9]+", "", claim)
+            compact_source = re.sub(r"[^a-z0-9]+", "", cited_text)
+            if claim.startswith(("section", "s.")):
+                parts = re.findall(r"\d+[a-z]?", claim)
+                supported = all(part in compact_source for part in parts)
+            else:
+                supported = compact_claim in compact_source
+            if not supported:
+                return False
+    return True

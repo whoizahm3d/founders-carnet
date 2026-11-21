@@ -1,16 +1,17 @@
 from pathlib import Path
 
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.pool import StaticPool
 
+from alembic import command
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_migrations_build_user_schema_from_empty_database():
     config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_ROOT / "alembic"))
     engine = create_engine("sqlite://", poolclass=StaticPool)
 
     with engine.begin() as connection:
@@ -50,25 +51,58 @@ def test_migrations_build_user_schema_from_empty_database():
         assert "alembic_version" in tables
         assert len(set(tables) - {"alembic_version"}) == _documented_table_count()
         assert {"consent_version", "consented_at", "embedding"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("ecosystem_profiles")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("ecosystem_profiles")
+            }
         )
-        assert {"factors", "similarity", "score", "founder_accepted", "candidate_accepted"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("match_records")}
+        assert {
+            "factors",
+            "similarity",
+            "score",
+            "founder_accepted",
+            "candidate_accepted",
+        }.issubset(
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("match_records")
+            }
         )
         assert {"request_status", "requester_user_id"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("match_records")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("match_records")
+            }
         )
         assert {
-            "question", "status", "interpretation", "evidence", "prompt_version", "model_name",
+            "question",
+            "status",
+            "interpretation",
+            "evidence",
+            "prompt_version",
+            "model_name",
         }.issubset(
-            {column["name"] for column in inspect(connection).get_columns("market_research_reports")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("market_research_reports")
+            }
         )
         assert {
-            "user_id", "storage_key", "file_sha256", "target_role", "processing_consent_version",
-            "processing_consented_at", "status", "suggestions",
-            "prompt_version", "model_name",
+            "user_id",
+            "storage_key",
+            "file_sha256",
+            "target_role",
+            "processing_consent_version",
+            "processing_consented_at",
+            "status",
+            "suggestions",
+            "prompt_version",
+            "model_name",
         }.issubset(
-            {column["name"] for column in inspect(connection).get_columns("resume_optimizations")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("resume_optimizations")
+            }
         )
         assert {"id", "email", "hashed_password", "role"}.issubset(
             {column["name"] for column in inspect(connection).get_columns("users")}
@@ -76,48 +110,114 @@ def test_migrations_build_user_schema_from_empty_database():
         assert "token_version" in {
             column["name"] for column in inspect(connection).get_columns("users")
         }
+        assert {
+            "heading_path",
+            "effective_date",
+            "corpus_version",
+        }.issubset(
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("compliance_chunks")
+            }
+        )
         assert {"deletion_requested_at", "deletion_scheduled_for"}.issubset(
             {column["name"] for column in inspect(connection).get_columns("users")}
         )
-        assert {"user_id", "consent_type", "consent_version", "withdrawn_at", "source"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("consent_records")}
+        assert {
+            "user_id",
+            "consent_type",
+            "consent_version",
+            "withdrawn_at",
+            "source",
+        }.issubset(
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("consent_records")
+            }
         )
         assert {"user_id", "provider", "provider_subject"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("oauth_identities")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("oauth_identities")
+            }
         )
         assert {"user_id", "github_url", "consent_version"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("talent_profiles")}
-        )
-        assert {"verification_id", "signal_name", "input_snapshot", "score", "outcome", "reason"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("verification_signals")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("talent_profiles")
+            }
         )
         assert {
-            "request_id", "operation", "model_name", "prompt_version", "attempt_number",
-            "queue_position", "passage_count", "approximate_prompt_chars", "cache_hit",
-            "outcome", "failure_category", "elapsed_ms", "created_at",
+            "verification_id",
+            "signal_name",
+            "input_snapshot",
+            "score",
+            "outcome",
+            "reason",
         }.issubset(
-            {column["name"] for column in inspect(connection).get_columns("llm_gateway_call_logs")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("verification_signals")
+            }
+        )
+        assert {
+            "request_id",
+            "operation",
+            "model_name",
+            "prompt_version",
+            "attempt_number",
+            "queue_position",
+            "passage_count",
+            "approximate_prompt_chars",
+            "cache_hit",
+            "outcome",
+            "failure_category",
+            "elapsed_ms",
+            "created_at",
+        }.issubset(
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("llm_gateway_call_logs")
+            }
         )
         assert {"startup_id", "title", "employment_type", "status"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("job_listings")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("job_listings")
+            }
         )
         assert {"job_id", "user_id"}.issubset(
             {column["name"] for column in inspect(connection).get_columns("job_saves")}
         )
         assert {"job_id", "candidate_user_id", "status"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("job_applications")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("job_applications")
+            }
         )
         assert {"user_id", "score", "band", "signals", "status"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("profile_verifications")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("profile_verifications")
+            }
         )
         assert {"verification_id", "added_evidence", "status"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("verification_appeals")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("verification_appeals")
+            }
         )
         assert {"reporter_user_id", "target_user_id", "reason"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("profile_reports")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("profile_reports")
+            }
         )
         assert {"reviewer_user_id", "decision", "threshold_version"}.issubset(
-            {column["name"] for column in inspect(connection).get_columns("verification_decisions")}
+            {
+                column["name"]
+                for column in inspect(connection).get_columns("verification_decisions")
+            }
         )
 
     engine.dispose()

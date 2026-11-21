@@ -1,6 +1,6 @@
 """Founder profile and startup endpoints (FR-1, FR-17, NFR-5, NFR-9)."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,7 +17,6 @@ from app.schemas import (
     StartupRead,
     StartupUpdate,
 )
-
 
 router = APIRouter(prefix="/api/v1/founders/me", tags=["founders"])
 FounderDep = Annotated[User, Depends(require_roles("founder"))]
@@ -58,14 +57,14 @@ def save_founder_profile(
             bio=payload.bio,
             location=payload.location,
             consent_version=PROFILE_CONSENT_VERSION,
-            consented_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            consented_at=datetime.now(UTC).replace(tzinfo=None),
         )
         session.add(profile)
     else:
         profile.bio = payload.bio
         profile.location = payload.location
         profile.consent_version = PROFILE_CONSENT_VERSION
-        profile.consented_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        profile.consented_at = datetime.now(UTC).replace(tzinfo=None)
 
     session.commit()
     session.refresh(profile)
@@ -81,7 +80,9 @@ def read_founder_profile(
         select(FounderProfile).where(FounderProfile.user_id == current_user.id)
     )
     if profile is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Founder profile not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Founder profile not found"
+        )
     return profile
 
 
@@ -152,7 +153,9 @@ def update_startup(
         select(FounderProfile).where(FounderProfile.user_id == current_user.id)
     )
     if profile is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Startup not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Startup not found"
+        )
     startup = session.scalar(
         select(Startup).where(
             Startup.id == startup_id,
@@ -160,10 +163,15 @@ def update_startup(
         )
     )
     if startup is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Startup not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Startup not found"
+        )
 
     changes = payload.model_dump(exclude_unset=True)
-    if any(field in _REQUIRED_STARTUP_FIELDS and value is None for field, value in changes.items()):
+    if any(
+        field in _REQUIRED_STARTUP_FIELDS and value is None
+        for field, value in changes.items()
+    ):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Required startup fields cannot be cleared",

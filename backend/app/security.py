@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer
@@ -21,18 +21,23 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(*, subject: str, role: str, token_version: int = 0) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     to_encode = {"sub": subject, "role": role, "ver": token_version, "exp": expire}
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
 def decode_access_token(token: str) -> dict:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.algorithm]
+        )
         if not payload.get("sub"):
             raise ValueError("missing subject")
         return payload
-    except (JWTError, ValueError) as exc:  # pragma: no cover - behavior enforced by dependency
+    except (
+        JWTError,
+        ValueError,
+    ) as exc:  # pragma: no cover - behavior enforced by dependency
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

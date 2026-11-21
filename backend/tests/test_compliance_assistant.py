@@ -1,6 +1,7 @@
 import logging
 
 import pytest
+from google.genai.errors import ServerError
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
@@ -13,7 +14,6 @@ from app.services.compliance_assistant import (
     GroundingValidation,
 )
 from app.services.llm_gateway import GeminiGateway
-from google.genai.errors import ServerError
 
 
 class FakeEncoder:
@@ -29,7 +29,13 @@ class FakeEncoder:
 class FakeGateway:
     prompt_version = "compliance-answer-test-v1"
 
-    def __init__(self, *, citation_id="source:1:0", supported=True, answer="The cited source describes this procedure."):
+    def __init__(
+        self,
+        *,
+        citation_id="source:1:0",
+        supported=True,
+        answer="The cited source describes this procedure.",
+    ):
         self.citation_id = citation_id
         self.supported = supported
         self.answer = answer
@@ -59,10 +65,11 @@ def _database(
     engine = create_engine("sqlite://", poolclass=StaticPool)
     Base.metadata.create_all(bind=engine)
     session = Session(engine)
+    fake_password_hash = "not-a-real-password-hash"
     user = User(
         email="founder@example.test",
         full_name="Test Founder",
-        hashed_password="not-a-real-password-hash",
+        hashed_password=fake_password_hash,
         role="founder",
     )
     document = ComplianceDocument(
@@ -105,7 +112,9 @@ def test_supported_answer_is_saved_with_its_citation():
         minimum_similarity=0.8,
     )
 
-    result = assistant.ask(session, user_id=user.id, question="What does the source say?")
+    result = assistant.ask(
+        session, user_id=user.id, question="What does the source say?"
+    )
 
     saved_query = session.scalar(select(ComplianceQuery))
     assert result.outcome == "answered"
@@ -158,12 +167,44 @@ def test_invalid_citation_or_failed_grounding_validation_abstains():
             minimum_similarity=0.8,
         )
 
-        result = assistant.ask(session, user_id=user.id, question="What procedure is described?")
+        result = assistant.ask(
+            session, user_id=user.id, question="What procedure is described?"
+        )
 
         assert result.outcome == "abstained"
         assert result.answer is None
         assert result.citations == ()
         engine.dispose()
+
+
+def test_invented_rupee_amount_is_rejected_before_support_check():
+    engine, session, user = _database(document_text="The fee is Rs. 250.")
+    gateway = FakeGateway(answer="The fee is Rs. 500.")
+    assistant = ComplianceAnswerService(
+        encoder=FakeEncoder(), gateway=gateway, embedding_model="candidate-v1"
+    )
+
+    result = assistant.ask(session, user_id=user.id, question="What is the fee?")
+
+    assert result.outcome == "abstained"
+    assert result.abstention_reason == "unsupported_number_or_date"
+    assert gateway.validation_calls == 0
+    engine.dispose()
+
+
+def test_tc05_non_abstaining_answer_requires_a_dated_citation():
+    engine, session, user = _database(effective_date=None)
+    assistant = ComplianceAnswerService(
+        encoder=FakeEncoder(), gateway=FakeGateway(), embedding_model="candidate-v1"
+    )
+
+    result = assistant.ask(
+        session, user_id=user.id, question="What procedure is described?"
+    )
+
+    assert result.outcome == "abstained"
+    assert result.abstention_reason == "missing_effective_date"
+    engine.dispose()
 
 
 def test_retrieval_below_threshold_abstains_without_calling_gateway():
@@ -216,7 +257,9 @@ def test_unrelated_question_with_no_indexed_corpus_is_saved_as_abstention(caplog
     )
 
     with caplog.at_level(logging.INFO, logger="app.services.compliance_assistant"):
-        result = assistant.ask(session, user_id=user.id, question="Give me random startup ideas")
+        result = assistant.ask(
+            session, user_id=user.id, question="Give me random startup ideas"
+        )
 
     saved_query = session.scalar(select(ComplianceQuery))
     assert result.outcome == "abstained"
@@ -230,11 +273,13 @@ def test_unrelated_question_with_no_indexed_corpus_is_saved_as_abstention(caplog
     assert gateway.generation_calls == 0
     assert assistant.encoder.calls == 0
     index_log = next(
-        record for record in caplog.records
+        record
+        for record in caplog.records
         if record.getMessage() == "Compliance retrieval index state"
     )
     retrieval_log = next(
-        record for record in caplog.records
+        record
+        for record in caplog.records
         if record.getMessage() == "Compliance retrieval completed"
     )
     assert index_log.document_count == 0
@@ -273,15 +318,19 @@ def test_what_is_secp_retrieves_manifested_position_paper_and_logs_counts(caplog
         result = assistant.ask(session, user_id=user.id, question="What is SECP?")
 
     assert result.outcome == "answered"
-    assert result.answer == "SECP is the Securities and Exchange Commission of Pakistan."
+    assert (
+        result.answer == "SECP is the Securities and Exchange Commission of Pakistan."
+    )
     assert result.citations[0].document_title == "Start-up ecosystem position paper"
     assert result.citations[0].effective_date == "2024-10-30"
     index_log = next(
-        record for record in caplog.records
+        record
+        for record in caplog.records
         if record.getMessage() == "Compliance retrieval index state"
     )
     retrieval_log = next(
-        record for record in caplog.records
+        record
+        for record in caplog.records
         if record.getMessage() == "Compliance retrieval completed"
     )
     assert index_log.active_document_count == 1
@@ -308,9 +357,11 @@ def test_retrieval_error_is_logged_and_failed_query_is_recorded(caplog):
         embedding_model="candidate-v1",
     )
 
-    with caplog.at_level(logging.ERROR, logger="app.services.compliance_assistant"):
-        with pytest.raises(ComplianceServiceUnavailable) as caught:
-            assistant.ask(session, user_id=user.id, question="What does the source say?")
+    with (
+        caplog.at_level(logging.ERROR, logger="app.services.compliance_assistant"),
+        pytest.raises(ComplianceServiceUnavailable) as caught,
+    ):
+        assistant.ask(session, user_id=user.id, question="What does the source say?")
 
     saved_query = session.scalar(select(ComplianceQuery))
     assert str(caught.value) == "Compliance retrieval failed"
@@ -336,9 +387,11 @@ def test_gemini_error_is_logged_and_failed_query_is_recorded(caplog):
         minimum_similarity=0.8,
     )
 
-    with caplog.at_level(logging.ERROR, logger="app.services.compliance_assistant"):
-        with pytest.raises(ComplianceServiceUnavailable) as caught:
-            assistant.ask(session, user_id=user.id, question="What procedure is described?")
+    with (
+        caplog.at_level(logging.ERROR, logger="app.services.compliance_assistant"),
+        pytest.raises(ComplianceServiceUnavailable) as caught,
+    ):
+        assistant.ask(session, user_id=user.id, question="What procedure is described?")
 
     saved_query = session.scalar(select(ComplianceQuery))
     assert str(caught.value) == "Compliance answer generation failed"
@@ -352,6 +405,7 @@ def test_gemini_error_is_logged_and_failed_query_is_recorded(caplog):
 
 def test_gateway_generation_failure_is_logged_once_and_failed_query_is_saved(caplog):
     engine, session, user = _database()
+
     class FailingModels:
         def generate_content(self, **kwargs):
             raise ServerError(
@@ -376,15 +430,18 @@ def test_gateway_generation_failure_is_logged_once_and_failed_query_is_saved(cap
         minimum_similarity=0.8,
     )
 
-    with caplog.at_level(logging.ERROR):
-        with pytest.raises(ComplianceServiceUnavailable):
-            assistant.ask(session, user_id=user.id, question="What does the source say?")
+    with caplog.at_level(logging.ERROR), pytest.raises(ComplianceServiceUnavailable):
+        assistant.ask(session, user_id=user.id, question="What does the source say?")
 
     saved_query = session.scalar(select(ComplianceQuery))
     assert saved_query is not None and saved_query.outcome == "failed"
-    assert sum(
-        record.message.startswith("Gemini generation failed") for record in caplog.records
-    ) == 1
+    assert (
+        sum(
+            record.message.startswith("Gemini generation failed")
+            for record in caplog.records
+        )
+        == 1
+    )
     assert not any(
         record.message.startswith("Compliance answer generation failed")
         for record in caplog.records
@@ -412,9 +469,13 @@ def test_failed_query_write_does_not_mask_original_provider_error(caplog):
     )
 
     try:
-        with caplog.at_level(logging.ERROR, logger="app.services.compliance_assistant"):
-            with pytest.raises(ComplianceServiceUnavailable) as caught:
-                assistant.ask(session, user_id=user.id, question="What does the source say?")
+        with (
+            caplog.at_level(logging.ERROR, logger="app.services.compliance_assistant"),
+            pytest.raises(ComplianceServiceUnavailable) as caught,
+        ):
+            assistant.ask(
+                session, user_id=user.id, question="What does the source say?"
+            )
     finally:
         event.remove(ComplianceQuery, "before_insert", reject_failed_query)
 

@@ -1,0 +1,218 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   The Founder's Carnet: Design System v3.9.1 (DESIGN.md)
+   ========================================================================== */
+
+:root {
+  /* Palette Tokens from DESIGN.md */
+  --color-canvas: #FAF9F7;
+  --color-fill: #F1F0EE;
+  --color-card: #FFFFFF;
+  --color-trough: #E8E6E1;
+  --color-ink: #0A0A0A;
+  --color-ink-raised: #171717;
+  --color-ink-border: #262626;
+  --color-accent: #B15F2C;
+  --color-accent-deep: #964E22;
+  --color-accent-wash: #F8EDE5;
+  --color-accent-soft: #D48B5D;
+
+  --color-text: #0A0A0A;
+  --color-text-secondary: #52525B;
+  --color-text-muted: #71717A;
+
+  --color-hairline: #E2DFD9;
+  --color-hairline-subtle: #ECEAE5;
+  --color-row-line: #E6E5E2;
+  --color-disabled: #E3E2DF;
+  --color-input-border: #8D8D8D;
+
+  --color-success: #047857;
+  --color-success-wash: #ECFDF5;
+  --color-warning: #B45309;
+  --color-warning-wash: #FFFBEB;
+  --color-error: #B91C1C;
+  --color-error-wash: #FEF2F2;
+
+  /* Backward compatibility for remaining CSS modules */
+  --color-bg: var(--color-canvas);
+  --color-text-primary: var(--color-text);
+  --color-text-inverse: #FFFFFF;
+  --color-border: var(--color-hairline);
+  --color-border-light: var(--color-hairline-subtle);
+  --color-btn-primary-bg: var(--color-ink);
+  --color-btn-primary-text: #FFFFFF;
+  --color-btn-primary-hover: var(--color-ink-raised);
+  --color-btn-secondary-bg: var(--color-card);
+  --color-btn-secondary-text: var(--color-text);
+  --color-btn-secondary-border: var(--color-row-line);
+  --color-btn-disabled-bg: var(--color-disabled);
+  --color-btn-disabled-text: var(--color-input-border);
+  --color-carnet-dark: #130100;
+  --gradient-artwork: radial-gradient(circle at 85% 15%, #FFF6E2 0%, #F5C842 8%, #FF8A2B 24%, #C4451A 38%, #3A1206 52%, #130100 70%, #130100 100%);
+  --font-family: var(--font-hanken), sans-serif;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --gradient-artwork: radial-gradient(circle at 160% 0%, #FFF6E2 0%, #F5C842 8%, #FF8A2B 24%, #C4451A 38%, #3A1206 52%, #130100 70%, #130100 100%);
+  }
+}
+
+/* Page background: single shared artwork gradient token */
+body {
+  background: var(--gradient-artwork) fixed;
+  min-height: 100vh;
+  color: #0A0A0A;
+  font-family: var(--font-hanken), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fixed viewport gradient layer for consistent mobile/desktop rendering */
+.bg-page-gradient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--gradient-artwork);
+  pointer-events: none;
+}
+
+/* Full-bleed hero and closing section gradient */
+.bg-hero-gradient {
+  background: var(--gradient-artwork);
+}
+
+/* Glass card styling per DESIGN.md line 103 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.70);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(230, 229, 226, 0.70);
+  box-shadow: 0 8px 24px rgba(10, 10, 10, 0.06);
+  border-radius: 24px;
+}
+
+/* Dark glass note card per DESIGN.md and reference screen.png */
+.glass-note-card {
+  background: rgba(10, 10, 10, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow: 0 16px 36px -8px rgba(10, 10, 10, 0.12);
+  border-radius: 24px;
+}
+
+/* Glass pill nav per DESIGN.md lines 86, 208 */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(230, 229, 226, 0.70);
+  box-shadow: 0 8px 24px rgba(10, 10, 10, 0.06);
+  border-radius: 9999px;
+}
+
+/* Glass time chip per DESIGN.md line 86 */
+.glass-chip {
+  background: rgba(255, 255, 255, 0.70);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(230, 229, 226, 0.70);
+  border-radius: 9999px;
+}
+
+/* Soft orange glow blobs per DESIGN.md line 102 */
+.glow-blob-1 {
+  background: rgba(177, 95, 44, 0.28);
+  filter: blur(100px);
+}
+
+.glow-blob-2 {
+  background: rgba(207, 128, 71, 0.22);
+  filter: blur(100px);
+}
+
+/* Tabular figures for data and numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Motion system strictly per DESIGN.md lines 276-285 */
+@keyframes entrance {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-entrance {
+  animation: entrance 400ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-entrance-delayed {
+  animation: entrance 400ms cubic-bezier(0.22, 1, 0.36, 1) 80ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-entrance,
+  .animate-entrance-delayed {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ==========================================================================
+   Button badge slide — shared across all variants including onDark.
+   The badge is absolutely positioned inside the pill (right-1, vertically
+   centered). At rest it sits at left: 4px, opacity 0 (off-screen left).
+   On hover / focus-visible it transitions to its natural right-end position.
+   ========================================================================== */
+
+/* Badge element base: pinned to right end, hidden at rest */
+.btn-badge {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%) translateX(0);
+  opacity: 0;
+  /* Slide starts from left edge: shift left by (badge width + right inset) = 36px + 4px = 40px */
+  /* Use a named keyframe so there is no arbitrary value in Tailwind classes. */
+  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
+              left 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  left: 4px;
+}
+
+/* Hovered / focused state: badge slides to right end */
+.btn-badge-active,
+.group:hover .btn-badge,
+.group:focus-visible .btn-badge {
+  opacity: 1;
+  left: calc(100% - 36px - 4px);
+}
+
+/* Touch devices (no fine pointer / no hover): badge always visible at right end */
+@media (hover: none) {
+  .btn-badge {
+    opacity: 1;
+    left: calc(100% - 36px - 4px);
+    transition: none;
+  }
+}
+
+/* Reduced motion: badge always at right end, no transition */
+@media (prefers-reduced-motion: reduce) {
+  .btn-badge {
+    opacity: 1;
+    left: calc(100% - 36px - 4px);
+    transition: none;
+  }
+}

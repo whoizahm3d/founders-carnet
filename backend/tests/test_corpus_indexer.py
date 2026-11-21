@@ -1,15 +1,15 @@
 import hashlib
 from pathlib import Path
 
+from rag.compliance.documents import ExtractedPage
+from rag.compliance.ingestion import CorpusDocument
+from rag.compliance.scoping import apply_corpus_scope
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.models import Base, ComplianceChunk, ComplianceDocument
 from app.services.corpus_indexer import index_corpus
-from rag.compliance.documents import ExtractedPage
-from rag.compliance.ingestion import CorpusDocument
-from rag.compliance.scoping import apply_corpus_scope
 
 
 class FakeEncoder:
@@ -103,7 +103,9 @@ def test_indexer_verifies_and_persists_text_source_chunks(tmp_path: Path):
     manifest_path.write_text(
         """| file | title | issuing_body | document_type | source_url | effective_date | consolidation_date | retrieved_at | content_sha256 | scope_note | is_active |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `sample.txt` | Sample Guide | FBR | guide | <https://example.test/source> | 2026-06-30 |  | 2026-10-04 | `""" + source_hash + "` | Procedure only. | true |\n",
+| `sample.txt` | Sample Guide | FBR | guide | <https://example.test/source> | 2026-06-30 |  | 2026-10-04 | `"""
+        + source_hash
+        + "` | Procedure only. | true |\n",
         encoding="utf-8",
     )
     engine = create_engine("sqlite://", poolclass=StaticPool)
@@ -127,29 +129,76 @@ def test_indexer_verifies_and_persists_text_source_chunks(tmp_path: Path):
         assert chunks[0].embedding_model == "candidate-v1"
         assert chunks[0].embedding == [1.0, 0.0]
         assert chunks[0].section == "1"
+        assert chunks[0].heading_path == ["Section 1 - Procedure"]
+        assert chunks[0].effective_date == "2026-06-30"
+        assert len(chunks[0].corpus_version) == 64
 
     engine.dispose()
 
 
-def test_indexer_repairs_missing_chunks_and_null_embeddings_without_duplicates(tmp_path: Path):
+def test_hash_mismatch_prevents_indexing(tmp_path: Path):
+    from rag.compliance.ingestion import CorpusIntegrityError
+
+    corpus_dir = tmp_path / "data"
+    corpus_dir.mkdir()
+    (corpus_dir / "sample.txt").write_text(
+        "Section 1. Changed\nText.", encoding="utf-8"
+    )
+    manifest_path = tmp_path / "corpus_manifest.md"
+    manifest_path.write_text(
+        """| file | title | issuing_body | document_type | source_url | effective_date | consolidation_date | retrieved_at | content_sha256 | scope_note | is_active |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `sample.txt` | Sample | FBR | guide | <https://example.test> | 2026-06-30 |  |  | `"""
+        + "0" * 64
+        + "` | Test. | true |\n",
+        encoding="utf-8",
+    )
+    engine = create_engine("sqlite://", poolclass=StaticPool)
+    Base.metadata.create_all(bind=engine)
+    with Session(engine) as session:
+        try:
+            index_corpus(
+                session,
+                manifest_path=manifest_path,
+                corpus_dir=corpus_dir,
+                encoder=FakeEncoder(),
+                embedding_model="candidate-v1",
+            )
+        except CorpusIntegrityError:
+            pass
+        else:
+            raise AssertionError("Hash mismatch must block indexing")
+        assert session.scalar(select(ComplianceDocument)) is None
+    engine.dispose()
+
+
+def test_indexer_repairs_missing_chunks_and_null_embeddings_without_duplicates(
+    tmp_path: Path,
+):
     corpus_dir = tmp_path / "data"
     corpus_dir.mkdir()
     source_path = corpus_dir / "sample.txt"
-    source_text = "Section 1. Procedure\n" + ("Follow the published steps. " * 80)
+    # Keep this fixture above the production 500-token chunk target so it
+    # exercises repair behavior with multiple chunks after target sizing changed.
+    source_text = "Section 1. Procedure\n" + "\n".join(
+        f"({index}) Follow the published steps." for index in range(1, 151)
+    )
     source_path.write_text(source_text, encoding="utf-8")
     source_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
     manifest_path = tmp_path / "corpus_manifest.md"
     manifest_path.write_text(
         """| file | title | issuing_body | document_type | source_url | effective_date | consolidation_date | retrieved_at | content_sha256 | scope_note | is_active |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `sample.txt` | Sample Guide | FBR | guide | <https://example.test/source> | 2026-06-30 |  | 2026-10-04 | `""" + source_hash + "` | Procedure only. | true |\n",
+| `sample.txt` | Sample Guide | FBR | guide | <https://example.test/source> | 2026-06-30 |  | 2026-10-04 | `"""
+        + source_hash
+        + "` | Procedure only. | true |\n",
         encoding="utf-8",
     )
     engine = create_engine("sqlite://", poolclass=StaticPool)
     Base.metadata.create_all(bind=engine)
 
     with Session(engine) as session:
-        first = index_corpus(
+        index_corpus(
             session,
             manifest_path=manifest_path,
             corpus_dir=corpus_dir,

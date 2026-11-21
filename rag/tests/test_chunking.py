@@ -1,6 +1,6 @@
+from rag.compliance.chunking import chunk_pages
 from rag.compliance.documents import ExtractedPage
 from rag.compliance.ingestion import CorpusDocument
-from rag.compliance.chunking import chunk_pages
 
 
 def test_chunks_keep_sections_page_numbers_and_citation_metadata():
@@ -27,7 +27,7 @@ def test_chunks_keep_sections_page_numbers_and_citation_metadata():
         ),
     )
 
-    chunks = chunk_pages(document, pages, max_chars=500, overlap_chars=40)
+    chunks = chunk_pages(document, pages, target_tokens=500)
 
     assert [chunk.section for chunk in chunks] == ["1", "2"]
     assert all(chunk.page_number == 7 for chunk in chunks)

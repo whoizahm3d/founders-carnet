@@ -51,6 +51,10 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install ruff==0.17.1 pytest
+      - name: Install backend requirements for rag tests
+        if: steps.has_code.outputs.found == 'true' && matrix.folder == 'rag'
+        working-directory: rag
+        run: pip install -r ../backend/requirements.txt
       - name: Lint (ruff)
         if: steps.has_code.outputs.found == 'true'
         working-directory: ${{ matrix.folder }}
@@ -58,9 +62,12 @@ jobs:
       - name: Tests (pytest)
         if: steps.has_code.outputs.found == 'true'
         working-directory: ${{ matrix.folder }}
+        env:
+          # Repo root so `rag.*` imports work, and the job folder so `app.*` imports work.
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/${{ matrix.folder }}
         run: |
           # pytest exits with 5 when it finds no tests. That is fine until tests exist.
-          pytest || [ $? -eq 5 ]
+          python -m pytest || [ $? -eq 5 ]
 
   frontend:
     name: Frontend

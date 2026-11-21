@@ -48,7 +48,7 @@ One monorepo, with folder-level ownership.
 | `frontend/` | Next.js (React) client, dashboards for the five roles | Shahzeb, Ali |
 | `backend/` | FastAPI gateway, services, LLM Gateway, database models and migrations, Celery jobs | Taha, Ali |
 | `rag/` | Compliance corpus, section-aware chunking, embedding, retrieval, answer validation | Ali, Shahzeb |
-| `ml/` | Dataset preprocessing and profiling, matching and re-ranker experiments, evaluation notebooks | Taha, Ali |
+| `ml/` | Dataset preprocessing and profiling, matching and re-ranker experiments, supporting classifiers, evaluation notebooks | Taha, Ali |
 | `docs/` | `DECISIONS.md`, `context/` (report summaries), and short notes that explain the code | all |
 
 `ml/` is an addition to the three folders the sprint plan locked (`frontend`, `backend`, `rag`). The report now lists all four folders. `ml/` exists because the supervisor wants preprocessing and model testing to start alongside the app code. Anything in `ml/` that ships goes through `backend/` as a service, never as a notebook.
@@ -68,6 +68,7 @@ One monorepo, with folder-level ownership.
 Keep these separate in code, comments, and docs.
 
 - **Trained:** the matching re-ranker (embeddings plus a trainable re-ranker). The full training is FYP-2. FYP-1 uses the cosine-similarity baseline.
+- **Trained offline on external data (adopted 2026-10-19, supervisor approval pending):** three supporting classifiers. A resume role classifier on the haider resumes, a startup outcome classifier on Startup Success/Fail, and a follow-on funding classifier on StartUp Investments. Labels and rules are in `docs/datasets.md`. They are offline studies. Never show their output to a user as a probability of success, failure or funding. None has been trained yet, so make no accuracy claim.
 - **Prompted LLM calls:** readiness assessment, pitch practice, market research synthesis, resume and profile suggestions, compliance answers, and the portfolio link check.
 
 Do not call a prompted feature "trained" or "fine-tuned" anywhere.
@@ -105,10 +106,12 @@ Applies to `backend/`, `rag/`, and `ml/`. The report names Python 3.11, so use 3
 ## Data rules
 
 - No data without consent. Do not request partner or founder datasets outside the approved pathway in the report.
-- External datasets are for profiling and schema design only. None of them trains the deployed re-ranker.
+- External datasets are for profiling, schema design and, for three FINAL datasets only, the supporting classifiers listed above. None of them trains the deployed re-ranker, the compliance assistant or the prompted features.
+- Before training on a dataset, finish its cleaning items in `docs/datasets.md` (for example the haider deduplication and the Success/Fail 1990 to 2015 date filter). Deduplicate before splitting.
 - Age and gender are never matching features. Do not store names, birth dates, or contact fields from external datasets.
 - Do not redistribute external datasets. Raw data and model weights stay out of git (see `.gitignore`).
-- The resume optimizer has no external test data. Test it on the team's own resumes and on resumes shared with consent.
+- The resume optimizer has no external test data. Test it on the team's own resumes and on resumes shared with consent. The public resume datasets are used only for the resume role classifier and its external check.
+- Write "we found no public labeled dataset for Pakistani founder-mentor or investor matching". Do not write that none exists or that its absence is confirmed.
 
 ## Scope limits
 
@@ -178,6 +181,7 @@ The same holds for GSD Core if it is installed (`SETUP.md` section 10). Its comm
 | `sql-queries` | Writing and tuning Postgres queries |
 | `frontend-design` | Visual polish of UI. The Figma prototypes and `DESIGN.md` win if they disagree |
 | `claude-api` | Reference for prompt and gateway design only. We call Gemini, not Claude |
+| `graphify` | Code graph (`/graphify`) for context and token savings. Only when the user asks. Do not index the repo, run `graphify hook install` or `graphify claude install` without a yes. Its description is trimmed so it does not start on its own. Personal tool, not required by the FYP |
 | `git-workflow-and-versioning` | Branch and commit habits. The git rules in this file win |
 | `web-design-guidelines` | Reviewing UI against web guidelines (rules file is local, no live download) |
 | `shipping-and-launch` | Pre-launch checklist, staged rollout and rollback plan. Nothing is deployed yet |
@@ -186,4 +190,60 @@ The same holds for GSD Core if it is installed (`SETUP.md` section 10). Its comm
 | `observability-and-instrumentation` | Logging, metrics, tracing and alerts. Never log secrets (see Safety rules) |
 | `ponytail`, `ponytail-review`, `ponytail-audit`, `ponytail-debt` | Only when the user asks. Smallest-change style, review of a change or the whole repo, and a list of deferred `shortcut:` comments. Replies must still explain each change in plain words |
 
-Other items (spec-kit, graphify, and the per-person installs) are listed in `THIRD_PARTY.md`. They are not skills in `.claude/skills/`, and spec-kit and graphify are not installed yet. Add a row here for each skill once it is in `.claude/skills/`.
+Other items (spec-kit and the per-person installs) are listed in `THIRD_PARTY.md`. They are not skills in `.claude/skills/`. spec-kit is a per-person tool, installed on Ali's machine, and `specify init` has not been run. Add a row here for each skill once it is in `.claude/skills/`.
+
+## Design source of truth (latest, overrides any earlier design rule above)
+
+- `DESIGN.md` at the repo root is the only design source. Read it before any UI work.
+- References live in `frontend/design_reference/<folder>/` (`screen.png` plus `code.html`). `frontend/design_reference/INDEX.md` maps each route to its folder.
+- References are visual only. Never copy `code.html` or its Tailwind config colors.
+- Strip anything that breaks rule 13 from references (invented stats, fake IDs, compliance claims, "AI-generated" badges).
+- Page background is one token in `globals.css`: `radial-gradient(circle at 85% 15%, #F5C842 0%, #FF8A2B 30%, #C4451A 55%, #3A1206 100%) fixed`. Same on every screen.
+- Fonts via `next/font/google`: Hanken Grotesk (text), Instrument Serif italic (last one or two words of page and card titles only), JetBrains Mono (uppercase small labels, nav, dates, status chips).
+- Icons are inline SVG components in `src/components/ui/icons`.
+- Overrides: rule 2 also allows numerals at 72 and 96 and mono at 12 to 13. Rule 3 is replaced by the font list above. Rule 4 is replaced by the page background token, the only gradient allowed. Rule 11 is amended: SECP, PSEB and FBR may appear only as plain context or a field label such as "SECP registration number", never as endorsement, compliance or certification. PECA stays out of the UI.
+- `ROLE_NAVIGATION` is the only nav source. Admin has Console only; appeals are tabs inside it.
+- Ignore the old `docs/design/stitch/` path.
+
+## Skills for frontend work
+
+- Use for UI work: `frontend-ui-engineering`, `vercel-react-best-practices`, `vercel-composition-patterns`, `web-design-guidelines` (accessibility and layout checks only), `incremental-implementation`.
+- Use for checking: `webapp-testing` and `verification-loop` after each screen, `code-review-and-quality` before a PR.
+- `frontend-design`: structure and spacing ideas only. It must never change colors, fonts, the page background, the logo or the nav.
+- `landing-page-design`: Part A only (page structure, copy, FAQ). Ignore Part B, DESIGN.md decides every visual value.
+- `anti-ai-writing` and `humanizer`: apply to all UI copy.
+- DESIGN.md wins over every skill. Do not use backend, data or ML skills for UI tasks.
+
+## Guide overrides
+
+- In that guide, `/design/` means `DESIGN.md` at the repo root plus `frontend/design_reference/`. Ignore stitch-v1, stitch-v2 and rename_map.
+- No AI marks, badges or labels anywhere in the UI. Ignore the guide's language model mark rule and test FT-06.
+
+## Stack (latest, overrides "Stack and layout", rules 1 and 2, and "Do not" above)
+
+- Styling is Tailwind CSS with shadcn/ui, as the report says. DESIGN.md tokens live in `globals.css` and are exposed through the Tailwind theme. Components use theme tokens only: no raw hex and no arbitrary values such as `text-[19px]` or `p-[13px]`. Sizes and spacing stay on the DESIGN.md scales.
+- List the exact packages needed for Tailwind and shadcn and wait for approval before installing.
+- shadcn components are copied into `src/components/ui` and must be restyled to DESIGN.md. The default shadcn look is not allowed.
+- Icons stay inline SVG in `src/components/ui/icons`. Do not add lucide-react or any icon package.
+- Existing CSS Modules stay until their page is rebuilt, then are removed from that page. New code is Tailwind only.
+- `code.html` may be read for structure and spacing, never pasted. Its Tailwind config colors are never used.
+
+## Reporting rules for agents
+
+- Stop after every step. The user commits.
+- Paste the raw output of `npx tsc --noEmit`, `npm run lint` and `npm run build`, never a summary. Do not report a check you did not run.
+- Do not claim a screen matches its reference unless you compared it with screen.png. List the differences you could not remove.
+- Before finishing a step, search frontend/src for PECA, NFR, any SECP, PSEB or FBR text that implies endorsement or compliance, "AI-assisted", "AI-generated", "powered by", compliant, secure, encrypted and certified. Fix hits in the files you touched and list the rest.
+- Fix every new lint warning you introduce.
+
+## Copy punctuation
+
+- No em dashes or en dashes anywhere in UI copy, labels, placeholders, option text, comments or docs. Use a comma, colon, period or the word "to" instead.
+
+## Context economy (read this first)
+- Start every task by reading docs/frontend-map.md and the last 40 lines of docs/build-log.md. Do not re-read the whole repo.
+- Read only the files named in the prompt or listed in the map for that screen. Use search with line ranges instead of opening whole files.
+- Read only the DESIGN.md section for the screen you are building (use search for its heading). Read all of DESIGN.md only when asked.
+- Do not re-measure colors, contrast or alignment that a previous step already reported unless the prompt asks.
+- Reuse the last screenshots if the screen did not change. One screenshot round, one build at the end.
+- After each step, update docs/frontend-map.md (new or changed components, tokens, routes, decisions) in a few lines.

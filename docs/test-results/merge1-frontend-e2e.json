@@ -1,0 +1,945 @@
+{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "E:\\Documents\\advanced_statistics\\fyp\\founders-carnet\\frontend\\node_modules\\playwright\\cli.js",
+      "test",
+      "--reporter=list,json"
+    ],
+    "configFile": "E:\\Documents\\advanced_statistics\\fyp\\founders-carnet\\frontend\\playwright.config.ts",
+    "rootDir": "E:/Documents/advanced_statistics/fyp/founders-carnet/frontend/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "E:/Documents/advanced_statistics/fyp/founders-carnet/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "E:/Documents/advanced_statistics/fyp/founders-carnet/frontend/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "E:\\Documents\\advanced_statistics\\fyp\\founders-carnet\\frontend\\test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "",
+        "testDir": "E:\\Documents\\advanced_statistics\\fyp\\founders-carnet\\frontend\\tests",
+        "snapshotDir": "E:\\Documents\\advanced_statistics\\fyp\\founders-carnet\\frontend\\tests",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:3000",
+          "trace": "on-first-retry"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": ""
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.65.1",
+    "workers": 1,
+    "webServer": {
+      "command": "npx next start -p 3000",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 60000
+    }
+  },
+  "suites": [
+    {
+      "title": "ft-01-founder-auth-redirect.spec.ts",
+      "file": "ft-01-founder-auth-redirect.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "FT-01: Founder Authentication and Role Guard (FR-23)",
+          "file": "ft-01-founder-auth-redirect.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "signing in with founder sample account lands on /founder/dashboard and typing another role URL redirects away",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 12751,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:06:24.892Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d37b2f88cd3afb8d6ccf-186ee6ebf2f89aafd06a",
+              "file": "ft-01-founder-auth-redirect.spec.ts",
+              "line": 4,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ft-02-register-consent.spec.ts",
+      "file": "ft-02-register-consent.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "FT-02: Register Consent Enforcement (FR-17)",
+          "file": "ft-02-register-consent.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Create account button cannot be submitted until consent box is ticked",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1267,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:06:41.174Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0f1404cb752e732682f3-84114dccbf5f36304564",
+              "file": "ft-02-register-consent.spec.ts",
+              "line": 4,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ft-03-register-roles.spec.ts",
+      "file": "ft-03-register-roles.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "FT-03: Register Role Options (FR-22)",
+          "file": "ft-03-register-roles.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "registration form does not offer Admin as an option",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 866,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:06:42.488Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5563f1d1023e4c4ef7f6-49fadc0c12a3859dec4d",
+              "file": "ft-03-register-roles.spec.ts",
+              "line": 4,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ft-09-founder-dashboard-viewport.spec.ts",
+      "file": "ft-09-founder-dashboard-viewport.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "FT-09 (Dashboard): Mobile and Desktop Viewport Overflow (Usability)",
+          "file": "ft-09-founder-dashboard-viewport.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "/founder/dashboard has no horizontal scroll at 390 px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1215,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:06:43.403Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1fd4a86da2eb699d9a8-15ad289c44ad039d0cd7",
+              "file": "ft-09-founder-dashboard-viewport.spec.ts",
+              "line": 22,
+              "column": 3
+            },
+            {
+              "title": "/founder/dashboard has no horizontal scroll at 768 px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1214,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:06:44.659Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1fd4a86da2eb699d9a8-ead6bdd7b4fa384b6ce0",
+              "file": "ft-09-founder-dashboard-viewport.spec.ts",
+              "line": 50,
+              "column": 3
+            },
+            {
+              "title": "/founder/dashboard has no horizontal scroll at 1024 px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1663,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:06:45.912Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1fd4a86da2eb699d9a8-0517c10d85c4b2f7628a",
+              "file": "ft-09-founder-dashboard-viewport.spec.ts",
+              "line": 76,
+              "column": 3
+            },
+            {
+              "title": "/founder/dashboard has no horizontal scroll at 1440 px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5525,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:06:47.632Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1fd4a86da2eb699d9a8-4fcfba23c7513835945d",
+              "file": "ft-09-founder-dashboard-viewport.spec.ts",
+              "line": 102,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ft-09-mobile-viewport.spec.ts",
+      "file": "ft-09-mobile-viewport.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "FT-09: Mobile Responsive 390px Viewport (Usability)",
+          "file": "ft-09-mobile-viewport.spec.ts",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Landing Page (/) has zero horizontal overflow at 390px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3849,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:06:53.200Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "edd8ca7d166848b49cc9-c7cd71baeff33fc0b223",
+              "file": "ft-09-mobile-viewport.spec.ts",
+              "line": 17,
+              "column": 5
+            },
+            {
+              "title": "Login Page (/login) has zero horizontal overflow at 390px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3739,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:06:57.088Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "edd8ca7d166848b49cc9-f957b2c25861e446559a",
+              "file": "ft-09-mobile-viewport.spec.ts",
+              "line": 17,
+              "column": 5
+            },
+            {
+              "title": "Register Page (/register) has zero horizontal overflow at 390px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3737,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:07:00.872Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "edd8ca7d166848b49cc9-7326c570234d73c0dff9",
+              "file": "ft-09-mobile-viewport.spec.ts",
+              "line": 17,
+              "column": 5
+            },
+            {
+              "title": "Privacy Policy (/privacy) has zero horizontal overflow at 390px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 882,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:07:04.659Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "edd8ca7d166848b49cc9-2486ddde9fe8078803d8",
+              "file": "ft-09-mobile-viewport.spec.ts",
+              "line": 17,
+              "column": 5
+            },
+            {
+              "title": "Terms of Service (/terms) has zero horizontal overflow at 390px",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 992,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:07:05.573Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "edd8ca7d166848b49cc9-d547a9297d2476034a29",
+              "file": "ft-09-mobile-viewport.spec.ts",
+              "line": 17,
+              "column": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ft-11-readiness-rubric-dialog.spec.ts",
+      "file": "ft-11-readiness-rubric-dialog.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "FT-11: Readiness Rubric Dialog Read-Only Evaluation (FR-2)",
+          "file": "ft-11-readiness-rubric-dialog.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "dialog shows 7 dimensions with score, reasoning, next action, has no editable controls, closes with Escape and Close button",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 14941,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:07:06.615Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "58afc2af3f604c036e67-b6cf5b0486dfef319817",
+              "file": "ft-11-readiness-rubric-dialog.spec.ts",
+              "line": 22,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ft-12-pitch-feedback-match-privacy.spec.ts",
+      "file": "ft-12-pitch-feedback-match-privacy.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "FT-12: Pitch Simulation Notices and Match Privacy Guard (FR-7, NFR-6)",
+          "file": "ft-12-pitch-feedback-match-privacy.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "pitch feedback carries language model simulation notice and match cards conceal contact details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 889,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-21T20:07:21.608Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1b336e9447d3f04b8fb-f5ae4c2cb1af14a37b5d",
+              "file": "ft-12-pitch-feedback-match-privacy.spec.ts",
+              "line": 22,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ft-talent-dashboard.spec.ts",
+      "file": "ft-talent-dashboard.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "FT-01 & FT-09 & FT-04 & FT-06: Talent Dashboard Specs",
+          "file": "ft-talent-dashboard.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "FT-01: Talent Authentication and Role Guard (FR-23)",
+              "file": "ft-talent-dashboard.spec.ts",
+              "line": 4,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "signing in with talent account lands on /talent/dashboard and typing another role URL redirects away",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 9479,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-11-21T20:07:22.553Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a7392c8826762042a1e3-633c73a13d1ed83cb7db",
+                  "file": "ft-talent-dashboard.spec.ts",
+                  "line": 5,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "FT-09: Talent Dashboard Viewport Overflow (Usability)",
+              "file": "ft-talent-dashboard.spec.ts",
+              "line": 41,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "/talent/dashboard has no horizontal scroll at mobile (390 px)",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4684,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-11-21T20:07:32.074Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a7392c8826762042a1e3-dc9ddba392859323bb63",
+                  "file": "ft-talent-dashboard.spec.ts",
+                  "line": 68,
+                  "column": 7
+                },
+                {
+                  "title": "/talent/dashboard has no horizontal scroll at tablet (768 px)",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 6749,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-11-21T20:07:36.937Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a7392c8826762042a1e3-8f665b751fb11f5c0a10",
+                  "file": "ft-talent-dashboard.spec.ts",
+                  "line": 68,
+                  "column": 7
+                },
+                {
+                  "title": "/talent/dashboard has no horizontal scroll at desktop (1024 px)",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4206,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-11-21T20:07:43.723Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a7392c8826762042a1e3-8ccbae56d938621fb6d5",
+                  "file": "ft-talent-dashboard.spec.ts",
+                  "line": 68,
+                  "column": 7
+                },
+                {
+                  "title": "/talent/dashboard has no horizontal scroll at large desktop (1440 px)",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1656,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-11-21T20:07:47.968Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a7392c8826762042a1e3-4490f8aa4e7d34d1cd2f",
+                  "file": "ft-talent-dashboard.spec.ts",
+                  "line": 68,
+                  "column": 7
+                }
+              ]
+            },
+            {
+              "title": "FT-04 & FT-06: Language Model Attribution and Privacy Guard (FR-7, NFR-6)",
+              "file": "ft-talent-dashboard.spec.ts",
+              "line": 98,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "resume analysis carries simulation notice and contact details stay hidden",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 6533,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-11-21T20:07:49.659Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "a7392c8826762042a1e3-6259940606626b9b325d",
+                  "file": "ft-talent-dashboard.spec.ts",
+                  "line": 116,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-21T20:06:02.713Z",
+    "duration": 121426.537,
+    "expected": 20,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -1,12 +1,12 @@
 from functools import lru_cache
 
 from fastapi import HTTPException, status
+from rag.compliance.embeddings import SentenceTransformerEncoder
 
 from app.config import get_settings
 from app.services.compliance_assistant import ComplianceAnswerService
 from app.services.llm_gateway import GeminiGateway
 from app.services.llm_gateway_logging import write_gateway_call_log
-from rag.compliance.embeddings import SentenceTransformerEncoder
 
 
 @lru_cache(maxsize=1)
@@ -31,7 +31,7 @@ def get_compliance_answer_service() -> ComplianceAnswerService:
         gateway=gateway,
         embedding_model=settings.embedding_model_name,
         top_k=settings.compliance_top_k,
-        minimum_similarity=settings.compliance_minimum_similarity,
+        minimum_similarity=settings.compliance_refusal_threshold,
     )
 
 

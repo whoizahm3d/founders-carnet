@@ -1,0 +1,74 @@
+{
+  "rubric_version": "v1",
+  "scoring_rules": [
+    "Score only from the information in the startup profile. Do not invent facts.",
+    "If a dimension has no supporting information, score it 1 and state 'no evidence provided'.",
+    "Use the full 1-5 scale. 2 and 4 sit between the anchors.",
+    "Readiness means how well prepared the startup is to approach mentors and investors. It is not a prediction of funding."
+  ],
+  "dimensions": [
+    {
+      "name": "problem_clarity",
+      "definition": "How clearly the startup states a specific problem, who has it, and why it matters.",
+      "anchors": {
+        "1": "No clear problem, or a vague statement such as 'people need better tools'.",
+        "3": "Problem is stated and a target user is named, but pain level or evidence is thin.",
+        "5": "Specific problem, clearly defined user, and evidence of the pain (interviews, data, or observed behaviour)."
+      }
+    },
+    {
+      "name": "market_definition",
+      "definition": "How well the target market, its size, and the first customer segment are defined.",
+      "anchors": {
+        "1": "No target market, or 'everyone' is the customer.",
+        "3": "Target segment named and a rough market size given, but without a source or a clear entry segment.",
+        "5": "Specific initial segment, sourced market size (TAM/SAM/SOM or equivalent), and a clear reason for starting there."
+      }
+    },
+    {
+      "name": "differentiation",
+      "definition": "How clearly the startup explains why it is better than or different from existing alternatives.",
+      "anchors": {
+        "1": "No alternatives or competitors mentioned; claims to have no competition.",
+        "3": "Competitors or alternatives named, with a general claim of being better.",
+        "5": "Specific comparison against real alternatives with a defensible advantage (technology, data, cost, access, or distribution)."
+      }
+    },
+    {
+      "name": "business_model",
+      "definition": "How coherent the plan is for who pays, how much, and why the economics can work.",
+      "anchors": {
+        "1": "No revenue model, or it is unrelated to the problem.",
+        "3": "Revenue source and pricing idea stated, but costs, margins, or willingness to pay are untested.",
+        "5": "Clear payer, pricing, and unit economics, supported by evidence such as pilots, quotes, or early sales."
+      }
+    },
+    {
+      "name": "traction",
+      "definition": "Evidence that real users or customers want the product.",
+      "anchors": {
+        "1": "No users, conversations, or validation; idea stage only.",
+        "3": "Some validation such as interviews, a waitlist, a prototype, or a few pilot users.",
+        "5": "Measurable traction such as paying customers, repeat usage, or growth with numbers and dates."
+      }
+    },
+    {
+      "name": "team",
+      "definition": "Whether the team has the skills, commitment, and completeness to execute the idea.",
+      "anchors": {
+        "1": "No team information, or a single founder with no relevant skills described.",
+        "3": "Team described with some relevant skills, but key roles are missing or commitment is unclear.",
+        "5": "Complementary team covering the key roles (product, technical, business), with relevant experience and full-time commitment."
+      }
+    },
+    {
+      "name": "scalability",
+      "definition": "Whether the business can grow beyond its first customers without costs growing at the same rate.",
+      "anchors": {
+        "1": "No growth plan, or the model depends entirely on manual work for each customer.",
+        "3": "Growth path described (new segments, cities, or channels), but the constraints and costs are not addressed.",
+        "5": "Clear, realistic plan to scale with identified channels, repeatable processes, and awareness of constraints."
+      }
+    }
+  ]
+}

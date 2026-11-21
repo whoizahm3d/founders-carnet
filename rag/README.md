@@ -9,6 +9,7 @@ Compliance assistant: corpus, section-aware chunking, embedding, retrieval, answ
 | `data/` | The 11 corpus documents. Committed. |
 | `corpus_manifest.md` | File names, source URLs, dates and SHA-256 hashes. In git. |
 | `corpus_profile/` | The profiling script and report used to check the files. |
+| `evaluation/` | Question set, retrieval and end-to-end evaluation runners, guards, results. |
 
 ## Before you index
 
@@ -17,4 +18,4 @@ Compliance assistant: corpus, section-aware chunking, embedding, retrieval, answ
 
 ## Evaluation
 
-A hand-verified gold question set measures citation correctness, retrieval recall and correct abstention (English only in FYP-1). Do not claim an accuracy figure before it has been run.
+A hand-verified gold question set (26 questions: 12 dev, 14 test) measures retrieval recall, correct abstention, and baseline comparison. Primary configuration is pre-registered as multilingual-e5-base hybrid with refusal gate at 0.8428. Test split is strictly held out. See `rag/evaluation/README.md` for reproduction commands and guard specifications.

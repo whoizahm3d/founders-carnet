@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -25,8 +27,8 @@ def ensure_processing_consent(db: Session, user_id: int) -> None:
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> User:
     if credentials is None:
         raise HTTPException(
@@ -39,7 +41,9 @@ def get_current_user(
     payload = decode_access_token(token)
     user_id = payload.get("sub")
     if not isinstance(user_id, str):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
 
     try:
         parsed_user_id = int(user_id)
@@ -56,12 +60,15 @@ def get_current_user(
         or payload.get("ver") != user.token_version
         or payload.get("role") != user.role
     ):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+        )
     return user
 
 
 def require_roles(*allowed_roles: str):
-    def role_checker(current_user: User = Depends(get_current_user)) -> User:
+    def role_checker(current_user: Annotated[User, Depends(get_current_user)]) -> User:
         if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

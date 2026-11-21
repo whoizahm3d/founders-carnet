@@ -1,6 +1,130 @@
 # Decisions log
 
+## 2026-11-21: Shared dense top-1 cosine refusal gate and hybrid ranking alignment
+
+**Context:** Compliance RAG system retrieval pipeline and abstention gating (FR-8, NFR-11 to NFR-14, Section 4.4 and Section 4.5 of the report). Synchronizing the deployed service refusal logic with the pre-registered evaluation design.
+
+**What we tried:** The previous hybrid retrieval path applied `minimum_score` directly to dense rows, BM25 rows, and the fused reciprocal rank fusion (RRF) score `min(1.0, score * (rrf_k + 1) / 2.0)`.
+
+**What we found:** A candidate chunk present in only one ranking receives an RRF contribution of at most 1/(60+1) = 0.5 under the fused score formula. When `minimum_similarity = 0.8` was configured, hybrid retrieval filtered out all candidate passages unless BM25 also produced a score >= 0.8, which theoretical upper-bound normalized BM25 rarely assigns. This caused `ComplianceAnswerService` to refuse virtually all queries and broke backend test suites (`test_supported_answer_is_saved_with_its_citation`, `test_gemini_error_is_logged_and_failed_query_is_recorded`, `test_gateway_generation_failure_is_logged_once_and_failed_query_is_saved`).
+
+**Decision:**
+1. Decouple retrieval ranking from the refusal gate: for `method="hybrid"`, fetch active candidates of the configured model without a distance filter in the database query.
+2. Evaluate refusal against the candidate set using a shared function `refuse_by_dense_top1(dense_top1_cosine, threshold)` in `rag/compliance/retrieve.py`, used identically in `backend/app/services/compliance_retrieval.py` and `rag/evaluation/run_e2e.py`.
+3. If not refused, call `hybrid_retrieve` with `minimum_score=0.0` over the unfiltered candidates to rank passages, matching the evaluation pipeline.
+4. Add `compliance_refusal_threshold: float = 0.8428` to backend config, matching the pre-registered dev-tuned threshold on 3 negative examples.
+
+**Why:** Aligns the deployed service with the pre-registered evaluation protocol where hybrid provides cross-lingual ranking while dense top-1 cosine serves as the refusal gate.
+
+**Follow-ups:** Update `docs/pending-report-changes.md` and `docs/build-log.md`. If the backend default embedding model changes to `intfloat/multilingual-e5-base`, stored chunks in `compliance_chunks` and ecosystem profiles in `ecosystem_profiles` must be regenerated.
+
+## 2026-11-20: Pre-registered compliance evaluation configuration and test guard policy
+
+**Context:** Compliance RAG system evaluation (FR-8, NFR-11 to NFR-14, Research Question 2, Section 4.5 of the project report and playbook). Establishing the primary deployed retrieval pipeline, refusal gate threshold, and the protocol for the single held-out test split evaluation.
+
+**What we tried:** Benchmarked dense, BM25, and hybrid (RRF k=60) retrieval on the 12 development questions (9 answerable, 3 unanswerable) across MPNet and multilingual-e5-base. Tuned the abstention threshold on the 3 unanswerable dev questions and evaluated default (0.4) vs tuned thresholds.
+
+**What we found:** On the development split (n=9 answerable questions), MPNet hybrid and E5 hybrid both achieved 8/9 Recall@5 hits (88.9%, Wilson 95% interval [0.565, 0.980]), and E5 BM25 also scored 8/9 hits. With n=9, confidence intervals are broad and dev results do not statistically separate the configurations. However, BM25 alone cannot match across English queries and Urdu or mixed-language statutory texts, which is a core project requirement. On the 3 unanswerable dev questions, E5 dense top-1 cosine scores separated negatives from positives with an optimal threshold of 0.8428 (tied range 0.842750 to 0.842938).
+
+**Decision:**
+1. Primary retrieval configuration: intfloat/multilingual-e5-base with hybrid retrieval (BM25 + Dense RRF, k=60, top 5). This is a principled design choice for cross-lingual coverage rather than an empirical dev win.
+2. Refusal gate: Questions whose E5 dense top-1 cosine similarity falls below 0.8428 are refused immediately before generation. This threshold rests on 3 negative dev examples. Downstream rule checks (citation membership, numeric/date claim fidelity, effective date presence) and the LLM grounding validator (compliance-grounding-v1) remain active.
+3. Test split retrieval evaluation: All six configurations (MPNet and E5 across dense, BM25, hybrid) will be evaluated once on the 14-question test split under strict guard enforcement (clean working tree for code, lock file, explicit --confirm-test-run flag). Test metrics will be recorded in retrieval.csv and retrieval_summary.csv but will never be used to alter configuration choices.
+4. End-to-end evaluation: Run exclusively for the primary configuration against a no-retrieval baseline (gemini-2.5-flash, temperature 0.0). Results are recorded in e2e.csv with human labels (citation_correct, unsupported_claim, date_correct) left for subsequent manual audit.
+
+**Why:** Pre-registering the primary configuration and locking test evaluation prevents post-hoc selection, overfitting to the test split, and metric p-hacking.
+
+**Follow-ups:** Enforced through rag/evaluation/guards.py in run_test_retrieval.py and run_e2e.py. Update docs/build-log.md, docs/pending-report-changes.md, and rag/evaluation/README.md.
+
+## 2026-11-20: BM25 score normalization fix and dev-12 re-run
+
+**Context:** The BM25 retriever in `rag/compliance/retrieve.py` is used in the hybrid retrieval pipeline and its top score drives abstention threshold tuning. The score feeds directly into the hybrid RRF signal and determines whether a question is abstained on.
+
+**What we tried:** Inspected the original `bm25()` function in `rag/compliance/retrieve.py`. The old normalization divided each BM25Plus raw score by `max(scores)`, which forces the top result of every query to score exactly 1.0 regardless of actual match quality.
+
+**What we found:** Scores normalized to the query-specific maximum are not comparable across queries. Every query's top result gets 1.0, so the abstention threshold cannot distinguish a strong match from a weak one. After the fix, the BM25 top score for a question like q017 (outside corpus) is visibly lower than for q001 (strong lexical match). The old retrieval results show all BM25 top scores as 1.0, confirming the bug.
+
+**Decision:** Replace the in-query maximum normalization with a theoretical upper bound: `sum(IDF(token) * (k1 + 1 + delta) for token in unique_query_tokens)`. This bound is the maximum score any single document could receive for the query given the corpus IDF values, so scores are calibrated and cross-query comparable. All returned scores are still clamped to [0, 1].
+
+**Why:** Cross-query comparable BM25 scores are required for the hybrid abstention threshold to generalize. With the old normalization the threshold had no signal from BM25 top scores.
+
+**Follow-ups:** Dev-12 re-run results (retrieval.csv, retrieval_summary.csv, abstention_tuning.csv) supersede the dev-6 results archived as `retrieval_dev6_superseded.csv`. The report must reflect the new BM25 normalization method and the tuned abstention threshold from the dev-12 run. Update pending-report-changes.md.
+
+## 2026-11-19: Expand the compliance evaluation development split
+
+**Context:** The compliance RAG evaluation uses a fixed development and test split. The first development retrieval run used 6 development questions and 14 held-out test questions.
+
+**What we tried:** We ran dense, BM25 and hybrid retrieval on the original 6-question development split using MPNet and multilingual E5. The test split was not run.
+
+**What we found:** Six new answerable questions were written after that first development run. Adding them grows the development split from 6 to 12 questions. The test split remains unchanged at 14 questions.
+
+**Decision:** Add the six new answerable questions to the development split only. Re-run the development retrieval evaluation and tune abstention thresholds again before relying on any development metrics. Do not change or run the test split.
+
+**Why:** The prior development metrics and tuned thresholds were based on six questions, so they do not measure the expanded development set. Preserving the test split protects its held-out status.
+
+**Follow-ups:** Confirm each proposed chunk mapping against its source PDF, re-run the development retrieval comparison without downloading models, regenerate the evaluation result files and RESULTS.md, and state in the report that the original development figures and thresholds were superseded.
+
+## 2026-11-15: Social auth options (LinkedIn, Google, GitHub) and demographic field handling in /login and /register
+
+**Context:** The report specifies FR-22 (social sign in via LinkedIn and email) and omits Google and GitHub, while prototype reference screens show Google and GitHub options. Furthermore, the backend registration schema requires `full_name`, but the prototype and DESIGN.md v3.9 intentionally omit Full Name, Profession, and Age fields from the auth cards.
+
+**What was tried:** Evaluated adding live OAuth integrations versus rendering visible disabled options. Evaluated adding a full name input versus deriving an initial name fallback.
+
+**Decision:**
+- Render "Continue with LinkedIn" as a full-width outlined pill, and "Google" and "GitHub" as half-width outlined pills side by side below it, with monochrome glyphs (no blue) and a visible `(Not available yet)` caption.
+- In `src/lib/auth.ts`, provide a fallback `nameFromEmail(email)` when registering so the backend `UserRegisterRequest` validation passes without requiring a demographic field on the registration card.
+- Log missing backend endpoints for LinkedIn, Google, and GitHub in `docs/api_gaps.md` and document the scope disparity in `docs/pending-report-changes.md` (noting the report is finalized).
+
+**Why:** Respects DESIGN.md visual hierarchy and prototype expectations while remaining strictly honest about backend capabilities and preserving backend validation integrity.
+
+## 2026-11-14: Adopt Tailwind CSS, shadcn/ui component primitives, and DESIGN.md v3.8 tokens for frontend rebuild
+
+**Context:** The report states Tailwind CSS and shadcn/ui in its software stack, while the initial wireframe-driven prototype used CSS Modules. Rebuilding against accepted Stitch prototypes and DESIGN.md requires a unified styling foundation, explicit design tokens, and removal of sidebar navigation in favor of a floating pill top navigation.
+
+**What was tried:** Evaluated keeping CSS Modules vs installing Tailwind CSS and restyled shadcn/ui primitives. Approved minimal package set: `tailwindcss@^3.4.17`, `postcss`, `autoprefixer`, `clsx`, `tailwind-merge`, and `class-variance-authority`. No icon packages installed; inline SVG icons strictly used in `src/components/ui/icons/`.
+
+**Decision:**
+- Adopt Tailwind CSS with tokens locked to `DESIGN.md` (canvas, ink, accent #B15F2C, radii, spacing, hairlines, and status pairs).
+- Set page background globally to fixed radial gradient: `radial-gradient(circle at 85% 15%, #F5C842 0%, #FF8A2B 30%, #C4451A 55%, #3A1206 100%) fixed`.
+- Configure Google Fonts (`next/font/google`): Hanken Grotesk (body/headlines), Instrument Serif italic (last words of headings), JetBrains Mono (labels/nav/status).
+- Replace sidebar layout with floating `TopNav` (glass pill, Karachi local time chip, initials avatar) and full-screen mobile `MenuOverlay`.
+- Existing CSS Modules are preserved until each page is rebuilt, then deleted. Built `/styleguide` page to demonstrate all foundation tokens and component states.
+
+**Why:** Aligns the implementation with the project report and `DESIGN.md`, simplifies layout conversion from prototype visual specs, and ensures consistent accessibility, responsiveness, and contrast ratios without external design bloat.
+
+## 2026-11-13: Keep compliance embedding default provisional; reuse the existing chunks table
+
+**Context:** Three multilingual embedding models were requested for comparison, and citations require heading paths, effective dates and corpus versions. The repository already has a `compliance_chunks` table.
+
+**What we tried:** Installed pinned CPU embedding dependencies and attempted the MPNet download. Its weight file remained incomplete, so the sequential loader did not reach multilingual-E5 or BGE-M3 and no model comparison or corpus indexing could run. The existing table has a compatible pgvector embedding column.
+
+**Decision and reason:** Keep `paraphrase-multilingual-mpnet-base-v2` as the provisional configured default; do not select a new default without dev measurements and one test confirmation. Extend `compliance_chunks` with metadata in Alembic revision 0005 instead of adding a table. This preserves existing document/chunk relationships and avoids duplicating the retrieval corpus.
+
+**Report difference:** The implemented schema and incomplete model evaluation need to be reflected in the report's implementation/evaluation sections. See the pending-report row.
+
+## 2026-11-13: Narrow Finance Act retrieval scope to founder-facing provisions
+
+**Context:** The report describes amendments effective from 1 July 2026, but the Finance Act also amends vehicle taxation, customs, sales tax and excise.
+
+**What we found:** The reviewed Finance Act has section 5 amendments to the Income Tax Ordinance and no Companies Act or SECP fee amendment. Keeping that section yields 32 chunks, above the approved five-chunk minimum.
+
+**Decision and reason:** Retrieve the Income Tax Ordinance amendments and any Companies Act/SECP fee amendments only. This keeps the founder compliance corpus focused and excludes unrelated Finance Act material. No Companies Act/SECP fee amendments were present in the 2026 Act.
+
+**Report difference:** `main.tex` and `docs/context/corpus.md` currently state the broader amendment scope. The matching pending-report row records what to update.
+
 Dated entries, newest first. Each entry has the context, what was tried, what was found, what was decided, and why. Add an entry every time the code or the report is changed so the two agree.
+
+## 2026-11-13: Normalize line endings when verifying text corpus hashes
+
+**Context:** Git is configured with `core.autocrlf=true`, so Windows checkouts convert LF text to CRLF. The three initially mismatched VOSS/PSEB entries in the manifest are LF hashes. The two older FBR registration-page entries are raw CRLF hashes, so the manifest has a mixed text-hash convention.
+
+**What we tried:** Compared raw-byte hashes and CRLF-to-LF hashes for the VOSS transcription and PSEB HTML and reviewed-text captures.
+
+**What we found:** The three initially mismatched working copies use CRLF and have no UTF-8 BOM; their LF-normalized SHA-256 hashes match the manifest. The two FBR registration-page files also use CRLF, but their raw SHA-256 hashes match their manifest entries. No source bytes or manifest hashes were changed.
+
+**Decision:** For `.txt` and `.html`, verify the CRLF-to-LF SHA-256 first and accept an exact raw-byte SHA-256 only when the normalized hash does not match. Hash PDFs and all other file types as raw bytes. Do not change the manifest hashes or corpus files.
+
+**Why:** This preserves the LF hashes used for the three VOSS/PSEB entries, while retaining exact verification for the two existing FBR rows whose manifest hashes were recorded from CRLF bytes after Git's Windows checkout conversion.
 
 ## 2026-11-12: Keep PostgreSQL 17 and include Redis/Celery in step 1
 
@@ -35,6 +159,111 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 **Why:** This follows the coding plan's allowed LinkedIn OAuth cut, preserves FR-12's SECP cross-check, and avoids unapproved account integration or unsupported claims of automated identity verification.
 
 **Follow-ups:** The admin review console must record the SECP check and final reviewer decision. Calibrate thresholds on the team's consented pilot profiles before treating auto bands as validated.
+## 2026-11-02 (later): Master document synced with the report; two cross-references fixed
+
+**Context:** The master .md and .docx had drifted from the report (F26-090 plus the 2 November main.tex). A comparison found that the report cites three works the master did not list, states numbers the master lacked, and has a Chapter 4 and 5 level of detail (31 FRs, 23 numbered NFRs, 17 features, 19 risks, 10 use cases, 14 assumptions, 12 GUI screens, 41 tables) that the master held only in summary form. Two cross-references in the master were also wrong.
+
+**What we tried:** A script compared the bib keys, the appendix sources and the numbers in the report's prose against the master, then patched the master from main.tex.
+
+**What we found:** Missing references: Liu et al. 2022, Butt, Varanasi and Neumann 2025, Mustafa et al. 2026 (P5), and the Rozee.pk, Indeed and Glassdoor sources (A7 to A9). Missing facts: 0.747 versus 0.743, ObliQA 27,869, Butt BM25 0.0846 and mT5 0.1903, 19.64% duplicates, 4.5:1 contrast, 41 tables and 264 attributes, about one shared vCPU with 512 MB to 1 GB, Python 3.11. Wrong cross-references: Section 7 said Section 15 (it is Section 18) and Section 9 said Section 14 (it is Section 20).
+
+**Decision:** Fix both cross-references. Add the three references, the appendix sources and a map of the report's 32 Appendix A codes. Replace the master's objectives with the report's nine, and label the third SDG as supported but not targeted. Add Section 11.5 (six services, seven strategies, policies), FR-22 to FR-31, NFR-1 to NFR-23, assumptions, ten use cases, hardware and software, GUI, database design (16.4 to 16.8), the R-1 to R-19 register (19.1) and the FYP-2 plan. Rebuild the .docx (64 pages, 15 diagram placeholders).
+
+**Why:** The master is the source of truth, so the report must not state anything it lacks. FR rows 22 to 31 show the actors from the report, because the report does not assign them modules.
+
+**Follow-ups:** Ali replaces the master .md and .docx in the Project and the local copy (the tool cannot write the 210 KB file). Diagram images still need inserting into the .docx from the diagram files.
+
+## 2026-11-02: Chapter 3 summary tables back to four columns; spelling and wording pass
+
+**Context:** On 2026-10-21 the Chapter 3 tables were shortened for the submitted report (F26-090, 89 pages). Only the cell text was meant to shrink, but the Method and Results columns merged into one "Finding" cell. The literature tables then had three header cells on a four-column spec and printed narrower than the page. On 2026-10-22 Ali said every Chapter 3 table has four columns, and the team planned to restore them after the mid evaluation. The mid evaluation is done.
+
+**What we tried:** Compared the submitted `main.tex` with the 2026-10-19 version (Author, Method, Results, Limitations; Application, Features, Relevance, Limitations). Split each shortened "Finding" cell back into Method and Results and kept the 2026-10-21 wording. Read the whole file for spelling and wording, ran a spell check, and checked cite keys, labels and table rows by script.
+
+**What we found:** The (V), (A) and (P) basis marks were also missing from the related applications table, although its caption still explains them. The corpus table had been a five-column table (with Size) cut to three, and the datasets table had lost its Contents column and its license information. There was one real typo ("tarined") and several broken sentences in Chapter 6 and in the Chapter 2 Problem Domain Overview ("Only English is taught in FYP-1"). Some wording broke standing rules: "small cohorts" (no source), and platform claims stated flatly ("No platform had Urdu or Roman Urdu support", IFDP features). `fypbib.bib` needed no change.
+
+**Decision:**
+
+- Literature tables: Author, Method, Results, Limitations, widths 3.0, 4.0, 2.8 and 4.0 cm as before. Related applications: Application, Features, Relevance, Limitations, with the (V), (A), (P) marks back. Corpus table: Document, Issuer, Version or date, Scope in the corpus (the Size column is not restored). Datasets table: Dataset, Contents as loaded, Role, License and main limitation.
+- Wording: "competitive cohorts" instead of "small cohorts"; "We saw no Urdu or Roman Urdu support on the platforms we reviewed"; "On its public pages, the Investor Founder Discovery Platform shows no mentor profile, compliance feature or AI ranking"; "No AI seen" for PakStartups.org; FR-3 says "defensibility of numbers" (the four-area pitch rubric). The Chapter 6 legal-sources sentence now says what Chapter 3 found: a PSEB page against the Ordinance, and two FBR sources on company registration.
+- Left as they are on Ali's instruction: the Section 2.6 team-roles sentence, and Stakeholders Summary as Section 2.7.1 under Business Opportunity.
+- The master document (`.md` and `.docx`) was synced with the wording rules above. Its scope, design and references did not change.
+
+**Why:** The four columns are what the department template and the earlier version had, and the cell text was already short. The wording rules protect claims that the team cannot back with a dated source.
+
+**Follow-ups:** Ali compiles the new `main.tex` and checks the table widths and page count. The submitted PDF is not touched. Two master-document cross-references are known to be wrong and were not changed (Section 7 says Section 15 for legal exposure, which is Section 18; Section 9 says Section 14 for the anchor partner, which is Section 20). Logged in `pending-report-changes.md`.
+
+## 2026-10-21: Supervisor approves the supporting classifiers and the dataset plan
+
+**Context:** The 2026-10-19 entry adopted three supporting classifiers (resume role, startup outcome, follow-on funding) with the supervisor's approval pending. Ms. Khaleel has since answered.
+
+**What we found:** She approved the classifier plan. On datasets she said there are many links and we may use whatever seems fine for training initially.
+
+**Decision:** The three classifiers stay as planned, as offline FYP-2 studies. The re-ranker is still the only model that ships. We keep the seven FINAL datasets and treat the rest as reference only. Column names, split sizes and the Investments label rule are still set when the training scripts are written, and logged then.
+
+**Why:** Her answer settles the open approval and removes the need for a fallback plan.
+
+**Follow-ups:** `datasets.md`, the master document (sections 9 and 13.9, objective 8) and the pending-changes table now say "approved". `main.tex` carried no "approval pending" wording, so it needed no change.
+
+## 2026-10-21: Roman-Urdu-Parl overlap resolved; remaining preprocessing results
+
+**Context:** The 2026-10-17 entry recorded that our Parl files did not match the Hugging Face card, and the 2026-10-19 pending table asked for a recount and an overlap test before the report was submitted. The Gemini preprocessing run finished and the results were checked against its CSV.
+
+**What we found:**
+
+- The train file holds 6,365,808 rows, and 32,460 of them are validation or test pairs. The earlier claim that the splits do not overlap was wrong for our copy.
+- Removing those pairs leaves 6,333,348 train rows. The card gives 6,333,218. The 130-row gap equals the number of fully blank rows. That is my arithmetic, not something the run confirmed.
+- Card figures: train 6,333,218, validation 20,719, test 20,741, validation plus test 41,460, total 6,374,678. Our files total 6,407,268. After cleaning, our total is 6,374,808.
+- In the train file, 37.1% of the pairs are exact repeats. In a validation sample, 76.8% of the Urdu column is in Arabic script. The Apache 2.0 licence is on the split card only, and the sentences come from informal online sources.
+- Success/Fail: the 1990-2015 founded_at filter keeps 49,766 of 66,368 rows. 15,221 rows have no usable founding date. 8.0% of the kept startups are closed.
+- Haider: exact-text deduplication of the 6,000 tech resumes leaves 4,170. Java Developers is the smallest category at 447.
+- Job Market: the tech share is at least 26.8% in the earlier raw run and 27.4% (1,469 of 5,368) after cleaning. Both are reported.
+- Not used: the Gemini under-3-word count (67,669), its strict phone-pattern counts and its "strict subsets" claim, because they did not agree with its own CSV.
+
+**Decision:** Remove the 32,460 overlapping pairs from the Parl train file. Report the file numbers, the overlap, the 6,333,348 result and the card figures side by side. This supersedes the "keep as FAIL" decision in the 2026-10-17 Parl entry and the "zero pair overlap" reason in `datasets.md`.
+
+**Why:** Training or testing on pairs that sit in both splits would inflate any result. Reporting the card numbers next to ours lets a reader check the difference.
+
+**Follow-ups:** Applied to `main.tex` (Section 3.3.3, Table 3.11 and the dataset limitations list), `datasets.md` and the master document. The three 2026-10-19 rows for the Parl recount, the card facts and the remaining preprocessing are closed in `pending-report-changes.md`.
+
+## 2026-10-21: Bibliography cut from 103 to 35 entries; non-paper sources move to Appendix A
+
+**Context:** The reference list was much longer than a report of this size needs, and many entries were web pages, datasets and official documents rather than papers.
+
+**What we found:** `bib_trim_plan_2026-10-19.md` (v2) sorted the 103 entries into 34 papers to keep, 34 non-paper sources for an appendix and 35 to cut. After reading each paper's citation context, four plan "keeps" went (Tahir 2025 KICS benchmark, Giuggioli 2025, Spigel 2017, Rysman 2009) and four plan "cuts" stayed (Peng 2025, Niu 2024, G-Eval, Caillaud 2003). The SECP position paper stays in References.
+
+**Decision:** `fypbib.bib` has 35 entries (34 papers plus the SECP position paper). Appendix A, "Data and Web Sources", lists 32 non-paper sources: P1 to P5, A1 to A9, D1 to D7 and R1 to R11. The body cites them with `\src{P1}`, `\src{A1}`, `\src{D1}` and `\src{R1}`. Every `\cite` key in `main.tex` resolves, and no bib entry is uncited. In `Chapter3_Source_Register_v2.md`, the papers cut from the report stay as evidence, marked "not cited in the report", and the sources moved to the appendix are marked "moved to Appendix A".
+
+**Why:** A shorter list of papers the report actually relies on is easier to defend, and web, dataset and regulatory sources fit better in an appendix than among the references.
+
+**Follow-ups:** Ali adds the P5 access date (18 Oct) by hand. A stray extra closing brace after the Gulati entry in `fypbib.bib` was removed on 2026-10-21; it would have broken BibTeX.
+
+## 2026-10-21: Gulati et al. citation verified against Springer
+
+**Context:** The 2026-10-18 pending row followed the arXiv author order because the Springer page was not checked.
+
+**Decision:** The published citation is Gulati, Kumar, Agarwal and Sharma (2026), "Weak Links in LinkedIn: Enhancing Fake Profile Detection in the Age of LLMs", in An, Cuzzocrea and Hu (eds), Social Networks Analysis and Mining, ASONAM 2025, Lecture Notes in Computer Science vol. 16323, Springer, Cham, DOI 10.1007/978-3-032-13821-7_31. The order matches arXiv. The `\cite` key `ref:gulati2025` is unchanged.
+
+**Why:** The report should cite the published version, not the preprint.
+
+## 2026-10-19: Supporting classifiers trained on three FINAL datasets; matching-data wording; preprocessing results
+
+**Context:** The seven FINAL datasets were chosen for profiling and schema design, and the plan said none of them trains a model. The team wants some real supervised training on the final data. Preprocessing of the seven datasets also finished (`preprocessing_summary.csv`). Touches Chapter 3 (datasets), Chapter 4 (features) and the slides. Adopted by the team on 2026-10-19; the supervisor has been sent a one-page overview. Update 2026-10-21: she approved it (see the entry above).
+
+**What we tried:** Checked each FINAL dataset for a label that can be defended, and checked each feature for whether training would help or only add risk.
+
+**What we found:** Three datasets carry usable labels: Haider resumes (6 tech categories), Startup Success/Fail (status) and StartUp Investments (funding rounds). The compliance assistant needs cited official text, and resume rewriting, pitch feedback and readiness explanations are prompted LLM calls, so training on external data would not improve them. We found no public labeled dataset for Pakistani founder-mentor or investor matching, so the re-ranker can only use our own labeled pairs. Preprocessing passed for all seven datasets and the counts match `datasets.md`, except: Success/Fail still needs the 1990-2015 founded_at filter, Haider still has its 30.5% duplicates in the cleaned file, and the Job Market tech share is 27.4% (1,469 of 5,368) on the cleaned file.
+
+**Decision:**
+
+- Train three supporting classifiers: a resume role classifier on Haider (R1; Bhawal IT and Engineering as an external check, with no per-class accuracy claim), a startup outcome classifier on Success/Fail (R4; closed against survived or exited), and a follow-on funding classifier on Investments (R4; label is "raised a follow-on round"). Rules: deduplicate before splitting, drop funding columns and post-outcome fields from the outcome classifier, drop round-count and total-funding columns from the funding classifier, macro-F1 where classes are small. Full detail is in `docs/datasets.md`.
+- The matching re-ranker stays trained only on the team's own 150 to 300 labeled pairs in FYP-2, with a cosine-similarity baseline in FYP-1 and NDCG@K, Precision@K and Recall@K as metrics. The compliance assistant and the prompted LLM features are not trained.
+- Optional in FYP-2: fine-tune a Roman Urdu embedding on Roman-Urdu-Parl, only if the R5 benchmark shows a gap.
+- Wording: write "we found no public labeled dataset for Pakistani founder-mentor or investor matching" in the report and slides. Do not write "confirmed absent". The three-layer matching design stays: public data fills profiles, retrieval uses filters and cosine similarity, the FYP-2 re-ranker trains on our own pairs.
+- Apply the 1990-2015 filter and deduplicate Haider in the training scripts. Correct the Job Market tech share to 27.4% on the cleaned file wherever it is reported.
+
+**Why:** Gives the final datasets a real modelling role without claiming accuracy that no data can support, and keeps trained models limited to places where labels exist.
+
+**Follow-ups:** Update `docs/context/*`, `CLAUDE.md`, `AGENTS.md`, `docs/pending-report-changes.md`, the master document markdown and `main.tex` (Chapter 3 datasets text and table, Chapter 4 features, Chapter 6 limitations). Fix the exact column names, split ratios and the Investments label rule when the scripts are written, and log them here. This entry supersedes earlier wording that says no FINAL dataset trains any model; entries before it are left as history. The supervisor approved the plan, so no change is needed (2026-10-21).
 
 ## 2026-10-17: Configure a provisional multilingual embedding default
 
@@ -75,6 +304,128 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 **Why:** It records schema changes as ordered revisions and supports rebuilding a fresh database, which directly meets NFR-22.
 
 **Follow-ups:** Apply migrations to the configured PostgreSQL 16 database and verify the pgvector extension and vector column there before corpus indexing.
+
+## 2026-10-18: Pitch simulator uses one four-area rubric everywhere
+
+**Context:** Prototype review (12 screens, 2026-10-18) found three conflicting pitch rubrics: master document section 13.2 and the prototypes use four areas (clarity, market understanding, defensibility of numbers, handling pushback); FR-3 in the master document says "clarity, confidence, and content"; the approved data dictionary `pitch_feedback.feedback_area` lists five values (clarity, problem_framing, traction, ask, delivery).
+
+**What we tried:** Compared the three against the prototypes and the pipeline description in section 13.2.
+
+**What we found:** The prototypes and section 13.2 already agree, and the four areas are what a prompted rubric can score from a transcript. "Confidence" and "delivery" need audio or video, which is out of scope until Phase 2 (video pitch upload).
+
+**Decision:** The rubric is four areas: clarity, market understanding, defensibility of numbers, handling pushback. Stored values for `pitch_feedback.feedback_area`: `clarity`, `market_understanding`, `number_defensibility`, `pushback_handling`. FR-3 wording changes to match. Applied to the master document markdown and the data dictionary markdown only; the master `.docx`, `data_dictionary_section.tex` and `main.tex` follow later.
+
+**Why:** One rubric means the prototype, the prompt, the stored data and the report describe the same thing.
+
+**Follow-ups:** Rebuild the master `.docx`; update Chapter 4 FR-3 text, Section 4.8 and the data dictionary table in `main.tex` (see `docs/pending-report-changes.md`); tell Shahzeb to use the same four labels on the pitch feedback screen.
+
+## 2026-10-18: The match action is called "Request match" on every screen
+
+**Context:** Prototype investor screens say "Request intro"; founder and talent screens say "Request match"; Section 4.8 text and the use case say "Request match". `SPEC_NAV_fig07-11.md` used "Request intro" for the investor figure.
+
+**Decision:** Use "Request match" everywhere (buttons, navigation edge labels, captions, report text). Figure 10 now reads "Request match" and "Match requests"; the caption says "match requests".
+
+**Why:** Matches the use case and FR-7 (contact revealed only on mutual acceptance). "Intro" suggests a warm introduction by a person, which the platform does not make.
+
+**Follow-ups:** Shahzeb changes the investor screens; `Section_4_8_GUI.tex` already uses "Request match".
+
+## 2026-10-18: Final dataset selection and classification of statuses (analysis run 2026-10-17)
+
+**Context:** External dataset profiling and validation for Chapter 3 (Section 3.3.3 and the datasets table (\label{tab:datasets})) supporting matching, discovery, readiness, and multilingual baselines.
+
+**What we tried:** Ran comprehensive dataset claim checks across 18 folders (14 full, 4 reference) in `ml/notebooks/dataset_claim_checks_v2.ipynb` to evaluate size, duplicate rates, tech relevance, missingness, PII risks, and licensing clarity.
+
+**What we found:** Seven datasets satisfy core requirements for final adoption: Roman-Urdu-Parl (6,407,268 pairs), Pakistan Startup Census (433 usable rows), Pakistan's Job Market (6,680 rows), Crunchbase Startup Success/Fail (66,368 rows), Crunchbase Investments (49,438 usable rows), snehaanbhawal Resume Dataset (2,484 rows), and haider Resume Dataset (6,000 tech rows). Seven datasets are retained as reference benchmarks or negative controls (LinkedIn, ATS, IterateCV, MS MARCO, retrieval-queries, finance-qa, Rozee). Four datasets failed quality and safety gates (Hafiz Hassaan Saeed, RUEmoCorp, Inferencelab, Urdu-Multi-Domain-Benchmark) and are dropped. Earlier candidates (HSE Hackathon, Resume PDF, Maaz, Rankistan, Pakistani Startups Hub, ERUPD) remain excluded.
+
+**Decision:** Formally adopt the 7 FINAL datasets as primary platform design and evaluation inputs. Classify the remaining datasets into REFERENCE ONLY, DROPPED, and EXCLUDED EARLIER. Update `docs/datasets.md`, `docs/dataset-links.md`, and the datasets table (\label{tab:datasets}).
+
+**Why:** Establishes disciplined data governance and ensures no unvetted, unconsented, or non-tech datasets leak into model evaluation.
+
+**Follow-ups:** Update Chapter 3 Section 3.3.3 and the datasets table (\label{tab:datasets}) in the report pull request.
+
+## 2026-10-18: Tech-only filtering rules and conservative title matcher (analysis run 2026-10-17)
+
+**Context:** Project scope discipline restricting the platform exclusively to tech startups and technical talent. Touches Chapter 3 methodology and data quality sections.
+
+**What we tried:** Tested loose substring keyword matching against a compiled word-boundary regex (`\b`) on job titles and resume titles across Rozee, Pakistan's Job Market, and ATS datasets. Evaluated Crunchbase pipe-separated category lists.
+
+**What we found:** Loose keyword matching inflated technical shares (for example, IterateCV showed 100% tech share, likely caused by short tokens such as 'it' and 'ai'; the strict-matcher rerun on IterateCV did not complete). The strict word-boundary regex eliminates false positives on non-tech roles like "Sales Associate" or "Accountant", but misses specific tool names like "Php", "Laravel", "Java", or "React". Crunchbase category-list filtering identifies 28,695 tech rows (45.4% of rows with a category) in Startup Success/Fail and 20,542 tech rows (45.2%) in Investments.
+
+**Decision:** Standardize on two explicit tech filters: (1) Crunchbase category-list filter for venture records; (2) compiled strict word-boundary title matcher for job titles and resumes. State in the report that reported title tech shares are "at least" lower bounds.
+
+**Why:** Prevents artificial inflation of tech shares while maintaining strict scope boundaries for the Pakistani tech ecosystem.
+
+**Follow-ups:** Add filter keyword lists to `docs/datasets.md` and document the "at least" lower-bound wording in `main.tex`.
+
+## 2026-10-18: Dataset exclusions and quality gate drop decisions (analysis run 2026-10-17)
+
+**Context:** Quality, safety, and ethical screening of candidate multilingual and emotional text corpora for Chapter 3.
+
+**What we tried:** Profiled candidate corpora for toxic language, exposed personal identifiers (PII), schema integrity, and licensing restrictions.
+
+**What we found:** Hafiz Hassaan Saeed corpus contained an 18.0% toxic content rate with profanity and an unpopulated metadata card. RUEmoCorp and Inferencelab have labels; reason = no emotion or sentiment feature in the project, and some person names remain in rows. Urdu-Multi-Domain-Benchmark contained 26 fragmented per-domain licences, executable rebuild scripts, and offensive content instances.
+
+**Decision:** Drop Hafiz Hassaan Saeed, RUEmoCorp, Inferencelab, and Urdu-Multi-Domain-Benchmark from the active project registry. Confirm earlier exclusions: HSE Hackathon (Russian language and geographic mismatch); Resume PDF (0 of 30 sampled files had text); Maaz (no licence listed, partly AI-generated, skipped by the team); Rankistan (named personal profiles and GitHub-versus-LinkedIn source leakage); Pakistani Startups Hub (self-described demo build with composite quotes); ERUPD (75,146 sentence pairs per the paper; no data release or licence seen).
+
+**Why:** Excludes datasets that lack project feature alignment, have unvetted toxicity, or expose named personal profiles.
+
+**Follow-ups:** Record dropped statuses in `docs/datasets.md` and `docs/dataset-links.md`.
+
+## 2026-10-18: ATS dataset exclusion reversed to reference-only smoke test (analysis run 2026-10-17)
+
+**Context:** Test input selection for resume parsing and optimizer pipelines (R1, R2) in Chapter 3 and Chapter 4.
+
+**What we tried:** Evaluated `ats_resume_dataset_elite_v3.csv` (6,000 rows, 17 columns) for realism, schema structure, and text length distributions.
+
+**What we found:** Resume text median is 377 characters and job description median is 131 characters, with near-uniform experience and education distributions consistent with synthetic generation. However, the dataset contains zero duplicates and clean structured schema fields.
+
+**Decision:** Reverse the previous full exclusion of the ATS dataset to REFERENCE ONLY. Use it strictly as a synthetic smoke test; never training or accuracy claims.
+
+**Why:** Provides a safe synthetic tabular test fixture for automated testing without risking exposure of real candidate resumes.
+
+**Follow-ups:** Update the datasets table (\label{tab:datasets}) in `main.tex` and entry in `docs/datasets.md`.
+
+## 2026-10-18: LinkedIn dataset retained as aggregate structure reference; Gulati profiles deferred to FYP-2 (analysis run 2026-10-17)
+
+**Context:** Mentor and investor profile verification (FR-12 to FR-21) and fake profile structural indicators in Chapter 3 and Chapter 4.
+
+**What we tried:** Examined Ayoobi et al. pickle dataset (3,600 rows x 39 columns) using a safe restricted unpickler. Reviewed recent fake profile detection literature by Gulati et al. (arXiv:2507.16860).
+
+**What we found:** Ayoobi et al. contains 1,800 legitimate, 600 fake, and 1,200 ChatGPT-generated profiles. It includes a Full Name column. We found no public Pakistani labeled real/fake LinkedIn-style dataset. Gulati et al. demonstrated that detectors not retrained on specific LLM profiles fail, but retraining on GPT profiles restores false accept rate (FAR) to 1 to 7%; their study is English-only with one LLM family.
+
+**Decision:** Retain Ayoobi LinkedIn dataset as REFERENCE ONLY for aggregate profile structure statistics. Strictly forbid printing, logging, or storing personal name fields. Defer Gulati et al. 600 GPT-4 Turbo profiles to FYP-2 as an optional extension. Maintain rule-based profile verification checks for FYP-1.
+
+**Why:** Complies with strict privacy constraints while utilizing structural insights on legitimate versus synthetic profiles.
+
+**Follow-ups:** Note aggregate-only role and Pakistani data limitation in Chapter 3 and Chapter 4.
+
+## 2026-10-18: Resume optimizer test plan and pair feasibility evaluation rules (analysis run 2026-10-17)
+
+**Context:** Evaluation protocol for resume optimization (R1) and candidate-job matching (R2) in Chapter 4 and Chapter 6.
+
+**What we tried:** Planned a cross-product feasibility pairing between public technical resumes (Haider, Snehaan Bhawal) and Pakistani job descriptions (Rozee, Job Market). The pair-feasibility cell (Step 3) crashed in the fixed rerun, so no pair statistics are reported.
+
+**What we found:** Public datasets come from disparate sources; artificial cross-product pairs lack ground-truth suitability labels. True candidate-job application decisions in Pakistan are proprietary and unavailable publicly.
+
+**Decision:** Test the resume optimizer exclusively on the team's own and consented resumes in a controlled pilot of tens of cases. Make no match-accuracy claims from artificially constructed pairs.
+
+**Why:** Preserves academic rigor and prevents misleading accuracy claims derived from ungrounded synthetic pairings.
+
+**Follow-ups:** Document pilot evaluation protocol in Chapter 4 methodology and Chapter 6 test plan.
+
+## 2026-10-18: Evaluator framing and baseline dataset freeze (analysis run 2026-10-17)
+
+**Context:** Dataset versioning, benchmarking discipline, and evaluator protocol across all project sprints.
+
+**What we tried:** Surveyed external datasets across Kaggle, Hugging Face, and Open Data Pakistan.
+
+**What we found:** Ad-hoc dataset substitutions introduce moving evaluation baselines and risk invalidating earlier profiling.
+
+**Decision:** Freeze the current set of 7 FINAL and 7 REFERENCE datasets as the official project baseline. A new dataset is adopted only if it strictly beats the baseline on formal selection criteria (tech niche, Pakistani relevance, licensing clarity, and privacy compliance) with an explicit DECISIONS entry and report update.
+
+**Why:** Guarantees reproducibility and maintains stable benchmarks for thesis evaluation.
+
+**Follow-ups:** Enforce freeze across all future model testing and report documentation.
 
 ## 2026-10-17: CI ruff pinned to 0.17.1; notebooks excluded from ruff
 
@@ -128,6 +479,8 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 **Decision:** Treat the unlabeled split in the files as train and keep the claim check as FAIL. State that the source of 6,333,218 is unknown. Do not claim it is wrong until the Hugging Face dataset card is checked.
 
 **Why:** The files and the report disagree. Keeping the claim as FAIL ensures the mismatch is tracked honestly and logged for resolution.
+
+**Update 2026-10-21:** Resolved. The train file contains 32,460 validation and test pairs; they are removed (see the 2026-10-21 Parl entry).
 
 **Follow-ups:** Check the Hugging Face dataset card for `Mavkif/Roman-Urdu-Parl-split`. Update the report to the file numbers (6,365,808 train; 6,407,268 total) unless a source for 6,333,218 is found. Logged in `docs/pending-report-changes.md`.
 
@@ -257,7 +610,6 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 
 **Note:** These are profiling copies, not corpus files. They are not in rag/corpus_manifest.md. Do not index them without a manifest row and a reason here.
 
-
 ## 2026-10-17: Hand-transcribe the VOSS circular for indexing
 
 **Context:** The FBR VOSS circular is a one-page scanned PDF and cannot be indexed by the current text extractor.
@@ -317,6 +669,7 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 
 **Follow-ups:** Update the report's gateway description to specify sanitized metadata rather than prompt/evidence persistence and describe the 24-hour user-scoped cache and its deletion cleanup.
 
+<<<<<<< HEAD
 ## 2026-11-22: Verification score bands with manual SECP follow-up
 
 **Context:** The manual SECP checker always reports `pending_manual_review`, so requiring an SECP `verified` outcome made the high band unable to produce `auto_verified`. Defaults also needed to let a complete profile reach the high band without LinkedIn OAuth.
@@ -367,3 +720,20 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 **Why:** A nullable migration keeps existing databases upgrade-safe; the batch task fills legacy hashes and is safe to rerun.
 
 **Follow-ups:** Track task outcomes without logging profile content or identifiers.
+=======
+## 2026-11-17: Remove cohort metrics, stage label, and vetted-investor claim from Founder Dashboard
+
+**Context:** The Founder Dashboard prototype displayed a "Cohort target" stat, an "SME bookings" stat, a "Series Seed" stage label in the breadcrumb, and a "Visible to vetted investors" badge subline. None of these appears in DESIGN.md as a required element, and they all constitute either invented statistics or premature claims about investor access.
+
+**Decision:** Remove the "Cohort target" and "SME bookings" pill block entirely. Simplify the breadcrumb to "Founder / Dashboard" with no stage suffix. Keep only the "Verified profile" text in the verification badge; remove the "Visible to vetted investors" subline. These fields are absent from the production fixture and from the page component.
+
+**Why:** DESIGN.md prohibits invented statistics, cohort labels, and vetted investor claims on the Founder Dashboard. Including them would misrepresent the platform state to the user and to any evaluator reading the report. The report's figure descriptions must match what the screen actually shows.
+
+**Follow-ups:** Update the report figure captions that reference a cohort stat block or a "Series Seed" breadcrumb label. See `docs/pending-report-changes.md` (2026-11-17 entry).
+
+## 2026-11-22: Corpus hashes are LF-normalized
+- Context: CI (Linux) failed with a SHA-256 mismatch on fbr_register_income_tax_2026-10-04.txt. Git stores the file with LF, while the Windows working copy is converted to CRLF, and the manifest held the CRLF hash.
+- Decision: the manifest stores the SHA-256 of the LF-normalized content. verify_corpus_file normalizes CRLF to LF before hashing, so Windows and Linux agree.
+- Scope: only rag/corpus_manifest.md changed (one hash). The text, chunks, question set and dev results are unchanged.
+- Note: run_metadata.csv and the constant in run_dev_retrieval.py keep the old CRLF hash as a historical record of the dev run.
+>>>>>>> origin/backend-changes

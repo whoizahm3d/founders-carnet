@@ -1,11 +1,10 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 from jose import jwt
 
 from app.config import get_settings
 from app.main import app
-
 
 client = TestClient(app)
 
@@ -39,10 +38,13 @@ def test_public_registration_cannot_create_an_admin():
         },
     )
     assert response.status_code == 422
-    assert client.post(
-        "/api/v1/auth/login",
-        json={"email": "admin@example.com", "password": "SecurePass123!"},
-    ).status_code == 401
+    assert (
+        client.post(
+            "/api/v1/auth/login",
+            json={"email": "admin@example.com", "password": "SecurePass123!"},
+        ).status_code
+        == 401
+    )
 
 
 def test_registration_validation_does_not_echo_the_submitted_password():
@@ -88,7 +90,7 @@ def test_expired_token_is_rejected():
             "sub": "1",
             "role": "founder",
             "ver": 0,
-            "exp": datetime.now(timezone.utc) - timedelta(seconds=1),
+            "exp": datetime.now(UTC) - timedelta(seconds=1),
         },
         settings.secret_key,
         algorithm=settings.algorithm,

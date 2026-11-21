@@ -4,9 +4,10 @@ Revision ID: 0002
 Revises: 0001
 """
 
-from alembic import op
 import sqlalchemy as sa
 from pgvector.sqlalchemy import VECTOR
+
+from alembic import op
 
 revision = "0002"
 down_revision = "0001"
@@ -90,7 +91,9 @@ def upgrade() -> None:
             "outcome IN ('answered', 'abstained', 'failed')",
             name="ck_compliance_queries_outcome",
         ),
-        sa.CheckConstraint("passage_count >= 0", name="ck_compliance_queries_passage_count"),
+        sa.CheckConstraint(
+            "passage_count >= 0", name="ck_compliance_queries_passage_count"
+        ),
         sa.CheckConstraint("latency_ms >= 0", name="ck_compliance_queries_latency"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -104,10 +107,16 @@ def upgrade() -> None:
         sa.Column("chunk_id", sa.Integer(), nullable=False),
         sa.Column("rank", sa.Integer(), nullable=False),
         sa.CheckConstraint("rank >= 1", name="ck_compliance_citations_rank"),
-        sa.ForeignKeyConstraint(["chunk_id"], ["compliance_chunks.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["query_id"], ["compliance_queries.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["chunk_id"], ["compliance_chunks.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["query_id"], ["compliance_queries.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("query_id", "chunk_id", name="uq_compliance_citations_query_chunk"),
+        sa.UniqueConstraint(
+            "query_id", "chunk_id", name="uq_compliance_citations_query_chunk"
+        ),
     )
 
 

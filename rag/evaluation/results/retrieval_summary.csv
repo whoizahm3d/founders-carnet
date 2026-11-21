@@ -1,0 +1,7 @@
+model_id,retriever,split,n_answerable,n_unanswerable,recall_at_5_hits,recall_at_5,mrr,wilson_lower_95,wilson_upper_95
+intfloat/multilingual-e5-base,bm25,dev,9,3,8,0.888889,0.833333,0.564994,0.98011
+intfloat/multilingual-e5-base,dense,dev,9,3,6,0.666667,0.666667,0.354197,0.879418
+intfloat/multilingual-e5-base,hybrid,dev,9,3,8,0.888889,0.740741,0.564994,0.98011
+sentence-transformers/paraphrase-multilingual-mpnet-base-v2,bm25,dev,9,3,6,0.666667,0.666667,0.354197,0.879418
+sentence-transformers/paraphrase-multilingual-mpnet-base-v2,dense,dev,9,3,7,0.777778,0.592593,0.452583,0.936776
+sentence-transformers/paraphrase-multilingual-mpnet-base-v2,hybrid,dev,9,3,8,0.888889,0.655556,0.564994,0.98011

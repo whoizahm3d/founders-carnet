@@ -2,22 +2,26 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from rag.compliance.chunking import CitationChunk, chunk_pages
+from rag.compliance.documents import (
+    ExtractedPage,
+    NoExtractableTextError,
+    cached_pdf_pages,
+)
+from rag.compliance.embeddings import SentenceTransformerEncoder
+from rag.compliance.ingestion import CorpusDocument, parse_manifest, verify_corpus_file
+from rag.compliance.scoping import apply_corpus_scope
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import SessionLocal
 from app.models import ComplianceChunk, ComplianceDocument
-from rag.compliance.chunking import CitationChunk, chunk_pages
-from rag.compliance.documents import ExtractedPage, NoExtractableTextError, extract_pdf_pages
-from rag.compliance.embeddings import SentenceTransformerEncoder
-from rag.compliance.ingestion import CorpusDocument, parse_manifest, verify_corpus_file
-from rag.compliance.scoping import apply_corpus_scope
-
 
 _SCOPE_EXCLUSIONS = {
     "PSEB Industry Facilitation page.pdf": (
@@ -54,7 +58,15 @@ def index_corpus(
 
     documents = parse_manifest(manifest_path.read_text(encoding="utf-8"))
     paths = {document.file: corpus_dir / document.file for document in documents}
+    corpus_version = hashlib.sha256(
+        "\n".join(
+            f"{document.file}:{document.content_sha256}"
+            for document in sorted(documents, key=lambda item: item.file)
+        ).encode("utf-8")
+    ).hexdigest()
     for document in documents:
+        if not document.is_active or _is_duplicate_html(document, documents):
+            continue
         verify_corpus_file(paths[document.file], document.content_sha256)
 
     indexed_files: list[str] = []
@@ -70,7 +82,9 @@ def index_corpus(
                 skipped_files[document.file] = _SCOPE_EXCLUSIONS[document.file]
                 continue
             if _is_duplicate_html(document, documents):
-                skipped_files[document.file] = "The text snapshot for this source is indexed instead."
+                skipped_files[document.file] = (
+                    "The text snapshot for this source is indexed instead."
+                )
                 continue
 
             try:
@@ -81,6 +95,9 @@ def index_corpus(
 
             pages = apply_corpus_scope(document, pages)
             chunks = chunk_pages(document, pages)
+            prepare_chunks = getattr(encoder, "prepare_chunks", None)
+            if prepare_chunks is not None:
+                chunks = prepare_chunks(chunks)
             if not chunks:
                 skipped_files[document.file] = "Source contains no extractable text."
                 continue
@@ -123,16 +140,22 @@ def index_corpus(
                         raise IndexConflictError(
                             f"{document.file} has stored content that differs from its source"
                         )
+                    stored.heading_path = list(expected.heading_path)
+                    stored.effective_date = expected.effective_date
+                    stored.corpus_version = corpus_version
                 chunks_to_encode = [
                     chunk
                     for chunk in chunks
                     if chunk.chunk_id not in existing_chunks
                     or existing_chunks[chunk.chunk_id].embedding is None
-                    or existing_chunks[chunk.chunk_id].embedding_model != embedding_model
+                    or existing_chunks[chunk.chunk_id].embedding_model
+                    != embedding_model
                 ]
 
             if not chunks_to_encode:
-                skipped_files[document.file] = "Source hash, chunks, and embeddings are already indexed."
+                skipped_files[document.file] = (
+                    "Source hash, chunks, and embeddings are already indexed."
+                )
                 continue
 
             vectors = _encode_chunks(encoder, chunks_to_encode, batch_size)
@@ -140,11 +163,20 @@ def index_corpus(
                 stored = existing_chunks.get(chunk.chunk_id)
                 if stored is None:
                     session.add_all(
-                        _chunk_models(indexed_document.id, [chunk], [vector], embedding_model)
+                        _chunk_models(
+                            indexed_document.id,
+                            [chunk],
+                            [vector],
+                            embedding_model,
+                            corpus_version,
+                        )
                     )
                 else:
                     stored.embedding = list(vector)
                     stored.embedding_model = embedding_model
+                    stored.heading_path = list(chunk.heading_path)
+                    stored.effective_date = chunk.effective_date
+                    stored.corpus_version = corpus_version
             indexed_files.append(document.file)
             total_chunks += len(chunks_to_encode)
 
@@ -162,7 +194,9 @@ def index_corpus(
 
 def _read_pages(path: Path) -> tuple[ExtractedPage, ...]:
     if path.suffix.lower() == ".pdf":
-        return extract_pdf_pages(path)
+        return cached_pdf_pages(
+            path, Path(__file__).resolve().parents[3] / "rag" / "cache"
+        )
     if path.suffix.lower() == ".txt":
         text = path.read_text(encoding="utf-8").strip()
         if not text:
@@ -171,7 +205,9 @@ def _read_pages(path: Path) -> tuple[ExtractedPage, ...]:
     raise NoExtractableTextError(f"Unsupported corpus format: {path.suffix}")
 
 
-def _is_duplicate_html(document: CorpusDocument, documents: Sequence[CorpusDocument]) -> bool:
+def _is_duplicate_html(
+    document: CorpusDocument, documents: Sequence[CorpusDocument]
+) -> bool:
     return document.file.lower().endswith(".html") and any(
         other.source_url == document.source_url and other.file.lower().endswith(".txt")
         for other in documents
@@ -187,7 +223,8 @@ def _encode_chunks(
     expected_dimensions: int | None = None
     for start in range(0, len(chunks), batch_size):
         batch = chunks[start : start + batch_size]
-        batch_vectors = encoder.encode([chunk.text for chunk in batch])
+        encode_passages = getattr(encoder, "encode_passages", encoder.encode)
+        batch_vectors = encode_passages([chunk.text for chunk in batch])
         if len(batch_vectors) != len(batch):
             raise ValueError("Embedding count does not match chunk count")
         for vector in batch_vectors:
@@ -223,6 +260,7 @@ def _chunk_models(
     chunks: Sequence[CitationChunk],
     vectors: Sequence[Sequence[float]],
     embedding_model: str,
+    corpus_version: str,
 ) -> list[ComplianceChunk]:
     return [
         ComplianceChunk(
@@ -230,6 +268,9 @@ def _chunk_models(
             chunk_id=chunk.chunk_id,
             page_number=chunk.page_number,
             section=chunk.section,
+            heading_path=list(chunk.heading_path),
+            effective_date=chunk.effective_date,
+            corpus_version=corpus_version,
             text=chunk.text,
             embedding=list(vector),
             embedding_model=embedding_model,
@@ -253,7 +294,9 @@ def main() -> None:
             embedding_model=settings.embedding_model_name,
         )
 
-    print(f"Indexed {len(summary.indexed_files)} documents and {summary.chunk_count} chunks")
+    print(
+        f"Indexed {len(summary.indexed_files)} documents and {summary.chunk_count} chunks"
+    )
     for file_name, reason in summary.skipped_files.items():
         print(f"Skipped {file_name}: {reason}")
 

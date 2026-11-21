@@ -8,15 +8,19 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.database import get_db
+<<<<<<< HEAD
 from app.models import Base, ConsentRecord, User
+=======
+from app.models import Base, User
+from app.routes.compliance import router
+>>>>>>> origin/backend-changes
 from app.security import create_access_token
 from app.services.compliance_assistant import (
+    CitationResult,
     ComplianceAnswerResult,
     ComplianceServiceUnavailable,
-    CitationResult,
 )
 from app.services.wiring import get_compliance_answer_service
-from app.routes.compliance import router
 
 
 class FakeComplianceService:
@@ -103,7 +107,9 @@ def client_and_service():
 def test_compliance_questions_require_a_token(client_and_service):
     client, _, _, _ = client_and_service
 
-    response = client.post("/api/v1/compliance/questions", json={"question": "What is the procedure?"})
+    response = client.post(
+        "/api/v1/compliance/questions", json={"question": "What is the procedure?"}
+    )
 
     assert response.status_code == 401
 
@@ -136,11 +142,16 @@ def test_founder_question_returns_structured_answer_and_citations(client_and_ser
     payload = response.json()
     assert payload["outcome"] == "answered"
     assert payload["citations"][0]["document_title"] == "Sample Act"
-    assert payload["informational_notice"] == "This information is not legal or tax advice."
+    assert (
+        payload["informational_notice"]
+        == "This information is not legal or tax advice."
+    )
     assert service.calls == [(founder_id, "What is the procedure?")]
 
 
-def test_provider_failure_returns_generic_503_without_internal_details(client_and_service):
+def test_provider_failure_returns_generic_503_without_internal_details(
+    client_and_service,
+):
     client, service, founder_id, _ = client_and_service
     service.failure = ComplianceServiceUnavailable("private provider traceback detail")
     token = create_access_token(subject=str(founder_id), role="founder")
@@ -152,5 +163,7 @@ def test_provider_failure_returns_generic_503_without_internal_details(client_an
     )
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Compliance assistant is temporarily unavailable"}
+    assert response.json() == {
+        "detail": "Compliance assistant is temporarily unavailable"
+    }
     assert "private provider traceback detail" not in response.text
