@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 
 import pytest
+
 from rag.compliance.ingestion import CorpusIntegrityError, verify_corpus_file
 
 

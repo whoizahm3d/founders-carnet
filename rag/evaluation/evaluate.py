@@ -14,6 +14,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
+
 from rag.compliance.chunking import chunk_pages, split_chunks_for_model
 from rag.compliance.documents import ExtractedPage, cached_pdf_pages
 from rag.compliance.embeddings import SentenceTransformerEncoder

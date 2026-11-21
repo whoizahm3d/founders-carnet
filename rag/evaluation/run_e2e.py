@@ -35,7 +35,6 @@ import csv
 import json
 import logging
 import os
-import re
 import sys
 import tempfile
 import time
@@ -43,8 +42,6 @@ from collections.abc import Sequence
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-
-import numpy as np
 
 # Add repository root and backend to sys.path
 _REPO = Path(__file__).resolve().parents[2]
@@ -59,11 +56,11 @@ from app.services.compliance_assistant import (
     GroundingValidation,
     _numeric_claims_are_supported,
 )
+
 from rag.compliance.chunking import split_chunks_for_model
 from rag.compliance.ingestion import CorpusDocument, parse_manifest
 from rag.compliance.retrieve import (
     RetrievedChunk,
-    bm25,
     hybrid,
     refuse_by_dense_top1,
 )

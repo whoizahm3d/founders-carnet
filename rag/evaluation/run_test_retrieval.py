@@ -29,27 +29,20 @@ import json
 import shutil
 import sys
 import tempfile
-from datetime import date
 from pathlib import Path
-from types import SimpleNamespace
 
 # Add repository root to sys.path
 _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from rag.compliance.chunking import split_chunks_for_model
-from rag.compliance.retrieve import RetrievedChunk, bm25, hybrid
 from rag.evaluation.guards import check_test_run_guards, write_test_run_lock
 from rag.evaluation.run_dev_retrieval import (
     MODEL_IDS,
-    canonical_id,
     compute_summary_rows,
     load_corpus_chunks,
     load_dev_questions,
-    recall_mrr,
     run_retrieval_for_model,
-    wilson_ci as wilson_interval,
 )
 
 RESULTS = Path(__file__).resolve().parent / "results"

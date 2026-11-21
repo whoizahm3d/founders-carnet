@@ -39,7 +39,7 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from rag.compliance.chunking import chunk_pages, split_chunks_for_model
+from rag.compliance.chunking import split_chunks_for_model
 from rag.compliance.retrieve import RetrievedChunk, bm25, hybrid
 
 RESULTS = Path(__file__).resolve().parent / "results"
@@ -231,7 +231,6 @@ def run_retrieval_for_model(
     n_continuation = sum(1 for c in model_chunks if ":continuation-" in c.chunk_id)
     n_base = len(base_chunks)
     n_model = len(model_chunks)
-    n_truncated = n_model - n_base  # extra chunks from splitting = number of splits
     print(f"  Base chunks: {n_base}, model chunks: {n_model}, continuation chunks: {n_continuation}")
 
     print(f"  Encoding {n_model} passages...")
@@ -606,7 +605,7 @@ def write_run_metadata(model_stats: dict[str, dict]) -> None:
             "status": "dev12_complete",
             "not_run_reason": not_run_reason,
         })
-    print(f"Wrote run_metadata.csv (status=dev12_complete)")
+    print("Wrote run_metadata.csv (status=dev12_complete)")
 
 
 # ---------------------------------------------------------------------------
@@ -625,7 +624,7 @@ def print_error_analysis(all_rows: list[dict], questions: list[dict]) -> None:
         if row["recall_at_5"] == "" or float(row["recall_at_5"]) > 0:
             continue  # correct chunk found
         q = answerable[qid]
-        relevant = set(canonical_id(cid) for cid in q["chunk_ids"])
+        relevant = {canonical_id(cid) for cid in q["chunk_ids"]}
         top5 = row["top5_chunk_ids"].split("|") if row["top5_chunk_ids"] else []
         # Determine cause
         cause = determine_cause(qid, row["model_id"], row["retriever"], relevant, top5)

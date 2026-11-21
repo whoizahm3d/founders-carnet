@@ -10,11 +10,9 @@ Rules enforced:
 from __future__ import annotations
 
 import json
-import re
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Sequence
 
 _REPO = Path(__file__).resolve().parents[2]
 
@@ -30,7 +28,7 @@ def get_git_commit_hash(repo_root: Path = _REPO) -> str:
             check=True,
         )
         return proc.stdout.strip()
-    except Exception:
+    except (subprocess.SubprocessError, OSError):
         return "unknown"
 
 
@@ -60,9 +58,7 @@ def is_ignored_path(path_str: str) -> bool:
         return True
     if "/.pytest_cache/" in normalized or normalized.startswith(".pytest_cache/"):
         return True
-    if "/.venv/" in normalized or normalized.startswith(".venv/"):
-        return True
-    return False
+    return "/.venv/" in normalized or normalized.startswith(".venv/")
 
 
 def is_relevant_code_path(path_str: str) -> bool:
@@ -70,7 +66,7 @@ def is_relevant_code_path(path_str: str) -> bool:
     normalized = path_str.replace("\\", "/")
     if is_ignored_path(normalized):
         return False
-    return normalized.startswith("rag/") or normalized.startswith("backend/")
+    return normalized.startswith(("rag/", "backend/"))
 
 
 def get_uncommitted_code_files(
@@ -148,7 +144,7 @@ def write_test_run_lock(
     payload = {
         "run_type": run_type,
         "git_commit": get_git_commit_hash(repo_root),
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "timestamp_utc": datetime.now(UTC).isoformat(),
         "metadata": metadata or {},
     }
     lock_file.write_text(

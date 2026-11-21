@@ -160,8 +160,7 @@ def retrieve_top_chunks(
         for chunk in rows:
             if chunk.embedding and len(chunk.embedding) == len(query_vector):
                 sim = cosine_similarity(query_vector, chunk.embedding)
-                if sim > dense_top1_cosine:
-                    dense_top1_cosine = sim
+                dense_top1_cosine = max(dense_top1_cosine, sim)
         if refuse_by_dense_top1(dense_top1_cosine, minimum_similarity):
             return ()
         return hybrid_retrieve(

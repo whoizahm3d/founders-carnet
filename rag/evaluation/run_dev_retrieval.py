@@ -98,7 +98,7 @@ def get_git_commit_hash() -> str:
             check=True,
         )
         return proc.stdout.strip()
-    except Exception:
+    except (subprocess.SubprocessError, OSError):
         return "f27a12546a054bba60927d9cc2670c64c7da35a1"
 
 
@@ -113,7 +113,7 @@ def is_working_tree_clean() -> bool:
         )
         # Tree is clean if git status output is empty
         return len(proc.stdout.strip()) == 0
-    except Exception:
+    except (subprocess.SubprocessError, OSError):
         return False
 
 

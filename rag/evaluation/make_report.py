@@ -187,11 +187,11 @@ def build_e2e_summary_table(rows: list[dict[str, str]]) -> str:
 
 def main() -> None:
     _, metadata = read_csv("run_metadata.csv")
-    _, splits = read_csv("split_sizes.csv")
+    _, _splits = read_csv("split_sizes.csv")
     _, retrieval_summary = read_csv("retrieval_summary.csv")
     _, abstention_tuning = read_csv("abstention_tuning.csv")
     e2e_headers, e2e_rows = read_csv("e2e.csv")
-    _, test_cases = read_csv("test_cases.csv")
+    _, _test_cases = read_csv("test_cases.csv")
     _, failure_causes = read_csv("failure_causes.csv")
 
     info = metadata[0] if metadata else {}
