@@ -2,7 +2,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-
 Dimension = Literal[
     "problem_clarity",
     "market_definition",

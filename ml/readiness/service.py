@@ -7,14 +7,13 @@ storing the returned result.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable, Optional
-
-from pydantic import ValidationError
 
 from prompt_v1 import PROMPT_VERSION, build_prompt
+from pydantic import ValidationError
 from schema import Assessment
 
 RUBRIC_PATH = Path(__file__).with_name("rubric_v1.json")
@@ -29,7 +28,7 @@ class ReadinessError(Exception):
     assessment (if any) so the caller can keep showing it and offer a retry.
     """
 
-    def __init__(self, message: str, previous: Optional["AssessmentResult"] = None):
+    def __init__(self, message: str, previous: AssessmentResult | None = None):
         super().__init__(message)
         self.previous = previous
 
@@ -59,7 +58,7 @@ def _extract_json(text: str) -> dict:
 def generate_assessment(
     profile: dict,
     llm_call: LLMCall,
-    previous: Optional[AssessmentResult] = None,
+    previous: AssessmentResult | None = None,
     max_attempts: int = 2,
 ) -> AssessmentResult:
     rubric = load_rubric()
@@ -80,7 +79,7 @@ def generate_assessment(
                 + "\nReturn corrected JSON only, with all 7 dimensions exactly once."
             )
             continue
-        except Exception as exc:  # model/network failure
+            except Exception as exc:  # noqa: BLE001 - any model/network failure
             last_error = f"model call failed: {exc}"
             continue
 
@@ -89,7 +88,7 @@ def generate_assessment(
             overall_score=assessment.overall_score(),
             rubric_version=rubric["rubric_version"],
             prompt_version=PROMPT_VERSION,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
 
     raise ReadinessError(

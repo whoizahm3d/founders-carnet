@@ -2,7 +2,7 @@ import json
 import os
 import urllib.request
 
-from service import generate_assessment, ReadinessError
+from service import ReadinessError, generate_assessment
 
 API_KEY = os.environ["GEMINI_API_KEY"]
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")

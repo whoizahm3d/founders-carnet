@@ -7,8 +7,8 @@ from pydantic import ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from schema import Assessment  # noqa: E402
-from service import ReadinessError, generate_assessment  # noqa: E402
+from schema import Assessment
+from service import ReadinessError, generate_assessment
 
 DIMS = [
     "problem_clarity", "market_definition", "differentiation",

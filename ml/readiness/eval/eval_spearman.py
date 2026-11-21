@@ -6,6 +6,7 @@ def main() -> None:
     sample_path = Path(__file__).with_name("sample_ideas.csv")
     with sample_path.open(newline="", encoding="utf-8") as sample_file:
         sample_ideas = list(csv.DictReader(sample_file))
+    print(f"Loaded {len(sample_ideas)} sample ideas")
     # TODO: Compute Spearman correlation from sample_ideas.
 
 
