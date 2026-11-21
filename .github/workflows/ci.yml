@@ -51,6 +51,10 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install ruff==0.17.1 pytest
+      - name: Install backend requirements for rag tests
+        if: steps.has_code.outputs.found == 'true' && matrix.folder == 'rag'
+        working-directory: rag
+        run: pip install -r ../backend/requirements.txt
       - name: Lint (ruff)
         if: steps.has_code.outputs.found == 'true'
         working-directory: ${{ matrix.folder }}
