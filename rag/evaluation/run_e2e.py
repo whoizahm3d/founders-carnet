@@ -85,6 +85,7 @@ RETRIEVAL_MODEL_ID = "intfloat/multilingual-e5-base"
 PRIMARY_ABSTENTION_THRESHOLD = 0.8428
 PRIMARY_TOP_K = 5
 RRF_K = 60
+DEFAULT_CACHE_DIR = Path.home() / ".founders_carnet" / "llm_cache"
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +148,7 @@ class GeminiAnswerGatewayWrapper:
         self,
         *,
         model_name: str,
-        cache_dir: Path,
+        cache_dir: Path = DEFAULT_CACHE_DIR,
     ) -> None:
         api_key = os.environ.get("GEMINI_API_KEY", "").strip()
         if not api_key:
@@ -158,7 +159,9 @@ class GeminiAnswerGatewayWrapper:
         from backend.app.services.llm_cache import StructuredResponseDiskCache
         from backend.app.services.llm_gateway import GeminiGateway
 
-        disk_cache = StructuredResponseDiskCache(cache_dir=cache_dir)
+        resolved_cache = cache_dir.expanduser().resolve()
+        resolved_cache.mkdir(parents=True, exist_ok=True)
+        disk_cache = StructuredResponseDiskCache(cache_dir=resolved_cache)
         # Note: fallback_model is strictly None to prevent silent model switching.
         self._gateway = GeminiGateway(
             api_key=api_key,
@@ -249,6 +252,7 @@ def run_evaluation(
     abstention_threshold: float,
     top_k: int,
     out_dir: Path | None = None,
+    cache_dir: Path = DEFAULT_CACHE_DIR,
 ) -> list[dict[str, Any]]:
     # 1. Enforce test guard if running test split
     if split_name == "test":
@@ -260,10 +264,11 @@ def run_evaluation(
             prompt_version=f"{answer_prompt_version}+{validation_prompt_version}"
         )
     elif provider == "gemini":
-        cache_path = _REPO / "rag" / "cache" / "llm"
+        resolved_cache = cache_dir.expanduser().resolve()
+        resolved_cache.mkdir(parents=True, exist_ok=True)
         gateway = GeminiAnswerGatewayWrapper(
             model_name=model_id,
-            cache_dir=cache_path,
+            cache_dir=resolved_cache,
         )
     else:
         raise ValueError(f"Unknown provider: {provider}")
@@ -636,6 +641,12 @@ def main() -> None:
             "For --provider gemini this defaults to rag/evaluation/results/."
         ),
     )
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=DEFAULT_CACHE_DIR,
+        help=f"Private directory for structured LLM response cache (default: {DEFAULT_CACHE_DIR}).",
+    )
     args = parser.parse_args()
 
     run_evaluation(
@@ -648,6 +659,7 @@ def main() -> None:
         abstention_threshold=args.abstention_threshold,
         top_k=args.top_k,
         out_dir=Path(args.out_dir) if args.out_dir else None,
+        cache_dir=args.cache_dir,
     )
 
 

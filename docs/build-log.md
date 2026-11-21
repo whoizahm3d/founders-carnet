@@ -956,3 +956,13 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Cut or partial:** None. Operates on typed fixtures pending backend API implementation.
 - **Differs from the report?** Yes; tracked in `docs/pending-report-changes.md` (2026-11-19 entry).
 
+## 2026-11-20: RAG evaluation e2e cache directory configuration (Gemini)
+
+- **Feature and IDs:** Compliance Assistant evaluation pipeline, FR-1, NFR-19, NFR-22.
+- **Built:**
+  - Added `--cache-dir` argument to `rag/evaluation/run_e2e.py` defaulting to a private user directory outside the repository (`~/.founders_carnet/llm_cache`), ensuring validation against `backend/app/services/llm_cache.py::_validated_cache_root` without weakening security rules. Created directory if missing.
+  - Added unit test `test_default_llm_cache_dir_passes_validation_and_is_outside_repo` in `rag/tests/test_evaluation_guards.py` verifying that default cache path is strictly outside the repository root, passes validation, and that directories inside repository source roots are rejected.
+- **Tested:** `rag/.venv/Scripts/python.exe -m pytest rag/tests -k "not rehearse_reproduces"`.
+- **Cut or partial:** None.
+- **Differs from the report?** No.
+

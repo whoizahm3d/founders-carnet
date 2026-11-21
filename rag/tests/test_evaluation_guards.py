@@ -425,3 +425,29 @@ def test_rehearse_reproduces_stored_dev_hit_counts() -> None:
             assert int(row["recall_at_5_hits"]) == stored[key], (
                 f"{key}: rehearse hits={row['recall_at_5_hits']}, stored={stored[key]}"
             )
+
+
+# ---------------------------------------------------------------------------
+# LLM cache validation and outside-repo default path
+# ---------------------------------------------------------------------------
+
+def test_default_llm_cache_dir_passes_validation_and_is_outside_repo() -> None:
+    """Default LLM cache path must be outside repository and pass _validated_cache_root."""
+    from app.services.llm_cache import _validated_cache_root
+    from rag.evaluation.run_e2e import DEFAULT_CACHE_DIR
+
+    repo = Path(__file__).resolve().parents[2]
+    resolved_default = DEFAULT_CACHE_DIR.expanduser().resolve()
+
+    # Verify default cache dir is outside the repository
+    assert not resolved_default.is_relative_to(repo.resolve())
+
+    # Verify that it passes validation and returns the resolved root
+    validated = _validated_cache_root(DEFAULT_CACHE_DIR)
+    assert validated == resolved_default
+
+    # Verify that an unapproved directory inside the repo is rejected
+    inside_repo = repo / "rag" / "cache" / "llm"
+    with pytest.raises(RuntimeError, match="outside served source directories"):
+        _validated_cache_root(inside_repo)
+
