@@ -9,6 +9,7 @@ from typing import Literal
 
 from rag.compliance.retrieve import (
     RetrievedChunk,
+    refuse_by_dense_top1,
 )
 from rag.compliance.retrieve import (
     bm25 as bm25_retrieve,
@@ -155,12 +156,20 @@ def retrieve_top_chunks(
     if method == "bm25":
         return bm25_retrieve(query, rows, top_k=top_k, minimum_score=minimum_similarity)
     if method == "hybrid":
+        dense_top1_cosine = -1.0
+        for chunk in rows:
+            if chunk.embedding and len(chunk.embedding) == len(query_vector):
+                sim = cosine_similarity(query_vector, chunk.embedding)
+                if sim > dense_top1_cosine:
+                    dense_top1_cosine = sim
+        if refuse_by_dense_top1(dense_top1_cosine, minimum_similarity):
+            return ()
         return hybrid_retrieve(
             query,
             query_vector,
             rows,
             top_k=top_k,
-            minimum_score=minimum_similarity,
+            minimum_score=0.0,
         )
     return dense_retrieve(
         query_vector, rows, top_k=top_k, minimum_score=minimum_similarity

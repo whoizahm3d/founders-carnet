@@ -1,5 +1,23 @@
 # Decisions log
 
+## 2026-11-21: Shared dense top-1 cosine refusal gate and hybrid ranking alignment
+
+**Context:** Compliance RAG system retrieval pipeline and abstention gating (FR-8, NFR-11 to NFR-14, Section 4.4 and Section 4.5 of the report). Synchronizing the deployed service refusal logic with the pre-registered evaluation design.
+
+**What we tried:** The previous hybrid retrieval path applied `minimum_score` directly to dense rows, BM25 rows, and the fused reciprocal rank fusion (RRF) score `min(1.0, score * (rrf_k + 1) / 2.0)`.
+
+**What we found:** A candidate chunk present in only one ranking receives an RRF contribution of at most 1/(60+1) = 0.5 under the fused score formula. When `minimum_similarity = 0.8` was configured, hybrid retrieval filtered out all candidate passages unless BM25 also produced a score >= 0.8, which theoretical upper-bound normalized BM25 rarely assigns. This caused `ComplianceAnswerService` to refuse virtually all queries and broke backend test suites (`test_supported_answer_is_saved_with_its_citation`, `test_gemini_error_is_logged_and_failed_query_is_recorded`, `test_gateway_generation_failure_is_logged_once_and_failed_query_is_saved`).
+
+**Decision:**
+1. Decouple retrieval ranking from the refusal gate: for `method="hybrid"`, fetch active candidates of the configured model without a distance filter in the database query.
+2. Evaluate refusal against the candidate set using a shared function `refuse_by_dense_top1(dense_top1_cosine, threshold)` in `rag/compliance/retrieve.py`, used identically in `backend/app/services/compliance_retrieval.py` and `rag/evaluation/run_e2e.py`.
+3. If not refused, call `hybrid_retrieve` with `minimum_score=0.0` over the unfiltered candidates to rank passages, matching the evaluation pipeline.
+4. Add `compliance_refusal_threshold: float = 0.8428` to backend config, matching the pre-registered dev-tuned threshold on 3 negative examples.
+
+**Why:** Aligns the deployed service with the pre-registered evaluation protocol where hybrid provides cross-lingual ranking while dense top-1 cosine serves as the refusal gate.
+
+**Follow-ups:** Update `docs/pending-report-changes.md` and `docs/build-log.md`. If the backend default embedding model changes to `intfloat/multilingual-e5-base`, stored chunks in `compliance_chunks` and ecosystem profiles in `ecosystem_profiles` must be regenerated.
+
 ## 2026-11-20: Pre-registered compliance evaluation configuration and test guard policy
 
 **Context:** Compliance RAG system evaluation (FR-8, NFR-11 to NFR-14, Research Question 2, Section 4.5 of the project report and playbook). Establishing the primary deployed retrieval pipeline, refusal gate threshold, and the protocol for the single held-out test split evaluation.

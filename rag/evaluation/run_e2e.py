@@ -60,7 +60,13 @@ from app.services.compliance_assistant import (
     _numeric_claims_are_supported,
 )
 from rag.compliance.chunking import split_chunks_for_model
-from rag.compliance.retrieve import RetrievedChunk, bm25, hybrid
+from rag.compliance.ingestion import CorpusDocument, parse_manifest
+from rag.compliance.retrieve import (
+    RetrievedChunk,
+    bm25,
+    hybrid,
+    refuse_by_dense_top1,
+)
 from rag.evaluation.guards import check_test_run_guards, write_test_run_lock
 from rag.evaluation.run_dev_retrieval import (
     canonical_id,
@@ -76,6 +82,7 @@ RESULTS = Path(__file__).resolve().parent / "results"
 RESULTS.mkdir(parents=True, exist_ok=True)
 E2E_LOCK_FILE = RESULTS / "e2e_test_run_lock.json"
 E2E_CSV = RESULTS / "e2e.csv"
+MANIFEST_PATH = _REPO / "rag" / "corpus_manifest.md"
 
 # Pre-registered configuration constants
 DEFAULT_MODEL_ID = "gemini-2.5-flash"
@@ -88,6 +95,204 @@ RRF_K = 60
 DEFAULT_CACHE_DIR = Path.home() / ".founders_carnet" / "llm_cache"
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Corpus manifest and evaluation passage adapters
+# ---------------------------------------------------------------------------
+
+def load_manifest_documents() -> dict[str, CorpusDocument]:
+    """Load corpus manifest indexed by file name."""
+    if not MANIFEST_PATH.exists():
+        return {}
+    return {
+        doc.file: doc
+        for doc in parse_manifest(MANIFEST_PATH.read_text(encoding="utf-8"))
+    }
+
+
+class EvaluationDocument:
+    """Document metadata presented to LLM Gateway and ComplianceAnswerService."""
+
+    def __init__(
+        self,
+        *,
+        title: str,
+        issuing_body: str = "",
+        effective_date: str | None = None,
+        source_url: str | None = None,
+        consolidation_date: str | None = None,
+        retrieved_at: str | None = None,
+        file: str | None = None,
+        file_name: str | None = None,
+        document_type: str | None = None,
+        content_sha256: str | None = None,
+        scope_note: str | None = None,
+        is_active: bool = True,
+    ) -> None:
+        self.title = title
+        self.document_title = title
+        self.issuing_body = issuing_body
+        self.effective_date = effective_date
+        self.source_url = source_url
+        self.consolidation_date = consolidation_date
+        self.retrieved_at = retrieved_at
+        file_val = file or file_name or ""
+        self.file = file_val
+        self.file_name = file_val
+        self.document_type = document_type or ""
+        self.content_sha256 = content_sha256 or ""
+        self.scope_note = scope_note or ""
+        self.is_active = is_active
+
+
+class EvaluationChunk:
+    """Chunk metadata presenting exact attributes expected by gateway and answer service."""
+
+    def __init__(
+        self,
+        *,
+        chunk_id: str,
+        text: str,
+        section: str | None,
+        page_number: int,
+        heading_path: tuple[str, ...],
+        effective_date: str | None,
+        document: EvaluationDocument,
+        id: int | str | None = None,
+        source_url: str | None = None,
+        document_file: str | None = None,
+        embedding: Sequence[float] | None = None,
+    ) -> None:
+        # Strip continuation suffix for citation
+        self.chunk_id = canonical_id(str(chunk_id))
+        self.text = text
+        self.section = section
+        self.page_number = int(page_number)
+        self.page = int(page_number)
+        self.heading_path = tuple(heading_path)
+        self.effective_date = effective_date or document.effective_date
+        self.document = document
+        self.id = id if id is not None else self.chunk_id
+        self.source_url = source_url or document.source_url
+        self.document_file = document_file or document.file
+        self.embedding = embedding
+
+
+def build_evaluation_chunk(
+    raw_chunk: Any,
+    manifest_by_file: dict[str, CorpusDocument] | None = None,
+    *,
+    index: int | None = None,
+    embedding: Sequence[float] | None = None,
+) -> EvaluationChunk:
+    """Build an EvaluationChunk from raw chunk metadata and manifest."""
+    doc_file = (
+        getattr(raw_chunk, "document_file", None)
+        or getattr(raw_chunk, "file", None)
+        or ""
+    )
+    manifest_doc = manifest_by_file.get(doc_file) if manifest_by_file else None
+
+    raw_doc = getattr(raw_chunk, "document", None)
+    title = (
+        getattr(raw_chunk, "document_title", None)
+        or (manifest_doc.title if manifest_doc else None)
+        or (getattr(raw_doc, "title", None) if raw_doc else None)
+        or "Unknown Document"
+    )
+    issuing_body = (
+        getattr(raw_chunk, "issuing_body", None)
+        or (manifest_doc.issuing_body if manifest_doc else None)
+        or (getattr(raw_doc, "issuing_body", None) if raw_doc else None)
+        or ""
+    )
+    effective_date = (
+        getattr(raw_chunk, "effective_date", None)
+        or (manifest_doc.effective_date if manifest_doc else None)
+        or (getattr(raw_doc, "effective_date", None) if raw_doc else None)
+    )
+    source_url = (
+        getattr(raw_chunk, "source_url", None)
+        or (manifest_doc.source_url if manifest_doc else None)
+        or (getattr(raw_doc, "source_url", None) if raw_doc else None)
+    )
+    consolidation_date = (
+        getattr(raw_chunk, "consolidation_date", None)
+        or (manifest_doc.consolidation_date if manifest_doc else None)
+        or (getattr(raw_doc, "consolidation_date", None) if raw_doc else None)
+    )
+    retrieved_at = (
+        getattr(raw_chunk, "retrieved_at", None)
+        or (manifest_doc.retrieved_at if manifest_doc else None)
+        or (getattr(raw_doc, "retrieved_at", None) if raw_doc else None)
+    )
+    doc_type = (
+        getattr(raw_chunk, "document_type", None)
+        or (manifest_doc.document_type if manifest_doc else None)
+        or (getattr(raw_doc, "document_type", None) if raw_doc else None)
+    )
+    content_sha256 = (
+        getattr(raw_chunk, "source_sha256", None)
+        or (manifest_doc.content_sha256 if manifest_doc else None)
+        or (getattr(raw_doc, "content_sha256", None) if raw_doc else None)
+    )
+    scope_note = (
+        (manifest_doc.scope_note if manifest_doc else None)
+        or (getattr(raw_doc, "scope_note", None) if raw_doc else None)
+    )
+
+    doc = EvaluationDocument(
+        title=title,
+        issuing_body=issuing_body,
+        effective_date=effective_date,
+        source_url=source_url,
+        consolidation_date=consolidation_date,
+        retrieved_at=retrieved_at,
+        file=doc_file,
+        document_type=doc_type,
+        content_sha256=content_sha256,
+        scope_note=scope_note,
+        is_active=manifest_doc.is_active if manifest_doc else True,
+    )
+
+    raw_cid = getattr(raw_chunk, "chunk_id", getattr(raw_chunk, "id", "chunk_unknown"))
+    text = getattr(raw_chunk, "text", "")
+    section = getattr(raw_chunk, "section", None)
+    page_num = getattr(raw_chunk, "page_number", getattr(raw_chunk, "page", 1))
+    heading_path = getattr(raw_chunk, "heading_path", ()) or ()
+    chunk_id_int = index if index is not None else getattr(raw_chunk, "id", raw_cid)
+    emb = embedding if embedding is not None else getattr(raw_chunk, "embedding", None)
+
+    return EvaluationChunk(
+        chunk_id=raw_cid,
+        text=text,
+        section=section,
+        page_number=page_num,
+        heading_path=heading_path,
+        effective_date=effective_date,
+        document=doc,
+        id=chunk_id_int,
+        source_url=source_url,
+        document_file=doc_file,
+        embedding=emb,
+    )
+
+
+def adapt_retrieved_passage(
+    passage: RetrievedChunk,
+    manifest_by_file: dict[str, CorpusDocument] | None = None,
+) -> RetrievedChunk:
+    """Adapt a retrieved passage so its chunk presents all attributes expected by the gateway."""
+    if isinstance(passage.chunk, EvaluationChunk):
+        adapted_chunk = passage.chunk
+    else:
+        adapted_chunk = build_evaluation_chunk(passage.chunk, manifest_by_file)
+    return RetrievedChunk(
+        chunk=adapted_chunk,
+        similarity=passage.similarity,
+        method=passage.method,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +491,7 @@ def run_evaluation(
     )
 
     # 4. Load retrieval components
+    manifest_by_file = load_manifest_documents()
     base_chunks = load_corpus_chunks()
     model = load_model(RETRIEVAL_MODEL_ID)
     limit = chunk_token_limit(RETRIEVAL_MODEL_ID, model)
@@ -300,8 +506,14 @@ def run_evaluation(
             text=p.text,
             embedding=emb,
             section=getattr(p, "section", None),
-            document=getattr(p, "document", None),
+            page_number=getattr(p, "page_number", 1),
+            page=getattr(p, "page_number", 1),
+            heading_path=getattr(p, "heading_path", ()),
+            document_file=getattr(p, "document_file", None),
+            source_url=getattr(p, "source_url", None),
             effective_date=getattr(p, "effective_date", None),
+            document=build_evaluation_chunk(p, manifest_by_file).document,
+            raw_chunk=p,
         )
         for i, (p, emb) in enumerate(zip(passages, passage_embeddings))
     )
@@ -324,7 +536,7 @@ def run_evaluation(
         dense_results = numpy_dense(qvec, embedded, top_k=1)
         top_dense_cosine = dense_results[0].score if dense_results else 0.0
 
-        if top_dense_cosine < abstention_threshold:
+        if refuse_by_dense_top1(top_dense_cosine, abstention_threshold):
             # Refusal gate triggers before generation
             pipe_latency_ms = int((time.perf_counter() - pipe_start) * 1000)
             results.append({
@@ -353,8 +565,13 @@ def run_evaluation(
                 dense_retriever=numpy_dense,
             )
 
+            # Adapt retrieved passages for gateway prompt builder and answer service
+            adapted_retrieved = tuple(
+                adapt_retrieved_passage(r, manifest_by_file) for r in retrieved
+            )
+
             # Generate answer
-            draft = gateway.generate_answer(question_text, retrieved)
+            draft = gateway.generate_answer(question_text, adapted_retrieved)
 
             if draft.abstain or not draft.answer.strip():
                 pipe_latency_ms = int((time.perf_counter() - pipe_start) * 1000)
@@ -374,13 +591,15 @@ def run_evaluation(
                     "status": "abstained",
                 })
             else:
-                # Check citations
+                # Check citations against adapted retrieved passages
                 retrieved_by_id = {
-                    r.chunk.chunk_id: r for r in retrieved if hasattr(r.chunk, "chunk_id")
+                    r.chunk.chunk_id: r
+                    for r in adapted_retrieved
+                    if hasattr(r.chunk, "chunk_id")
                 }
                 retrieved_by_canonical = {
                     canonical_id(r.chunk.chunk_id): r
-                    for r in retrieved
+                    for r in adapted_retrieved
                     if hasattr(r.chunk, "chunk_id")
                 }
 

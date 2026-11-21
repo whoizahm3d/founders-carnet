@@ -451,3 +451,144 @@ def test_default_llm_cache_dir_passes_validation_and_is_outside_repo() -> None:
     with pytest.raises(RuntimeError, match="outside served source directories"):
         _validated_cache_root(inside_repo)
 
+
+# ---------------------------------------------------------------------------
+# Retrieved passage adapter and real gateway prompt builder / answer draft tests
+# ---------------------------------------------------------------------------
+
+class _StubModels:
+    def __init__(self, response_text: str) -> None:
+        self.response_text = response_text
+        self.last_kwargs: dict[str, Any] = {}
+
+    def generate_content(self, **kwargs: Any) -> Any:
+        self.last_kwargs = kwargs
+        return SimpleNamespace(text=self.response_text)
+
+
+class _StubClient:
+    def __init__(self, response_text: str) -> None:
+        self.models = _StubModels(response_text)
+
+
+def test_unadapted_passage_fails_gateway_with_attribute_error() -> None:
+    """An unadapted passage with chunk.document as None fails with AttributeError on title."""
+    from app.services.llm_gateway import GeminiGateway
+    from rag.compliance.retrieve import RetrievedChunk
+
+    broken_chunk = SimpleNamespace(
+        chunk_id="test_doc.pdf:1:0:continuation-1",
+        text="Sample provision text",
+        section="1",
+        page_number=1,
+        document=None,
+    )
+    broken_passage = RetrievedChunk(chunk=broken_chunk, similarity=0.9, method="hybrid")
+    stub_client = _StubClient(
+        json.dumps({
+            "answer": "Test answer",
+            "citation_chunk_ids": [],
+            "abstain": False,
+        })
+    )
+    gateway = GeminiGateway(
+        api_key="fake-test-key",
+        model_name="gemini-2.5-flash",
+        client=stub_client,
+    )
+
+    with pytest.raises(AttributeError, match=r"'NoneType' object has no attribute 'title'"):
+        gateway.generate_answer("What is the requirement?", [broken_passage])
+
+
+def test_adapted_passage_succeeds_with_real_gateway_prompt_and_draft() -> None:
+    """The adapted passage presents all required attributes for gateway and answer service."""
+    from dataclasses import replace
+    from app.services.compliance_assistant import (
+        _citation_result,
+        _numeric_claims_are_supported,
+    )
+    from app.services.llm_gateway import GeminiGateway
+    from rag.compliance.retrieve import RetrievedChunk
+    from rag.evaluation.run_dev_retrieval import canonical_id, load_corpus_chunks
+    from rag.evaluation.run_e2e import adapt_retrieved_passage, load_manifest_documents
+
+    manifest_map = load_manifest_documents()
+    chunks = load_corpus_chunks()
+    assert len(chunks) > 0, "Expected corpus chunks"
+    raw_chunk = chunks[0]
+
+    # Create continuation chunk to test suffix stripping
+    continuation_chunk = replace(
+        raw_chunk,
+        chunk_id=f"{raw_chunk.chunk_id}:continuation-1",
+    )
+    raw_passage = RetrievedChunk(chunk=continuation_chunk, similarity=0.92, method="hybrid")
+
+    adapted = adapt_retrieved_passage(raw_passage, manifest_map)
+
+    # 1. Verify attributes on chunk and document
+    assert adapted.chunk.chunk_id == canonical_id(continuation_chunk.chunk_id)
+    assert not adapted.chunk.chunk_id.endswith(":continuation-1")
+    assert adapted.chunk.text == raw_chunk.text
+    assert adapted.chunk.page == raw_chunk.page_number
+    assert adapted.chunk.page_number == raw_chunk.page_number
+    assert adapted.chunk.heading_path == raw_chunk.heading_path
+    assert adapted.chunk.document is not None
+    assert adapted.chunk.document.title != ""
+    assert adapted.chunk.document.issuing_body != ""
+    assert adapted.chunk.document.effective_date is not None
+    assert adapted.similarity == 0.92
+    assert adapted.score == 0.92
+    assert adapted.method == "hybrid"
+
+    # 2. Test real gateway prompt builder and answer draft code
+    expected_answer = "Under Section 2, registration is mandatory."
+    stub_client = _StubClient(
+        json.dumps({
+            "answer": expected_answer,
+            "citation_chunk_ids": [adapted.chunk.chunk_id],
+            "abstain": False,
+        })
+    )
+    gateway = GeminiGateway(
+        api_key="fake-test-key",
+        model_name="gemini-2.5-flash",
+        client=stub_client,
+    )
+
+    draft = gateway.generate_answer("How to register?", [adapted])
+    assert draft.answer == expected_answer
+    assert draft.citation_chunk_ids == [adapted.chunk.chunk_id]
+    assert draft.abstain is False
+
+    # Check prompt builder contents passed to client
+    prompt_contents = stub_client.models.last_kwargs.get("contents", "")
+    assert adapted.chunk.document.title in prompt_contents
+    assert adapted.chunk.chunk_id in prompt_contents
+    assert adapted.chunk.document.issuing_body in prompt_contents
+
+    # 3. Test real gateway validation code
+    validation_client = _StubClient(
+        json.dumps({"is_supported": True, "unsupported_claims": []})
+    )
+    val_gateway = GeminiGateway(
+        api_key="fake-test-key",
+        model_name="gemini-2.5-flash",
+        client=validation_client,
+    )
+    validation = val_gateway.validate_answer("How to register?", draft.answer, [adapted])
+    assert validation.is_supported is True
+    assert validation.unsupported_claims == []
+
+    # 4. Test ComplianceAnswerService citation result and numeric claims check
+    citation = _citation_result(adapted)
+    assert citation.chunk_id == adapted.chunk.chunk_id
+    assert citation.document_title == adapted.chunk.document.title
+    assert citation.issuing_body == adapted.chunk.document.issuing_body
+    assert citation.page_number == adapted.chunk.page_number
+
+    numeric_ok = _numeric_claims_are_supported(draft.answer, [adapted])
+    assert isinstance(numeric_ok, bool)
+
+

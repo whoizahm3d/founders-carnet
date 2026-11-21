@@ -966,3 +966,28 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Cut or partial:** None.
 - **Differs from the report?** No.
 
+## 2026-11-21: RAG evaluation e2e retrieved passage adapter (Gemini)
+
+- **Feature and IDs:** Compliance Assistant evaluation pipeline, FR-1, FR-8, NFR-11, NFR-12, NFR-13, NFR-14, NFR-19, NFR-22.
+- **Built:**
+  - Fixed passage adapter in `rag/evaluation/run_e2e.py` by introducing `EvaluationDocument`, `EvaluationChunk`, `build_evaluation_chunk`, and `adapt_retrieved_passage` mapped from `rag/corpus_manifest.md` and evaluation chunk metadata.
+  - Resolved `AttributeError: 'NoneType' object has no attribute 'title'` in `backend/app/services/llm_gateway.py` by providing full document metadata (`title`, `issuing_body`, `effective_date`, `source_url`, `consolidation_date`, `retrieved_at`, `file`).
+  - Adapted chunk attributes to present `chunk.text`, parent chunk id with continuation suffix stripped for citation (`canonical_id`), `section`, `page_number`, `page`, `heading_path`, `effective_date`, `source_url`, and `document_file`.
+  - Added unit tests in `rag/tests/test_evaluation_guards.py` verifying that unadapted passages fail gateway prompt building with `AttributeError`, while adapter-built passages succeed through the real gateway prompt builder, answer draft generator, validation code, `_citation_result`, and `_numeric_claims_are_supported` using a stub transport without network access.
+- **Tested:** `rag/.venv/Scripts/python.exe -m pytest rag/tests -v -k "not rehearse_reproduces"`.
+- **Cut or partial:** None.
+- **Differs from the report?** No.
+
+## 2026-11-21: Shared refusal gate and hybrid retrieval ranking alignment (Gemini)
+
+- **Feature and IDs:** Compliance Assistant retrieval and abstention, FR-8, NFR-11, NFR-12, NFR-13, NFR-14.
+- **Built:**
+  - Added shared function `refuse_by_dense_top1(dense_top1_cosine, threshold)` in `rag/compliance/retrieve.py` and used it in both `rag/evaluation/run_e2e.py` and `backend/app/services/compliance_retrieval.py` so the evaluated and deployed gates match.
+  - In `backend/app/services/compliance_retrieval.py` (`method="hybrid"`), fetched candidates without distance filtering, computed dense top-1 cosine across all candidate chunks, applied the refusal gate, and ranked candidates with `hybrid_retrieve(..., minimum_score=0.0)`.
+  - Added `compliance_refusal_threshold: float = 0.8428` in `backend/app/config.py` and wired it into `backend/app/services/wiring.py`.
+- **Tested:** User runs tests manually with pytest.
+- **Cut or partial:** None.
+- **Differs from the report?** Yes; tracked in `docs/pending-report-changes.md` (2026-11-21 entry).
+
+
+

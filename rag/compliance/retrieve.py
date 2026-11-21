@@ -111,6 +111,11 @@ def hybrid(
     return tuple(ranked[:_top_k(top_k)])
 
 
+def refuse_by_dense_top1(dense_top1_cosine: float, threshold: float) -> bool:
+    """Return True if dense top-1 cosine similarity falls below the refusal threshold."""
+    return float(dense_top1_cosine) < float(threshold)
+
+
 def _tokens(text: str) -> list[str]:
     return re.findall(r"[a-z0-9]+", text.casefold())
 
