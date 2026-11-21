@@ -8,12 +8,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.database import get_db
-<<<<<<< HEAD
 from app.models import Base, ConsentRecord, User
-=======
-from app.models import Base, User
 from app.routes.compliance import router
->>>>>>> origin/backend-changes
 from app.security import create_access_token
 from app.services.compliance_assistant import (
     CitationResult,

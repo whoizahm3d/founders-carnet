@@ -50,7 +50,6 @@ class FakeGateway:
     def generate_structured(self, *, response_schema, **kwargs):
         if self.fail:
             raise RuntimeError("mock provider failure")
-<<<<<<< HEAD
         if self.invalid_schema:
             return response_schema.model_validate({
                 "suggestions": [{
@@ -74,24 +73,6 @@ class FakeGateway:
                 }
             ]
         })
-=======
-        return response_schema.model_validate(
-            {
-                "suggestions": [
-                    {
-                        "line_number": 1,
-                        "before": (
-                            "A line not present in the resume."
-                            if self.invalid_line
-                            else "Built API endpoints for retail clients."
-                        ),
-                        "after": "Built API endpoints serving retail clients.",
-                        "reasoning": "Uses a concise action verb while preserving the original claim.",
-                    }
-                ]
-            }
-        )
->>>>>>> origin/backend-changes
 
 
 def setup_function():

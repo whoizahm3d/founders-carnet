@@ -2,9 +2,6 @@
 
 from datetime import datetime
 
-<<<<<<< HEAD
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, func, text
-=======
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -18,8 +15,8 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
->>>>>>> origin/backend-changes
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import VECTOR_TYPE, Base
@@ -74,14 +71,8 @@ class EcosystemProfile(Base):
     is_open: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     embedding: Mapped[list[float] | None] = mapped_column(VECTOR_TYPE)
     embedding_model: Mapped[str | None] = mapped_column(String(255))
-<<<<<<< HEAD
     source_hash: Mapped[str | None] = mapped_column(String(64))
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
-=======
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now()
-    )
->>>>>>> origin/backend-changes
 
 
 class MatchRecord(Base):
@@ -422,16 +413,8 @@ class ProfileReport(Base):
 
     __tablename__ = "profile_reports"
     __table_args__ = (
-<<<<<<< HEAD
         CheckConstraint("kind IN ('report', 'block')", name="ck_profile_reports_kind"),
         UniqueConstraint("reporter_user_id", "target_user_id", name="uq_profile_reports_reporter_target"),
-=======
-        UniqueConstraint(
-            "reporter_user_id",
-            "target_user_id",
-            name="uq_profile_reports_reporter_target",
-        ),
->>>>>>> origin/backend-changes
         Index("ix_profile_reports_target_created", "target_user_id", "created_at"),
     )
 
@@ -443,14 +426,8 @@ class ProfileReport(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     reason: Mapped[str] = mapped_column(String(1000), nullable=False)
-<<<<<<< HEAD
     kind: Mapped[str] = mapped_column(String(20), default="report", server_default="report", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
-=======
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
-    )
->>>>>>> origin/backend-changes
 
 
 class VerificationDecision(Base):

@@ -102,7 +102,6 @@ One entry per finished piece of work, newest first. This is what we use to write
 
 ## Entries
 
-<<<<<<< HEAD
 ## 2026-11-22: Frontend integration and startup verification (Codex)
 
 - **Feature and IDs:** Authentication/session contract, founder startup verification, matching/profile reads, consent recovery, verified job posting; FR-17, FR-22, FR-24, FR-27, FR-29, NFR-5, NFR-9, NFR-22.
@@ -126,7 +125,6 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** Full backend suite: 140 passed, 0 failed. RAG regression suite: 11 passed. SQLite test data covered pagination, filters, reviewer attribution, authorization, and counts.
 - **Cut or partial:** No live operational database was queried.
 - **Differs from the report?** The report specifies admin decision logging and console but not this endpoint's pagination/filter shape.
-=======
 ## 2026-11-15: Step 3c Fix Pass — Landing page background, nav, spacing scale and Button component (Gemini)
 
 - **Feature and IDs:** Public Landing Page and Shared Button, FR-22, NFR-4, NFR-6, NFR-23.
@@ -304,7 +302,6 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** `rag/.venv/Scripts/python.exe -m pytest rag/tests -q` passed (21 passed). All 15 manifest hashes passed. pypdf extracted all active PDFs with text and no extraction errors. Chunk totals: 496 across 11 active source texts. Generated 10 Companies Act samples and 3 each from the Finance Act and Seventh Schedule for manual review.
 - **Cut or partial:** Embeddings, indexing, retrieval, answer generation, endpoint, and evaluation were not part of this step.
 - **Differs from the report?** No; see the 2026-11-13 entry in `docs/DECISIONS.md` for the verifier behavior and mixed manifest text-hash convention.
->>>>>>> origin/backend-changes
 
 ## 2026-11-12: Admin verification queue and appeals (Codex)
 
@@ -713,7 +710,6 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** 122 backend tests passed with 93.8% app line coverage (848/904 executable line starts; 2329.72 seconds). After final test dependency wiring, 29 focused task, infrastructure, matching, and admin tests passed. The isolated compliance regression suite passed 22 tests and the RAG regression suite passed 11. One existing Starlette/AnyIO deprecation warning appeared in backend and compliance runs. Console, JUnit, and coverage outputs are recorded in `docs/test-results/` and `backend/TESTS.md`.
 - **Cut or partial:** No live Redis/Celery deployment or PostgreSQL purge run was performed; task behavior was verified with isolated SQLite, private disk-cache, and PDF fixtures.
 - **Differs from the report?** No known difference from the available requirements summary; `main.tex` is absent from this checkout.
-<<<<<<< HEAD
 # 2026-11-21: Resume optimizer schema validation (Codex)
 
 - **Feature and IDs:** Resume optimizer, FR-5, NFR-7.
@@ -746,7 +742,6 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** Full backend suite: 152 passed, 0 failed; RAG regression: 11 passed, 0 failed. The empty-SQLite migration suite upgrades to head and downgrades to base.
 - **Cut or partial:** No live Celery worker, PostgreSQL/pgvector, Redis, or corpus re-embedding run was performed.
 - **Differs from the report?** Migration 0015 and the requester self-acceptance 409 behavior are recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`.
-=======
 
 ## 2026-11-02: graphify installed, skill-only (Ali, with Claude Code)
 
@@ -1051,4 +1046,3 @@ One entry per finished piece of work, newest first. This is what we use to write
 
 
 
->>>>>>> origin/backend-changes

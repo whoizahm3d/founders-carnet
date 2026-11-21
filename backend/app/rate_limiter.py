@@ -3,7 +3,6 @@ from slowapi.util import get_remote_address
 
 from app.config import get_settings
 
-
 settings = get_settings()
 AUTH_LIMIT = f"{settings.auth_rate_limit_per_minute}/minute"
 AI_LIMIT = f"{settings.ai_rate_limit_per_minute}/minute"

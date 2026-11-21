@@ -3,10 +3,6 @@
 import logging
 from typing import Annotated
 
-<<<<<<< HEAD
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
-from pydantic import ValidationError
-=======
 from fastapi import (
     APIRouter,
     Depends,
@@ -17,7 +13,7 @@ from fastapi import (
     Response,
     status,
 )
->>>>>>> origin/backend-changes
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 

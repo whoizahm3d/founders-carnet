@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,7 +14,6 @@ from app.startup_verification_schemas import (
     StartupVerificationRead,
     StartupVerificationRequestWrite,
 )
-
 
 router = APIRouter(prefix="/api/v1", tags=["startup verification"])
 FounderDep = Annotated[User, Depends(require_roles("founder"))]
@@ -98,7 +97,7 @@ def decide_startup_verification(
     request.status = "approved" if payload.decision == "approve" else "rejected"
     request.reason = payload.reason.strip()
     request.reviewed_by_user_id = user.id
-    request.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    request.reviewed_at = datetime.now(UTC).replace(tzinfo=None)
     startup = session.get(Startup, request.startup_id)
     if startup is not None:
         startup.is_verified = payload.decision == "approve"

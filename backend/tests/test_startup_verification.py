@@ -5,7 +5,6 @@ from app.main import app
 from app.models import User
 from app.security import hash_password
 
-
 client = TestClient(app)
 
 

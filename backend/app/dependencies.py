@@ -8,7 +8,6 @@ from app.database import get_db
 from app.models import ConsentRecord, User
 from app.security import decode_access_token, security
 
-
 NON_ESSENTIAL_CONSENT_TYPE = "non_essential_processing"
 
 

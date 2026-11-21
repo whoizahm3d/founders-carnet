@@ -1,29 +1,18 @@
 """Backend APIs for matching, startup readiness, and pitch practice."""
 
-import logging
-<<<<<<< HEAD
 import hashlib
-from datetime import datetime, timezone
-from typing import Annotated, Any
-
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-=======
+import logging
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from rag.compliance.embeddings import SentenceTransformerEncoder
->>>>>>> origin/backend-changes
 from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session, load_only
 from sqlalchemy.sql import Select
 
 from app.database import get_db
-<<<<<<< HEAD
 from app.dependencies import ensure_processing_consent, get_current_user, require_roles
-from app.feature_models import EcosystemProfile, MatchRecord, PitchSession, PitchTurn, ProfileVerification, ReadinessAssessment, TalentProfile, VerificationDecision
-=======
-from app.dependencies import get_current_user, require_roles
 from app.feature_models import (
     EcosystemProfile,
     MatchRecord,
@@ -34,7 +23,6 @@ from app.feature_models import (
     TalentProfile,
     VerificationDecision,
 )
->>>>>>> origin/backend-changes
 from app.feature_schemas import (
     EcosystemProfileRead,
     EcosystemProfileWrite,
@@ -49,13 +37,8 @@ from app.feature_schemas import (
     TalentProfileRead,
     TalentProfileWrite,
 )
-<<<<<<< HEAD
 from app.models import ConsentRecord, FounderProfile, Startup, User
 from app.rate_limiter import AI_LIMIT, limiter
-from app.tasks import regenerate_ecosystem_profile_embedding
-=======
-from app.models import FounderProfile, Startup, User
->>>>>>> origin/backend-changes
 from app.services.compliance_retrieval import cosine_similarity
 from app.services.feature_ai import get_encoder, get_gateway
 from app.services.llm_gateway import GeminiGateway
@@ -125,14 +108,8 @@ TalentUser = Annotated[User, Depends(require_roles("talent"))]
 
 
 @router.put("/matching/me/profile", response_model=EcosystemProfileRead)
-<<<<<<< HEAD
 def save_ecosystem_profile(payload: EcosystemProfileWrite, user: CurrentUser, db: SessionDep) -> EcosystemProfile:
     ensure_processing_consent(db, user.id)
-=======
-def save_ecosystem_profile(
-    payload: EcosystemProfileWrite, user: CurrentUser, db: SessionDep
-) -> EcosystemProfile:
->>>>>>> origin/backend-changes
     if user.role not in {"mentor", "investor", "talent"}:
         raise HTTPException(
             status_code=403, detail="This role does not have an ecosystem match profile"
@@ -163,7 +140,6 @@ def save_ecosystem_profile(
         verification = db.scalar(
             select(ProfileVerification).where(ProfileVerification.user_id == user.id)
         )
-<<<<<<< HEAD
         substantive_fields = {"sector", "stages", "skills", "location", "summary", "ticket_min", "ticket_max"}
         substantive_change = any(getattr(profile, key) != values[key] for key in substantive_fields)
         if (
@@ -171,12 +147,6 @@ def save_ecosystem_profile(
             and verification is not None
             and verification.status in {"verified", "auto_verified"}
         ):
-=======
-        if verification is not None and verification.status in {
-            "verified",
-            "auto_verified",
-        }:
->>>>>>> origin/backend-changes
             verification.status = "pending_review"
             verification.reason = (
                 "The matching profile changed and needs a reviewer to re-check it."
@@ -230,14 +200,8 @@ def read_ecosystem_profile(user: CurrentUser, db: SessionDep) -> EcosystemProfil
 
 
 @router.put("/talent/me/profile", response_model=TalentProfileRead)
-<<<<<<< HEAD
 def save_talent_profile(payload: TalentProfileWrite, user: TalentUser, db: SessionDep) -> TalentProfile:
     ensure_processing_consent(db, user.id)
-=======
-def save_talent_profile(
-    payload: TalentProfileWrite, user: TalentUser, db: SessionDep
-) -> TalentProfile:
->>>>>>> origin/backend-changes
     if not payload.consent_accepted:
         raise HTTPException(
             status_code=400,
@@ -270,20 +234,10 @@ def read_talent_profile(user: TalentUser, db: SessionDep) -> TalentProfile:
 
 
 @router.get("/matching/startups/{startup_id}", response_model=list[MatchRead])
-<<<<<<< HEAD
 def recommend_profiles(startup_id: int, user: Founder, db: SessionDep,
                        encoder: EncoderDep,
                        top_k: int = Query(default=3, ge=1, le=3)) -> list[MatchRead]:
     ensure_processing_consent(db, user.id)
-=======
-def recommend_profiles(
-    startup_id: int,
-    user: Founder,
-    db: SessionDep,
-    encoder: EncoderDep,
-    top_k: int = Query(default=3, ge=1, le=3),
-) -> list[MatchRead]:
->>>>>>> origin/backend-changes
     startup = _owned_startup(db, startup_id, user.id)
     readiness_exists = (
         db.scalar(
@@ -402,7 +356,6 @@ def list_my_matches(
                     EcosystemProfile.is_open.is_(True),
                     or_(User.role != "mentor", EcosystemProfile.availability != "closed"),
                     User.is_active.is_(True),
-<<<<<<< HEAD
                     exists(
                         select(ConsentRecord.id).where(
                             ConsentRecord.user_id == User.id,
@@ -411,12 +364,6 @@ def list_my_matches(
                         )
                     ),
                     or_(User.role == "talent", ProfileVerification.status.in_(("auto_verified", "verified"))),
-=======
-                    or_(
-                        User.role == "talent",
-                        ProfileVerification.status.in_(("auto_verified", "verified")),
-                    ),
->>>>>>> origin/backend-changes
                 )
                 .order_by(MatchRecord.score.desc(), MatchRecord.id)
                 .offset(offset)
@@ -567,19 +514,10 @@ def decline_match(match_id: int, user: CurrentUser, db: SessionDep) -> MatchRead
     )
 
 
-<<<<<<< HEAD
 @router.post("/startups/{startup_id}/readiness", response_model=ReadinessRead, status_code=201)
 @limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
 def assess_readiness(startup_id: int, request: Request, user: Founder, db: SessionDep, gateway: GatewayDep) -> ReadinessAssessment:
     ensure_processing_consent(db, user.id)
-=======
-@router.post(
-    "/startups/{startup_id}/readiness", response_model=ReadinessRead, status_code=201
-)
-def assess_readiness(
-    startup_id: int, user: Founder, db: SessionDep, gateway: GatewayDep
-) -> ReadinessAssessment:
->>>>>>> origin/backend-changes
     startup = _owned_startup(db, startup_id, user.id)
     try:
         result = gateway.generate_structured(
@@ -641,15 +579,9 @@ def readiness_history(
 
 
 @router.post("/pitch/sessions", response_model=PitchSessionRead, status_code=201)
-<<<<<<< HEAD
 @limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
 def start_pitch_session(payload: PitchStart, request: Request, user: Founder, db: SessionDep) -> PitchSessionRead:
     ensure_processing_consent(db, user.id)
-=======
-def start_pitch_session(
-    payload: PitchStart, user: Founder, db: SessionDep
-) -> PitchSessionRead:
->>>>>>> origin/backend-changes
     startup = _owned_startup(db, payload.startup_id, user.id)
     session = PitchSession(
         user_id=user.id,
@@ -674,25 +606,10 @@ def start_pitch_session(
 
 
 @router.post("/pitch/sessions/{session_id}/turns", response_model=PitchSessionRead)
-<<<<<<< HEAD
 @limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
 def answer_pitch_turn(session_id: int, payload: PitchAnswer, request: Request, user: Founder, db: SessionDep, gateway: GatewayDep) -> PitchSessionRead:
     ensure_processing_consent(db, user.id)
     session = db.scalar(select(PitchSession).where(PitchSession.id == session_id, PitchSession.user_id == user.id))
-=======
-def answer_pitch_turn(
-    session_id: int,
-    payload: PitchAnswer,
-    user: Founder,
-    db: SessionDep,
-    gateway: GatewayDep,
-) -> PitchSessionRead:
-    session = db.scalar(
-        select(PitchSession).where(
-            PitchSession.id == session_id, PitchSession.user_id == user.id
-        )
-    )
->>>>>>> origin/backend-changes
     if session is None:
         raise HTTPException(status_code=404, detail="Pitch session not found")
     if session.status != "active":
@@ -819,7 +736,6 @@ def _matching_candidates_query(
             EcosystemProfile.embedding.is_not(None),
             User.is_active.is_(True),
             User.role.in_(("mentor", "investor", "talent")),
-<<<<<<< HEAD
             exists(
                 select(ConsentRecord.id).where(
                     ConsentRecord.user_id == User.id,
@@ -828,12 +744,6 @@ def _matching_candidates_query(
                 )
             ),
             or_(User.role == "talent", ProfileVerification.status.in_(("auto_verified", "verified"))),
-=======
-            or_(
-                User.role == "talent",
-                ProfileVerification.status.in_(("auto_verified", "verified")),
-            ),
->>>>>>> origin/backend-changes
             func.lower(func.trim(EcosystemProfile.location))
             == startup.location.strip().casefold(),
         )

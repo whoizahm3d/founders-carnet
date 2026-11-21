@@ -320,17 +320,10 @@ def test_matching_request_can_be_accepted_to_reveal_contacts():
     assert request.json()["founder_accepted"] is True
     assert request.json()["candidate_accepted"] is False
     assert request.json()["contact_email"] is None
-<<<<<<< HEAD
     assert client.post(f"/api/v1/matching/{match_id}/request", headers=founder).status_code == 409
     assert client.post(f"/api/v1/matching/{match_id}/accept", headers=founder).status_code == 409
     outsider = create_user("outsider-own-request@example.com", "talent")
     assert client.post(f"/api/v1/matching/{match_id}/accept", headers=outsider).status_code == 404
-=======
-    assert (
-        client.post(f"/api/v1/matching/{match_id}/request", headers=founder).status_code
-        == 409
-    )
->>>>>>> origin/backend-changes
 
     accepted = client.post(f"/api/v1/matching/{match_id}/accept", headers=mentor)
     assert accepted.status_code == 200, accepted.text

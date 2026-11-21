@@ -1,12 +1,8 @@
 """Background work for profile embeddings and scheduled account deletion."""
 
-<<<<<<< HEAD
-from datetime import datetime, timezone
 import hashlib
 import logging
-=======
 from datetime import UTC, datetime
->>>>>>> origin/backend-changes
 
 from celery.utils.log import get_task_logger
 from sqlalchemy import select
@@ -15,10 +11,10 @@ from app.celery_app import celery_app
 from app.database import SessionLocal
 from app.feature_models import EcosystemProfile, ResumeOptimization
 from app.models import User
+from app.services.corpus_indexer import main as index_corpus_main
 from app.services.feature_ai import get_encoder
 from app.services.llm_cache import clear_structured_response_cache
 from app.services.matching import profile_match_text
-from app.services.corpus_indexer import main as index_corpus_main
 from app.services.resume_optimizer import delete_resume_pdf
 
 logger = get_task_logger(__name__)

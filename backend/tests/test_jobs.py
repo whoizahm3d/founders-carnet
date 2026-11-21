@@ -158,7 +158,6 @@ def test_unverified_or_non_owner_founder_cannot_manage_job_listings():
     startup = create_startup(founder)
     talent = create_user("jobs-unverified-talent@example.com", "talent")
 
-<<<<<<< HEAD
     unverified_publish = client.post(f"/api/v1/startups/{startup['id']}/jobs", headers=founder, json={
         "title": "Developer",
         "description": "Help us build.",
@@ -167,19 +166,6 @@ def test_unverified_or_non_owner_founder_cannot_manage_job_listings():
     })
     assert unverified_publish.status_code == 403
     assert unverified_publish.json()["detail"] == "Startup is not verified"
-=======
-    unverified_publish = client.post(
-        f"/api/v1/startups/{startup['id']}/jobs",
-        headers=founder,
-        json={
-            "title": "Developer",
-            "description": "Help us build.",
-            "employment_type": "job",
-            "location": "Lahore",
-        },
-    )
-    assert unverified_publish.status_code == 404
->>>>>>> origin/backend-changes
 
     set_startup_verified(startup["id"])
     created = client.post(

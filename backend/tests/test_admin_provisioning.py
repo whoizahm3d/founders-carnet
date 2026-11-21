@@ -1,8 +1,8 @@
 import pytest
+from conftest import TestSessionLocal
 
 from app.admin_provisioning import create_admin
 from app.models import ConsentRecord, User
-from conftest import TestSessionLocal
 
 
 def test_admin_cli_provisioning_creates_admin_and_consent_record():

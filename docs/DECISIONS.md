@@ -669,7 +669,6 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 
 **Follow-ups:** Update the report's gateway description to specify sanitized metadata rather than prompt/evidence persistence and describe the 24-hour user-scoped cache and its deletion cleanup.
 
-<<<<<<< HEAD
 ## 2026-11-22: Verification score bands with manual SECP follow-up
 
 **Context:** The manual SECP checker always reports `pending_manual_review`, so requiring an SECP `verified` outcome made the high band unable to produce `auto_verified`. Defaults also needed to let a complete profile reach the high band without LinkedIn OAuth.
@@ -720,7 +719,6 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 **Why:** A nullable migration keeps existing databases upgrade-safe; the batch task fills legacy hashes and is safe to rerun.
 
 **Follow-ups:** Track task outcomes without logging profile content or identifiers.
-=======
 ## 2026-11-17: Remove cohort metrics, stage label, and vetted-investor claim from Founder Dashboard
 
 **Context:** The Founder Dashboard prototype displayed a "Cohort target" stat, an "SME bookings" stat, a "Series Seed" stage label in the breadcrumb, and a "Visible to vetted investors" badge subline. None of these appears in DESIGN.md as a required element, and they all constitute either invented statistics or premature claims about investor access.
@@ -736,4 +734,9 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 - Decision: the manifest stores the SHA-256 of the LF-normalized content. verify_corpus_file normalizes CRLF to LF before hashing, so Windows and Linux agree.
 - Scope: only rag/corpus_manifest.md changed (one hash). The text, chunks, question set and dev results are unchanged.
 - Note: run_metadata.csv and the constant in run_dev_retrieval.py keep the old CRLF hash as a historical record of the dev run.
->>>>>>> origin/backend-changes
+
+## 2026-11-22: Taha's migrations renumbered to 0014-0016
+- Context: Taha's backend branch and main both defined revision 0013 (compliance_chunk_metadata on main, startup_verification_requests on his branch), which gave Alembic two heads and failed 3 migration tests.
+- Decision: kept main's 0013 unchanged (it may already be applied) and renumbered Taha's unmerged migrations to 0014, 0015 and 0016. The history is now one line.
+- Also: his branch had committed merge-conflict markers in 14 files. They were resolved keeping his consent, rate-limit and verification code (HEAD side), the compliance_refusal_threshold setting, and both sides of the docs and .env.example.
+- Note: anyone who applied his old 0013 to a local database must reset it.

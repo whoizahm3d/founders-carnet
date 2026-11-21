@@ -1,7 +1,7 @@
-from functools import lru_cache
 import json
 import logging
 import re
+from functools import lru_cache
 from pathlib import Path
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
@@ -69,7 +69,12 @@ class Settings(BaseSettings):
     embedding_model_name: str = _DEFAULT_EMBEDDING_MODEL
     compliance_top_k: int = 5
     compliance_minimum_similarity: float = 0.4
-<<<<<<< HEAD
+    compliance_refusal_threshold: float = Field(
+        default=0.8428,
+        ge=0.0,
+        le=1.0,
+        description="Dense top-1 cosine refusal threshold, tuned on 3 negative dev examples",
+    )
     verification_low_threshold: float = Field(default=_VERIFICATION_CONFIG["thresholds"]["low"], ge=0.0, le=1.0)
     verification_high_threshold: float = Field(default=_VERIFICATION_CONFIG["thresholds"]["high"], ge=0.0, le=1.0)
     verification_rule_version: str = _VERIFICATION_CONFIG["version"]
@@ -78,22 +83,6 @@ class Settings(BaseSettings):
     verification_completeness_weight: float = Field(default=_VERIFICATION_CONFIG["weights"]["completeness"], ge=0.0, le=1.0)
     verification_github_weight: float = Field(default=_VERIFICATION_CONFIG["weights"]["github"], ge=0.0, le=1.0)
     verification_portfolio_weight: float = Field(default=_VERIFICATION_CONFIG["weights"]["portfolio"], ge=0.0, le=1.0)
-=======
-    compliance_refusal_threshold: float = Field(
-        default=0.8428,
-        ge=0.0,
-        le=1.0,
-        description="Dense top-1 cosine refusal threshold, tuned on 3 negative dev examples",
-    )
-    verification_low_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
-    verification_high_threshold: float = Field(default=0.85, ge=0.0, le=1.0)
-    verification_rule_version: str = "profile-verification-v2"
-    verification_linkedin_weight: float = Field(default=0.15, ge=0.0, le=1.0)
-    verification_secp_weight: float = Field(default=0.25, ge=0.0, le=1.0)
-    verification_completeness_weight: float = Field(default=0.20, ge=0.0, le=1.0)
-    verification_github_weight: float = Field(default=0.15, ge=0.0, le=1.0)
-    verification_portfolio_weight: float = Field(default=0.25, ge=0.0, le=1.0)
->>>>>>> origin/backend-changes
 
     @model_validator(mode="after")
     def validate_verification_thresholds(self) -> "Settings":

@@ -35,16 +35,8 @@ GatewayDep = Annotated[GeminiGateway, Depends(get_gateway)]
 SearchDep = Annotated[FirecrawlSearch, Depends(get_market_search)]
 
 
-<<<<<<< HEAD
 @router.post("/market-research", response_model=MarketResearchRead, status_code=status.HTTP_201_CREATED)
 @limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
-=======
-@router.post(
-    "/market-research",
-    response_model=MarketResearchRead,
-    status_code=status.HTTP_201_CREATED,
-)
->>>>>>> origin/backend-changes
 def create_market_research(
     request: Request,
     payload: MarketResearchRequest,

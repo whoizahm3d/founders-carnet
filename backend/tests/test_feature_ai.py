@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-import app.services.feature_ai as feature_ai
+from app.services import feature_ai
 
 
 def test_gateway_receives_configured_fallback_model(monkeypatch, tmp_path):

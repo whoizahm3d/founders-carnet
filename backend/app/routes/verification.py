@@ -21,6 +21,7 @@ from app.feature_models import (
     VerificationSignal,
 )
 from app.models import OAuthIdentity, User
+from app.rate_limiter import AI_LIMIT, limiter
 from app.services.feature_ai import get_gateway
 from app.services.llm_gateway import GeminiGateway
 from app.services.portfolio_verification import (
@@ -29,13 +30,7 @@ from app.services.portfolio_verification import (
     get_portfolio_fetcher,
 )
 from app.services.profile_verification import score_profile_verification
-from app.services.secp_check import SecpCheckResult
-from app.services.secp_check import SecpChecker, get_secp_checker
-<<<<<<< HEAD
-from app.models import OAuthIdentity
-from app.rate_limiter import AI_LIMIT, limiter
-=======
->>>>>>> origin/backend-changes
+from app.services.secp_check import SecpChecker, SecpCheckResult, get_secp_checker
 from app.verification_schemas import (
     PortfolioLinkAssessment,
     ProfileReportRead,
@@ -59,14 +54,8 @@ GatewayDep = Annotated[GeminiGateway, Depends(get_gateway)]
 SecpCheckerDep = Annotated[SecpChecker, Depends(get_secp_checker)]
 
 
-<<<<<<< HEAD
 @router.post("/me", response_model=ProfileVerificationRead, status_code=status.HTTP_201_CREATED)
 @limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
-=======
-@router.post(
-    "/me", response_model=ProfileVerificationRead, status_code=status.HTTP_201_CREATED
-)
->>>>>>> origin/backend-changes
 def submit_verification(
     request: Request,
     payload: ProfileVerificationWrite,
@@ -92,18 +81,11 @@ def submit_verification(
         select(EcosystemProfile).where(EcosystemProfile.user_id == user.id)
     )
     if ecosystem_profile is None:
-<<<<<<< HEAD
         raise HTTPException(status_code=409, detail="Create a matching profile before requesting verification")
     if user.role != "talent" and (
         payload.secp_entity_name is None or payload.secp_registration_number is None
     ):
         raise HTTPException(status_code=422, detail="SECP entity details are required for this role")
-=======
-        raise HTTPException(
-            status_code=409,
-            detail="Create a matching profile before requesting verification",
-        )
->>>>>>> origin/backend-changes
     existing = session.scalar(
         select(ProfileVerification.id).where(ProfileVerification.user_id == user.id)
     )
@@ -163,19 +145,11 @@ def submit_verification(
                 OAuthIdentity.provider == "linkedin",
             )
         )
-<<<<<<< HEAD
     ) is not None
     secp_result = (
         SecpCheckResult(outcome="not_provided", score=0.0, reason="Talent profiles do not have a SECP entity signal.")
         if user.role == "talent"
         else secp_checker.check(payload.secp_entity_name, payload.secp_registration_number)
-=======
-        is not None
-    )
-    secp_result = secp_checker.check(
-        payload.secp_entity_name.strip(),
-        payload.secp_registration_number.strip(),
->>>>>>> origin/backend-changes
     )
     result = score_profile_verification(
         ecosystem_profile,
@@ -209,58 +183,7 @@ def submit_verification(
     )
     session.add(verification)
     session.flush()
-<<<<<<< HEAD
     for signal_name, signal in result.signal_details.items():
-=======
-    signal_definitions = {
-        "linkedin_oauth": {
-            "score": 1.0 if linkedin_connected else 0.0,
-            "outcome": "connected" if linkedin_connected else "not_connected",
-            "input_snapshot": {
-                "provider": "linkedin",
-                "identity_present": linkedin_connected,
-            },
-            "reason": "A LinkedIn OAuth identity is linked."
-            if linkedin_connected
-            else "No LinkedIn OAuth identity is linked.",
-        },
-        "secp_cross_check": {
-            "score": secp_result.score,
-            "outcome": secp_result.outcome,
-            "input_snapshot": {
-                "entity_name": payload.secp_entity_name.strip(),
-                "registration_number": payload.secp_registration_number.strip(),
-            },
-            "reason": secp_result.reason,
-        },
-        "profile_completeness": {
-            "score": result.signals["profile_completeness"] == "complete",
-            "outcome": result.signals["profile_completeness"],
-            "input_snapshot": {"profile_id": ecosystem_profile.id},
-            "reason": "The matching profile completeness rule was evaluated.",
-        },
-        "github_for_talent": {
-            "score": bool(talent_profile and talent_profile.github_url),
-            "outcome": result.signals["github_for_talent"],
-            "input_snapshot": {
-                "github_url_present": bool(
-                    talent_profile and talent_profile.github_url
-                ),
-                "role": user.role,
-            },
-            "reason": "The optional GitHub link rule was evaluated.",
-        },
-        "portfolio_link": {
-            "score": {"consistent": 1.0, "insufficient": 0.5, "inconsistent": 0.0}[
-                assessment.result
-            ],
-            "outcome": assessment.result,
-            "input_snapshot": {"portfolio_url": str(payload.portfolio_url)},
-            "reason": assessment.reason,
-        },
-    }
-    for signal_name, signal in signal_definitions.items():
->>>>>>> origin/backend-changes
         session.add(
             VerificationSignal(
                 verification_id=verification.id,

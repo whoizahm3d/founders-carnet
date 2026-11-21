@@ -1,16 +1,8 @@
-<<<<<<< HEAD
-from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
-import secrets
 import logging
-=======
-from __future__ import annotations
-
 import secrets
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
->>>>>>> origin/backend-changes
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -20,16 +12,16 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.config import get_settings
+from app.database import get_db
 from app.dependencies import get_current_user, require_roles
-from app.feature_models import ProfileVerification, VerificationAppeal, VerificationDecision
+from app.feature_models import (
+    ProfileVerification,
+    VerificationAppeal,
+    VerificationDecision,
+)
 from app.models import ConsentRecord, OAuthIdentity, User
-<<<<<<< HEAD
 from app.rate_limiter import AUTH_LIMIT, limiter
-from app.routes.compliance import router as compliance_router
-=======
->>>>>>> origin/backend-changes
 from app.routes.admin_verification import router as admin_verification_router
 from app.routes.compliance import router as compliance_router
 from app.routes.founders import router as founders_router
@@ -40,8 +32,8 @@ from app.routes.resumes import router as resumes_router
 from app.routes.startup_verification import router as startup_verification_router
 from app.routes.verification import router as verification_router
 from app.schemas import (
-    ConsentStatusRead,
     AuthSessionResponse,
+    ConsentStatusRead,
     DeletionRequestRead,
     LinkedInSignInRequest,
     TokenResponse,
@@ -50,19 +42,12 @@ from app.schemas import (
     UserRegisterRequest,
     UserRole,
 )
-<<<<<<< HEAD
-from app.verification_schemas import AdminStatsRead
-from app.services.oauth import linkedin_provider
-from app.services.llm_cache import clear_structured_response_cache
-from app.services.wiring import close_compliance_answer_service
-from app.services.feature_ai import clear_feature_clients
-=======
->>>>>>> origin/backend-changes
 from app.security import create_access_token, hash_password, verify_password
 from app.services.feature_ai import clear_feature_clients
 from app.services.llm_cache import clear_structured_response_cache
 from app.services.oauth import linkedin_provider
 from app.services.wiring import close_compliance_answer_service
+from app.verification_schemas import AdminStatsRead
 
 
 @asynccontextmanager
@@ -151,20 +136,9 @@ def _record_consent(db: Session, user_id: int, source: str) -> ConsentRecord:
     return record
 
 
-<<<<<<< HEAD
 @app.post("/api/v1/auth/register/{role}", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 @limiter.limit(AUTH_LIMIT, error_message="Rate limit exceeded")
 def register_user(role: UserRole, payload: UserRegisterRequest, request: Request, db: Session = Depends(get_db)) -> User:
-=======
-@app.post(
-    "/api/v1/auth/register/{role}",
-    response_model=UserRead,
-    status_code=status.HTTP_201_CREATED,
-)
-def register_user(
-    role: UserRole, payload: UserRegisterRequest, db: Session = Depends(get_db)
-) -> User:
->>>>>>> origin/backend-changes
     """Register a public role with explicit consent; admin is never public.
 
     FR-17, FR-22, FR-23, NFR-4, NFR-5, NFR-8, NFR-9.
@@ -192,15 +166,7 @@ def register_user(
     return user
 
 
-<<<<<<< HEAD
 @app.post("/api/v1/auth/linkedin/{role}", response_model=AuthSessionResponse, status_code=status.HTTP_201_CREATED)
-=======
-@app.post(
-    "/api/v1/auth/linkedin/{role}",
-    response_model=UserRead,
-    status_code=status.HTTP_201_CREATED,
-)
->>>>>>> origin/backend-changes
 def linkedin_sign_in(
     role: UserRole,
     payload: LinkedInSignInRequest,
@@ -274,14 +240,8 @@ def linkedin_sign_in(
 
 
 @app.post("/api/v1/auth/login", response_model=TokenResponse)
-<<<<<<< HEAD
 @limiter.limit(AUTH_LIMIT, error_message="Rate limit exceeded")
 def login_user(payload: UserLoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
-=======
-def login_user(
-    payload: UserLoginRequest, db: Annotated[Session, Depends(get_db)]
-) -> TokenResponse:
->>>>>>> origin/backend-changes
     """Sign in and issue a JWT for role-scoped access.
 
     FR-23, NFR-4, NFR-5.
@@ -397,7 +357,6 @@ def read_current_user(current_user: Annotated[User, Depends(get_current_user)]) 
     return current_user
 
 
-<<<<<<< HEAD
 @app.get("/api/v1/admin/stats", response_model=AdminStatsRead)
 def admin_stats(
     current_user: User = Depends(require_roles("admin")),
@@ -414,7 +373,7 @@ def admin_stats(
     pending_appeals = db.scalar(
         select(func.count(VerificationAppeal.id)).where(VerificationAppeal.status == "pending")
     ) or 0
-    seven_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+    seven_days_ago = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=7)
     recent_decisions = db.scalar(
         select(func.count(VerificationDecision.id)).where(VerificationDecision.created_at >= seven_days_ago)
     ) or 0
@@ -424,17 +383,6 @@ def admin_stats(
         pending_appeals=pending_appeals,
         decisions_last_7_days=recent_decisions,
     )
-=======
-@app.get("/api/v1/admin/stats")
-def admin_stats(
-    current_user: Annotated[User, Depends(require_roles("admin"))],
-) -> dict[str, str]:
-    """Admin-only endpoint for the first access-control slice.
-
-    FR-23, NFR-5.
-    """
-    return {"status": "ok", "role": current_user.role}
->>>>>>> origin/backend-changes
 
 
 @app.get("/")

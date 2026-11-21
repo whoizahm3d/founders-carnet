@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from app.config import Settings
 from app.feature_models import EcosystemProfile
 from app.services.secp_check import SecpCheckResult
-from app.verification_schemas import PortfolioVerdict, VerificationScoringResult, VerificationSignalDetail
+from app.verification_schemas import (
+    PortfolioVerdict,
+    VerificationScoringResult,
+    VerificationSignalDetail,
+)
 
 
 @dataclass(frozen=True)
@@ -61,13 +65,8 @@ def score_profile_verification(
             score=secp_result.score,
             outcome=secp_result.outcome,
             input_snapshot={
-<<<<<<< HEAD
                 "entity_name": secp_entity_name or "not_provided",
                 "registration_number": secp_registration_number or "not_provided",
-=======
-                "entity_name": "submitted",
-                "registration_number": "submitted",
->>>>>>> origin/backend-changes
             },
             reason=secp_result.reason,
         ),
@@ -122,21 +121,9 @@ def score_profile_verification(
         else "review"
     )
 
-<<<<<<< HEAD
     # A high aggregate band is an automatic profile result; the manual SECP signal remains
     # visible in the immutable log so a reviewer can revoke an incorrect result (FR-12, FR-14).
     status = "auto_rejected" if band == "low" else "auto_verified" if band == "high" else "pending_review"
-=======
-    # The SECP cross-check is a manual reviewer step; profile completeness or a link alone
-    # must not establish a legal entity's identity.
-    status = (
-        "auto_rejected"
-        if band == "low"
-        else "auto_verified"
-        if band == "high" and secp_result.outcome == "verified"
-        else "pending_review"
-    )
->>>>>>> origin/backend-changes
     if band == "low":
         reason = (
             "The collected signals are below the verification threshold. "
@@ -144,13 +131,7 @@ def score_profile_verification(
         )
     elif band == "high":
         reason = "The signals score highly. " + (
-<<<<<<< HEAD
             "The SECP signal remains recorded for reviewer follow-up." if status == "auto_verified" else "A manual SECP cross-check is still required."
-=======
-            "The SECP check is recorded as verified."
-            if status == "auto_verified"
-            else "A manual SECP cross-check is still required."
->>>>>>> origin/backend-changes
         )
     else:
         reason = "The collected signals need human review. " + "; ".join(

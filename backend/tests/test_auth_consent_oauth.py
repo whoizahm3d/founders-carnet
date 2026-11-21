@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 from fastapi.testclient import TestClient
 
 from app.database import get_db
-from app.models import ConsentRecord
 from app.main import app
+from app.models import ConsentRecord
 
 client = TestClient(app)
 
@@ -149,7 +149,6 @@ def test_linkedin_provider_configuration_rejects_unavailable_provider(monkeypatc
 
 
 def test_consent_withdrawal_backfills_missing_record_as_withdrawn():
-    from app.models import User
 
     headers = {"Authorization": f"Bearer {client.post('/api/v1/auth/login', json={'email':'missing-consent@example.com','password':'SecurePass123!'}).json().get('access_token', '')}"}
     if headers["Authorization"] == "Bearer ":
