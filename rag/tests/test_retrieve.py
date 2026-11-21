@@ -39,3 +39,18 @@ def test_hybrid_caps_internal_candidate_count_to_retriever_limit():
     ranked = hybrid("company registration", [1.0, 0.0], chunks, top_k=5)
     assert len(ranked) == 5
     assert all(row.method == "hybrid" for row in ranked)
+
+
+def test_bm25_normalization_distinguishes_partial_from_complete_matches():
+    chunks = [
+        _chunk("full", "Company registration documents and procedure for private entity.", [1.0, 0.0], 1),
+        _chunk("partial", "General company overview without other details.", [0.0, 1.0], 2),
+    ]
+    ranked = bm25("company registration procedure entity", chunks)
+    assert len(ranked) == 2
+    assert ranked[0].chunk.chunk_id == "full"
+    assert ranked[1].chunk.chunk_id == "partial"
+    assert ranked[0].score > ranked[1].score
+    assert ranked[1].score < 0.5
+    assert all(0.0 <= row.score <= 1.0 for row in ranked)
+

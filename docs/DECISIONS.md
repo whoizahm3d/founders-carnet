@@ -1,5 +1,69 @@
 # Decisions log
 
+## 2026-11-21: Shared dense top-1 cosine refusal gate and hybrid ranking alignment
+
+**Context:** Compliance RAG system retrieval pipeline and abstention gating (FR-8, NFR-11 to NFR-14, Section 4.4 and Section 4.5 of the report). Synchronizing the deployed service refusal logic with the pre-registered evaluation design.
+
+**What we tried:** The previous hybrid retrieval path applied `minimum_score` directly to dense rows, BM25 rows, and the fused reciprocal rank fusion (RRF) score `min(1.0, score * (rrf_k + 1) / 2.0)`.
+
+**What we found:** A candidate chunk present in only one ranking receives an RRF contribution of at most 1/(60+1) = 0.5 under the fused score formula. When `minimum_similarity = 0.8` was configured, hybrid retrieval filtered out all candidate passages unless BM25 also produced a score >= 0.8, which theoretical upper-bound normalized BM25 rarely assigns. This caused `ComplianceAnswerService` to refuse virtually all queries and broke backend test suites (`test_supported_answer_is_saved_with_its_citation`, `test_gemini_error_is_logged_and_failed_query_is_recorded`, `test_gateway_generation_failure_is_logged_once_and_failed_query_is_saved`).
+
+**Decision:**
+1. Decouple retrieval ranking from the refusal gate: for `method="hybrid"`, fetch active candidates of the configured model without a distance filter in the database query.
+2. Evaluate refusal against the candidate set using a shared function `refuse_by_dense_top1(dense_top1_cosine, threshold)` in `rag/compliance/retrieve.py`, used identically in `backend/app/services/compliance_retrieval.py` and `rag/evaluation/run_e2e.py`.
+3. If not refused, call `hybrid_retrieve` with `minimum_score=0.0` over the unfiltered candidates to rank passages, matching the evaluation pipeline.
+4. Add `compliance_refusal_threshold: float = 0.8428` to backend config, matching the pre-registered dev-tuned threshold on 3 negative examples.
+
+**Why:** Aligns the deployed service with the pre-registered evaluation protocol where hybrid provides cross-lingual ranking while dense top-1 cosine serves as the refusal gate.
+
+**Follow-ups:** Update `docs/pending-report-changes.md` and `docs/build-log.md`. If the backend default embedding model changes to `intfloat/multilingual-e5-base`, stored chunks in `compliance_chunks` and ecosystem profiles in `ecosystem_profiles` must be regenerated.
+
+## 2026-11-20: Pre-registered compliance evaluation configuration and test guard policy
+
+**Context:** Compliance RAG system evaluation (FR-8, NFR-11 to NFR-14, Research Question 2, Section 4.5 of the project report and playbook). Establishing the primary deployed retrieval pipeline, refusal gate threshold, and the protocol for the single held-out test split evaluation.
+
+**What we tried:** Benchmarked dense, BM25, and hybrid (RRF k=60) retrieval on the 12 development questions (9 answerable, 3 unanswerable) across MPNet and multilingual-e5-base. Tuned the abstention threshold on the 3 unanswerable dev questions and evaluated default (0.4) vs tuned thresholds.
+
+**What we found:** On the development split (n=9 answerable questions), MPNet hybrid and E5 hybrid both achieved 8/9 Recall@5 hits (88.9%, Wilson 95% interval [0.565, 0.980]), and E5 BM25 also scored 8/9 hits. With n=9, confidence intervals are broad and dev results do not statistically separate the configurations. However, BM25 alone cannot match across English queries and Urdu or mixed-language statutory texts, which is a core project requirement. On the 3 unanswerable dev questions, E5 dense top-1 cosine scores separated negatives from positives with an optimal threshold of 0.8428 (tied range 0.842750 to 0.842938).
+
+**Decision:**
+1. Primary retrieval configuration: intfloat/multilingual-e5-base with hybrid retrieval (BM25 + Dense RRF, k=60, top 5). This is a principled design choice for cross-lingual coverage rather than an empirical dev win.
+2. Refusal gate: Questions whose E5 dense top-1 cosine similarity falls below 0.8428 are refused immediately before generation. This threshold rests on 3 negative dev examples. Downstream rule checks (citation membership, numeric/date claim fidelity, effective date presence) and the LLM grounding validator (compliance-grounding-v1) remain active.
+3. Test split retrieval evaluation: All six configurations (MPNet and E5 across dense, BM25, hybrid) will be evaluated once on the 14-question test split under strict guard enforcement (clean working tree for code, lock file, explicit --confirm-test-run flag). Test metrics will be recorded in retrieval.csv and retrieval_summary.csv but will never be used to alter configuration choices.
+4. End-to-end evaluation: Run exclusively for the primary configuration against a no-retrieval baseline (gemini-2.5-flash, temperature 0.0). Results are recorded in e2e.csv with human labels (citation_correct, unsupported_claim, date_correct) left for subsequent manual audit.
+
+**Why:** Pre-registering the primary configuration and locking test evaluation prevents post-hoc selection, overfitting to the test split, and metric p-hacking.
+
+**Follow-ups:** Enforced through rag/evaluation/guards.py in run_test_retrieval.py and run_e2e.py. Update docs/build-log.md, docs/pending-report-changes.md, and rag/evaluation/README.md.
+
+## 2026-11-20: BM25 score normalization fix and dev-12 re-run
+
+**Context:** The BM25 retriever in `rag/compliance/retrieve.py` is used in the hybrid retrieval pipeline and its top score drives abstention threshold tuning. The score feeds directly into the hybrid RRF signal and determines whether a question is abstained on.
+
+**What we tried:** Inspected the original `bm25()` function in `rag/compliance/retrieve.py`. The old normalization divided each BM25Plus raw score by `max(scores)`, which forces the top result of every query to score exactly 1.0 regardless of actual match quality.
+
+**What we found:** Scores normalized to the query-specific maximum are not comparable across queries. Every query's top result gets 1.0, so the abstention threshold cannot distinguish a strong match from a weak one. After the fix, the BM25 top score for a question like q017 (outside corpus) is visibly lower than for q001 (strong lexical match). The old retrieval results show all BM25 top scores as 1.0, confirming the bug.
+
+**Decision:** Replace the in-query maximum normalization with a theoretical upper bound: `sum(IDF(token) * (k1 + 1 + delta) for token in unique_query_tokens)`. This bound is the maximum score any single document could receive for the query given the corpus IDF values, so scores are calibrated and cross-query comparable. All returned scores are still clamped to [0, 1].
+
+**Why:** Cross-query comparable BM25 scores are required for the hybrid abstention threshold to generalize. With the old normalization the threshold had no signal from BM25 top scores.
+
+**Follow-ups:** Dev-12 re-run results (retrieval.csv, retrieval_summary.csv, abstention_tuning.csv) supersede the dev-6 results archived as `retrieval_dev6_superseded.csv`. The report must reflect the new BM25 normalization method and the tuned abstention threshold from the dev-12 run. Update pending-report-changes.md.
+
+## 2026-11-19: Expand the compliance evaluation development split
+
+**Context:** The compliance RAG evaluation uses a fixed development and test split. The first development retrieval run used 6 development questions and 14 held-out test questions.
+
+**What we tried:** We ran dense, BM25 and hybrid retrieval on the original 6-question development split using MPNet and multilingual E5. The test split was not run.
+
+**What we found:** Six new answerable questions were written after that first development run. Adding them grows the development split from 6 to 12 questions. The test split remains unchanged at 14 questions.
+
+**Decision:** Add the six new answerable questions to the development split only. Re-run the development retrieval evaluation and tune abstention thresholds again before relying on any development metrics. Do not change or run the test split.
+
+**Why:** The prior development metrics and tuned thresholds were based on six questions, so they do not measure the expanded development set. Preserving the test split protects its held-out status.
+
+**Follow-ups:** Confirm each proposed chunk mapping against its source PDF, re-run the development retrieval comparison without downloading models, regenerate the evaluation result files and RESULTS.md, and state in the report that the original development figures and thresholds were superseded.
+
 ## 2026-11-15: Social auth options (LinkedIn, Google, GitHub) and demographic field handling in /login and /register
 
 **Context:** The report specifies FR-22 (social sign in via LinkedIn and email) and omits Google and GitHub, while prototype reference screens show Google and GitHub options. Furthermore, the backend registration schema requires `full_name`, but the prototype and DESIGN.md v3.9 intentionally omit Full Name, Profession, and Age fields from the auth cards.
@@ -614,3 +678,9 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 **Why:** DESIGN.md prohibits invented statistics, cohort labels, and vetted investor claims on the Founder Dashboard. Including them would misrepresent the platform state to the user and to any evaluator reading the report. The report's figure descriptions must match what the screen actually shows.
 
 **Follow-ups:** Update the report figure captions that reference a cohort stat block or a "Series Seed" breadcrumb label. See `docs/pending-report-changes.md` (2026-11-17 entry).
+
+## 2026-11-22: Corpus hashes are LF-normalized
+- Context: CI (Linux) failed with a SHA-256 mismatch on fbr_register_income_tax_2026-10-04.txt. Git stores the file with LF, while the Windows working copy is converted to CRLF, and the manifest held the CRLF hash.
+- Decision: the manifest stores the SHA-256 of the LF-normalized content. verify_corpus_file normalizes CRLF to LF before hashing, so Windows and Linux agree.
+- Scope: only rag/corpus_manifest.md changed (one hash). The text, chunks, question set and dev results are unchanged.
+- Note: run_metadata.csv and the constant in run_dev_retrieval.py keep the old CRLF hash as a historical record of the dev run.

@@ -35,7 +35,7 @@ main.tex describes a full AI design, but no model has been trained or evaluated,
 | --- | --- |
 | Compliance assistant | Answers only from 11 official documents (SECP, FBR, PSEB and the Finance Act 2026). Cites source and effective date. Abstains when evidence is missing. |
 | Matching | Two stages: pgvector retrieval with hard filters on sector, stage and geography, then a re-ranker. FYP-1 uses feature weights. The trained re-ranker is the only trained model in the platform. |
-| Evaluation | Re-ranker: NDCG@K and MRR against a cosine-only baseline, with two members labeling independently and agreement reported. Assistant: hand-written gold question set, measuring citation correctness, retrieval recall and correct abstention, with RAGAS as support. |
+| Evaluation | Re-ranker: NDCG@K and MRR against a cosine-only baseline, with two members labeling independently and agreement reported. Assistant: hand-written question set, measuring citation correctness, retrieval recall and correct abstention, with RAGAS as support. |
 | Readiness score | Prompted module, 7 dimensions, score 1 to 5 with reason and next action. Compared with human ratings by Spearman correlation on 10 to 15 ideas. Not a funding probability. |
 | Classifiers | Resume role, startup outcome, follow-on funding. Offline studies, macro F1 against a simple baseline. Never shown to users as a probability. |
 | Multilingual | English, Urdu and Roman Urdu benchmark with off-the-shelf models such as LaBSE and multilingual-e5. Planned for FYP-2. |
@@ -66,11 +66,11 @@ The plan below assumes four weeks. If you only have two, stop after step 2 and d
 1. Fix the LLM gateway: one function that takes a prompt version and a model id, returns JSON, caches every response on disk, and logs model id, prompt version and latency.
 2. Convert the 11 corpus documents to text, record the SHA-256 hash and dates of each, and chunk by legal section.
 3. Embed the chunks, load them into pgvector, and build the first retrieval call.
-4. Start the gold question set: write 40 questions this week, split between you.
+4. Start the question set: write 20 questions this week, split between you.
 
 ### Week 2: RAG evaluation and synthetic data
 
-1. Finish the gold set to about 80 questions and freeze a test split.
+1. Finish the question set to about 27 questions and freeze a test split.
 2. Run the retrieval comparison (dense, BM25, hybrid) on the dev split, then confirm on the test split.
 3. Build the generation, validator and abstention steps and run the no-retrieval baseline.
 4. In parallel, generate synthetic profiles and start hand-labeling the 100 evaluation pairs.
@@ -93,7 +93,7 @@ The plan below assumes four weeks. If you only have two, stop after step 2 and d
 | Work | Lead | Second |
 | --- | --- | --- |
 | Gateway, corpus processing, retrieval | Shahzeb | Ali |
-| Gold set, validator, abstention | Ali | Shahzeb |
+| Question set, validator, abstention | Ali | Shahzeb |
 | Synthetic data and re-ranker | Shahzeb | Ali |
 | Hand-labeling of evaluation pairs | Both, independently |  |
 | Prompted modules and classifiers | Ali | Shahzeb |
@@ -111,9 +111,9 @@ The assistant retrieves passages from the indexed official documents, writes an 
 | --- | --- | --- |
 | Architecture | Retrieval-augmented generation with a validation step and abstention | Fixed |
 | Chunking | By legal section, with the heading path attached to each chunk | Proposed |
-| Embedding model | Pick by bake-off on the gold set. Candidates: multilingual-e5-base, bge-m3, and a small English model as a floor | Proposed |
+| Embedding model | Pick by bake-off on the question set. Candidates: multilingual-e5-base, bge-m3, and a small English model as a floor | Proposed |
 | Vector store | pgvector in the existing PostgreSQL (NFR-20) | Fixed |
-| Retrieval | Dense, BM25, and hybrid with reciprocal rank fusion. Keep hybrid only if it wins on the gold set | Fixed in principle, Proposed in detail |
+| Retrieval | Dense, BM25, and hybrid with reciprocal rank fusion. Keep hybrid only if it wins on the question set | Fixed in principle, Proposed in detail |
 | Generator | Gemini through the gateway (or the OpenRouter model that replaces it), temperature 0, JSON output | Fixed |
 | Conflict handling | Show both sources with dates, never pick silently | Proposed |
 
@@ -122,7 +122,7 @@ The assistant retrieves passages from the indexed official documents, writes an 
 - **RAG, not fine-tuning.** The corpus changes (fees rise 10% a year, a tax exemption ended on 30 June 2025), and a fine-tuned model cannot cite a passage. Retrieval lets us re-index when a document changes.
 - **RAG, not a free-answering model.** Magesh et al. found commercial legal tools hallucinated 17 to 33% of the time. We expect a free model to do worse on Pakistani regulation, and the baseline run in 4.5 tests that.
 - **Section-based chunks.** Fixed-size chunks split a legal clause across two pieces and drop the section number we need for the citation. Section chunks keep the citation intact.
-- **Embedding bake-off, not a guess.** multilingual-e5 is named in main.tex for the multilingual benchmark. bge-m3 is a stronger multilingual candidate but larger. One model must serve both matching and retrieval (NFR-20), so we choose with data from our own gold set.
+- **Embedding bake-off, not a guess.** multilingual-e5 is named in main.tex for the multilingual benchmark. bge-m3 is a stronger multilingual candidate but larger. One model must serve both matching and retrieval (NFR-20), so we choose with data from our own question set.
 - **pgvector, not a separate vector database.** One store to keep consistent. At a few thousand chunks, exact search is fast enough, so an approximate index is optional.
 - **Hybrid only if it earns its place.** Legal text has exact terms (section numbers, defined words) that BM25 matches well. The Cormack et al. fusion constant of 60 is the default.
 
@@ -155,9 +155,9 @@ The assistant retrieves passages from the indexed official documents, writes an 
 
 ### 4.5 Evaluation
 
-**Gold set.** About 80 questions written from the corpus by both of you: roughly 55 answerable, including date-sensitive and conflicting-source questions, and roughly 25 that should be refused. For the refused ones, use the six categories in Peng et al. (open the paper for the exact list). Each answerable question records the chunk or chunks that support it, which is what makes recall measurable.
+**Question set.** About 27 questions written from the corpus by both of you: roughly 19 answerable, including date-sensitive and conflicting-source questions, and roughly 8 that should be refused. For the refused ones, use the six categories in Peng et al. (open the paper for the exact list). Each answerable question records the chunk or chunks that support it, which is what makes recall measurable.
 
-Split into 30 dev questions for tuning and 50 test questions that nobody looks at until the final run. Without that wall, we tune on the exam and the numbers mean nothing.
+Split into 13 dev questions for tuning and 14 test questions that nobody looks at until the final run. Without that wall, we tune on the exam and the numbers mean nothing.
 
 **Systems compared on the test split**
 
@@ -180,7 +180,7 @@ Split into 30 dev questions for tuning and 50 test questions that nobody looks a
 | Date correctness | Right rate or fee for the right effective date |
 | Latency | Checked against NFR-2 (about 8 seconds) |
 
-With 50 test questions, one question moves a rate by 2 points. Report counts next to percentages and give a Wilson confidence interval. Do not claim a difference you cannot show.
+With 14 test questions (9 answerable, 5 out of scope), one question moves a rate by about 7 points, and a rate on 9 answerable questions has a very wide interval (9 of 9 still has a Wilson lower bound near 70%). Present results as a small-sample check, not a precise accuracy figure. Report counts next to percentages and give a Wilson confidence interval. Do not claim a difference you cannot show.
 
 **Pass rules to fix now (proposed targets, change them before you run, not after):** the full pipeline has a lower unsupported-claim rate than the no-retrieval baseline, and it abstains correctly on most of the refused questions. If it does not, report that plainly and name the failure causes.
 
@@ -190,7 +190,7 @@ With 50 test questions, one question moves a rate by 2 points. Report counts nex
 2. Write `embed.py`: batch embedding on Colab or Kaggle, saved to disk, then loaded into pgvector.
 3. Write `retrieve.py` with dense, BM25 (`rank_bm25`) and fusion as three functions with one shared output format.
 4. Write `answer.py`: prompt template (versioned), JSON parsing, the four checks, abstention.
-5. Write `eval_rag.py`: reads the gold file, runs each system, writes one CSV of per-question results. The report tables come from this CSV, never from memory.
+5. Write `eval_rag.py`: reads the question file, runs each system, writes one CSV of per-question results. The report tables come from this CSV, never from memory.
 6. Expose one endpoint, `POST /compliance/ask`, returning the fields listed in Section 11.
 
 ### 4.7 Impact
@@ -434,7 +434,7 @@ This is FYP-2 work in main.tex, so for D3 the goal is a small first run and a cl
 1. Build the parallel set. For each of 30 to 50 descriptions, write the English, the Urdu and a Roman Urdu version. Roman Urdu has no standard spelling, so write two spelling variants for a subset to test sensitivity.
 2. Embed all versions with each model.
 3. Cross-lingual match: for each Urdu or Roman Urdu text, check whether its English counterpart is the nearest neighbor among all English texts. Report top-1 and top-5 accuracy.
-4. Retrieval check: translate 15 to 20 gold questions into Urdu and Roman Urdu and measure recall@5 against the same chunks.
+4. Retrieval check: translate 15 to 20 questions into Urdu and Roman Urdu and measure recall@5 against the same chunks.
 
 ### 9.3 Evaluation and honesty
 
@@ -454,8 +454,8 @@ This one table answers the D2 question "which model, why, and what is the plan" 
 
 | Component | Method | Chosen over | Baseline | Metric | Data |
 | --- | --- | --- | --- | --- | --- |
-| Compliance retrieval | Hybrid or dense retrieval, chosen on the gold set | Fine-tuning, free answering | Dense only, BM25 only, no retrieval | Recall@5, MRR | 11 documents, gold set |
-| Compliance answer | Grounded generation with checks and abstention | Free answering | Same model without retrieval | Unsupported-claim rate, abstention precision and recall | Gold test split |
+| Compliance retrieval | Hybrid or dense retrieval, chosen on the question set | Fine-tuning, free answering | Dense only, BM25 only, no retrieval | Recall@5, MRR | 11 documents, question set |
+| Compliance answer | Grounded generation with checks and abstention | Free answering | Same model without retrieval | Unsupported-claim rate, abstention precision and recall | Test split |
 | Re-ranker | LightGBM lambdarank | Cross-encoder, neural re-rankers | Cosine only, hand-weighted | NDCG@5, NDCG@10, MRR | Synthetic training, hand-labeled test |
 | Readiness | Rubric prompt | Open-ended prompt | Repeat-run spread | Spearman, repeatability, sensitivity | 10 to 15 ideas |
 | Pitch simulator | Persona prompt with rubric | None | Scripted answers | Relevance rating, ordering of strong against weak | 8 to 10 sessions |
@@ -467,7 +467,7 @@ This one table answers the D2 question "which model, why, and what is the plan" 
 
 ### 10.2 Rules for fair testing
 
-1. **Freeze the test set first.** Write and lock gold questions and hand-labeled pairs before you tune anything. Tune on dev only. Run the test split once per final system.
+1. **Freeze the test set first.** Write and lock questions and hand-labeled pairs before you tune anything. Tune on dev only. Run the test split once per final system.
 2. **Never split by row when rows share a source.** Split by startup, by resume text after deduplication, or by founding date.
 3. **Record what is synthetic.** Every table that touches synthetic data says so in its caption.
 4. **Report counts, intervals and failures,** not only the best number. A clear negative result is acceptable. A hidden one is not.
@@ -539,12 +539,12 @@ The three most likely ways this plan fails are time, a weak result that you are 
 
 | Risk | Likelihood | What to do | Impact if it happens |
 | --- | --- | --- | --- |
-| Gold set written late or tuned on | High | Freeze the test split in week 2 and tune on dev only | Numbers are inflated and the panel can tell |
+| Question set written late or tuned on | High | Freeze the test split in week 2 and tune on dev only | Numbers are inflated and the panel can tell |
 | Synthetic labels teach the model our own formula | High | Hand-labeled test, judge differs from generator, rule override only for hard filters | The re-ranker result proves nothing |
 | Free-tier quota or model change mid-evaluation | High | Gateway cache, pinned model id, listwise judge calls, run finals in one window | Results cannot be reproduced or compared |
 | Re-ranker does not beat hand-weighted score | Medium | Decision rule set now. Ship the hand-weighted score and report the pilot | A negative result, which is acceptable if reported plainly |
 | Section splitting breaks legal clauses | Medium | Check splits by hand on the Companies Act before embedding everything | Wrong citations, false recall |
-| Conflicting sources produce a wrong confident answer | Medium | Precedence rule, show both with dates, conflict questions in the gold set | A cited but wrong answer, the worst failure for this product |
+| Conflicting sources produce a wrong confident answer | Medium | Precedence rule, show both with dates, conflict questions in the question set | A cited but wrong answer, the worst failure for this product |
 | Synthetic profiles look too alike | Medium | Sample attributes in code, write only the text with the model | A model that fits a narrow set |
 | Labelers disagree heavily | Medium | Shared written rubric, calibration on 10 pairs first, report kappa | Noisy test set and wide intervals |
 | Small samples tempt over-claiming | High | Report counts and intervals, and use cautious wording | Panel questions every claim |
@@ -576,7 +576,7 @@ Short answers you can say aloud. Each is consistent with main.tex and with the e
 
 **How do you know the re-ranker works on real people?** We do not yet. We add a small slice of real consenting profiles to the test, label it separately, and plan a partner pilot in FYP-2 to collect real labels.
 
-**Why only about 80 gold questions?** It is what two people can write and check carefully in the time. We say so, report counts with intervals, and do not claim small differences.
+**Why only about 27 questions?** It is what two people can write and check carefully in the time. We say so, report counts with intervals, and do not claim small differences.
 
 **Is the readiness score just a prompt?** Yes, and the report says so. We test it for repeatability, for sensitivity (removing traction should lower the score), and for agreement with human reviewers. It is never a funding probability.
 
@@ -645,7 +645,7 @@ Six decisions are still yours, and the first three block the most work.
 
 - [ ] Build the language model gateway with caching and logging.
 - [ ] Convert and hash the 11 corpus documents, then check the section splits by hand.
-- [ ] Write the first 40 gold questions, half each.
+- [ ] Write the first 20 questions, half each.
 - [ ] Run the first dense retrieval and look at what it misses.
 - [ ] Write the attribute sampler for synthetic profiles.
 
@@ -675,7 +675,7 @@ CVs, profile fields, linked pages, searched web pages and even corpus documents 
 ### 16.3 Corpus freshness and background jobs
 
 - **Ingestion:** main.tex has Celery and cron jobs pulling whitelisted SECP, FBR and PSEB pages through Firecrawl. Save each page as a dated snapshot with its hash.
-- **Updates (R-3):** re-check every document before the demonstration. If a document changed, bump `corpus_version`, re-chunk, re-embed, and rerun the gold set. A changed corpus can change old results.
+- **Updates (R-3):** re-check every document before the demonstration. If a document changed, bump `corpus_version`, re-chunk, re-embed, and rerun the question set. A changed corpus can change old results.
 - **Embeddings:** regenerate them when a profile is edited or the embedding model changes. If you change the embedding model after the bake-off, the stored vectors and the re-ranker features must both be rebuilt.
 
 ### 16.4 Performance numbers from the requirements
@@ -690,13 +690,13 @@ main.tex sets targets that these tests can check cheaply now, with the full load
 
 ### 16.5 Error analysis
 
-Numbers alone do not convince a panel. After each evaluation, read every wrong answer or wrong ranking and give it one cause: retrieval missed it, the chunk split a clause, the model ignored the evidence, a check was too strict, or the gold label was wrong. Report the counts. This also shows you whether to fix retrieval, chunking or the prompt next.
+Numbers alone do not convince a panel. After each evaluation, read every wrong answer or wrong ranking and give it one cause: retrieval missed it, the chunk split a clause, the model ignored the evidence, a check was too strict, or the label was wrong. Report the counts. This also shows you whether to fix retrieval, chunking or the prompt next.
 
 ### 16.6 What this playbook updates in the FYP-2 plan
 
 D3 requires a plan for FYP-2. The plan table in main.tex lists six phases. After D3, change them like this.
 
-- **Phase 1 (assistant):** move the gold set, the corpus and the first evaluation to done. Keep the larger corpus and a re-run on new documents.
+- **Phase 1 (assistant):** move the question set, the corpus and the first evaluation to done. Keep the larger corpus and a re-run on new documents.
 - **Phase 2 (matching):** record the synthetic training and hand-labeled test as done. Keep real labels from a partner pilot as the main open item.
 - **Phase 3 (prompted modules):** record which small tests you finished.
 - **Phase 4 (benchmark and classifiers):** mark what you ran, and leave only what you cut.
@@ -835,14 +835,14 @@ Then add, as separate small changes:
 Extend tests/test_llm_gateway.py with a fake provider: cache hit returns identical output and makes no provider call, six simultaneous calls run five and queue one, the call is logged. Do not call the real API in tests. Back up each existing file before editing. Run pytest from backend/ and report the real output. Add a build-log entry. Do not commit.
 ```
 
-### 18.3 Prompt 2: gold set, retrieval comparison and end-to-end evaluation
+### 18.3 Prompt 2: question set, retrieval comparison and end-to-end evaluation
 
 ```text
-Read rag/, backend/app/services/compliance_retrieval.py, compliance_assistant.py, docs/context/corpus.md and rag/corpus_manifest.md. Already built: section-aware chunking, a provisional default embedding model (paraphrase-multilingual-mpnet-base-v2), dense top-5 retrieval, answer generation with an LLM grounding validator, abstention reasons, citations and a query log. Not built: a gold set, an evaluation harness, BM25 or hybrid retrieval, and any model comparison.
+Read rag/, backend/app/services/compliance_retrieval.py, compliance_assistant.py, docs/context/corpus.md and rag/corpus_manifest.md. Already built: section-aware chunking, a provisional default embedding model (paraphrase-multilingual-mpnet-base-v2), dense top-5 retrieval, answer generation with an LLM grounding validator, abstention reasons, citations and a query log. Not built: a question set, an evaluation harness, BM25 or hybrid retrieval, and any model comparison.
 Show a plan and wait for my yes, then build in rag/evaluation/:
-1) A gold question file format (rag/evaluation/gold_questions.jsonl): id, question, answerable true or false, the supporting section references, a category tag for out-of-scope questions, and a dev or test split. Build the loader and a ten-question starter file. I will write the real questions by hand. Do not generate gold answers.
+1) A question file format (rag/evaluation/gold_questions.jsonl): id, question, answerable true or false, the supporting section references, a category tag for out-of-scope questions, and a dev or test split. Build the loader and a ten-question starter file. I will write the real questions by hand. Do not generate reference answers.
 2) A retrieval harness that compares dense (current), BM25 and hybrid with reciprocal rank fusion, for each embedding model in config: the current default, multilingual-e5-base and bge-m3. Compute Recall@5 and MRR on the dev split and write results/retrieval.csv. Tell me before installing anything and pin the versions.
-3) An end-to-end run of ComplianceAnswerService over the gold set that measures citation correctness, unsupported-claim rate, and abstention precision and recall, with a no-retrieval baseline using the same model. Use the gateway cache.
+3) An end-to-end run of ComplianceAnswerService over the question set that measures citation correctness, unsupported-claim rate, and abstention precision and recall, with a no-retrieval baseline using the same model. Use the gateway cache.
 4) A rule-based check in the answer service, in addition to the existing LLM validator: every number and date in the answer must appear in a cited chunk, otherwise abstain. Add tests.
 Verify corpus file hashes against the manifest before indexing. Never index a superseded version. Make no accuracy claim until a results CSV exists, and say what was and was not run. If the default embedding model changes, add the DECISIONS entry and the pending-report row. Do not commit.
 ```
@@ -965,7 +965,7 @@ Read from github.com/whozahm3d/founders-carnet (latest commit: merge of pull req
 | --- | --- | --- |
 | Auth (FR-22, FR-23) | register, login, logout, current user; roles; token version; sanitized validation errors; 8 tests | LinkedIn sign-in; a consent record table (consent is stored inside the founder and ecosystem profile rows); account deletion; withdrawal of consent |
 | Founder data (FR-1) | profile and startups: create, read, update; consent version stored | readiness gating of investor visibility (FR-10) |
-| Compliance assistant (FR-8) | corpus indexer; section-aware chunking; provisional embedding default (paraphrase-multilingual-mpnet-base-v2); dense top-5 retrieval; answer generation; LLM grounding validator; abstention with reasons; citation fields with dates; query log; about 20 tests | gold question set; evaluation harness; BM25 and hybrid retrieval; embedding comparison; rule-based number and date check |
+| Compliance assistant (FR-8) | corpus indexer; section-aware chunking; provisional embedding default (paraphrase-multilingual-mpnet-base-v2); dense top-5 retrieval; answer generation; LLM grounding validator; abstention with reasons; citation fields with dates; query log; about 20 tests | question set; evaluation harness; BM25 and hybrid retrieval; embedding comparison; rule-based number and date check |
 | LLM gateway (NFR-2, NFR-19) | Gemini client; five-slot semaphore; retry; fallback model; logging through the logger; prompt version strings; 11 tests | disk cache; persisted call log; queue position visible to callers; one prompt registry |
 | Matching (FR-7) | ecosystem profiles; five factor weights (0.25, 0.20, 0.25, 0.15, 0.15) blended 0.5 with semantic similarity; factors stored; accept by both sides; contact email only after mutual acceptance; no model call | I could not confirm that candidate search uses pgvector with hard filters. The matching code imports a Python cosine function. Check this against the report, which says pgvector with filters. No re-rank score column |
 | Readiness (FR-2), pitch (FR-3, FR-28) | endpoints, schemas, tables; four-area pitch rubric; history | calibration against human reviewers (FYP-2) |
@@ -980,7 +980,7 @@ Read from github.com/whozahm3d/founders-carnet (latest commit: merge of pull req
 | 3, timeline | 2 to 4 weeks of build | Coding plan: feature freeze about 6 November, report due 11 November | Confirm the real D3 date with your supervisor today. If it is 11 November, the plan in Section 3 is too long |
 | 4.1, embeddings | bake-off of e5, bge-m3 and an English floor | The backend default is paraphrase-multilingual-mpnet-base-v2, marked provisional until evaluated | Add the current default as the incumbent in the bake-off |
 | 4.1, retrieval | dense, BM25, hybrid | Only dense exists | Build the other two in Prompt 2 and keep hybrid only if it wins |
-| 4.5, gold set | about 80 questions | The coding plan says 20 to 22 hand-verified questions. The report gives no number | Start at the committed number, grow it if time allows, and state the real count in the report |
+| 4.5, question set | 27 questions (20 committed plus 7 dev questions added) | The coding plan says 20 to 22 hand-verified questions. The report gives no number | State the real count and the 13 dev / 14 test split in the report |
 | 5, re-ranker data | synthetic pairs and LLM labels | DECISIONS 19 October: the re-ranker trains only on the team's own 150 to 300 labeled pairs | Write a new DECISIONS entry and a pending-changes row first (draft in 20.4) |
 | 8, classifiers | in the 2 to 4 week plan | Approved on 21 October as offline FYP-2 studies. Rules: deduplicate before splitting, 1990 to 2015 filter for Success/Fail, drop funding and post-outcome columns, macro-F1 against a simple baseline. None is trained | Mark as optional, lowest priority. Drop the DistilBERT idea, which is not in the repo plan |
 | 10.3, gateway | build it first | It exists | Extend it (Prompt 1) |

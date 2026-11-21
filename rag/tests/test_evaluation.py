@@ -19,12 +19,12 @@ def test_existing_questions_are_preserved_without_generated_answers():
     with open(GOLD_QUESTIONS, encoding="utf-8") as f:
         raw = f.read().splitlines()
     # Retain the repository's existing authored set; do not synthesize answers.
-    assert len(raw) == 20
+    assert len(raw) == 26
     assert all("gold_answer" not in line for line in raw)
     questions = load_questions()
-    assert len(questions) == 20
+    assert len(questions) == 26
     dev, test = split_dev_test(questions)
-    assert (len(dev), len(test)) == (6, 14)
+    assert (len(dev), len(test)) == (12, 14)
     raw_questions = {json.loads(line)["id"]: json.loads(line) for line in raw}
     for question_id in ("q009", "q010"):
         assert raw_questions[question_id]["answerable"] is False

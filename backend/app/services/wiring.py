@@ -31,7 +31,7 @@ def get_compliance_answer_service() -> ComplianceAnswerService:
         gateway=gateway,
         embedding_model=settings.embedding_model_name,
         top_k=settings.compliance_top_k,
-        minimum_similarity=settings.compliance_minimum_similarity,
+        minimum_similarity=settings.compliance_refusal_threshold,
     )
 
 

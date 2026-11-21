@@ -2,6 +2,48 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-20: Pre-registered compliance evaluation harness, test guards, and end-to-end pipeline
+
+- **Feature and IDs:** Compliance assistant evaluation, FR-8, NFR-11, NFR-12, NFR-13, NFR-14, NFR-20, Research Question 2.
+- **Built:**
+  - `rag/evaluation/guards.py`: Enforces three conditions for test execution: (1) git working tree clean for .py code under rag/ and backend/, ignoring .md files, results, and caches; (2) lock file does not exist; (3) explicit --confirm-test-run flag is provided.
+  - `rag/evaluation/run_test_retrieval.py`: Test retrieval runner executing all six configurations (MPNet and E5 across dense, BM25, hybrid) on the 14 held-out test questions under test guard enforcement. Appends test results to `retrieval.csv` and Wilson confidence intervals to `retrieval_summary.csv`.
+  - `rag/evaluation/run_e2e.py`: End-to-end evaluation runner for the primary pre-registered configuration (multilingual-e5-base hybrid, refusal gate at 0.8428 E5 dense top-1 cosine, grounded generation, rule checks for citations, numbers, dates, and LLM grounding validation) against a no-retrieval baseline (temperature 0.0, empty passages). Writes `e2e.csv` with human labels (citation_correct, unsupported_claim, date_correct) left empty. Supports `--provider fake` (deterministic local execution) and `--provider gemini` (environment API key, strict quota handling, disk cache). Refuses `--split test` without guard conditions.
+  - `rag/evaluation/make_report.py`: Extended to generate `RESULTS.md` strictly from CSVs with counts next to percentages, explicit labeling of dev (12 questions: 9 answerable, 3 out of scope) and test (14 questions: 9 answerable, 5 out of scope), and "pending" placeholders for unexecuted components. Zero em dashes and en dashes.
+  - `rag/tests/test_evaluation_guards.py`: Unit test suite covering working tree cleanliness filtering, lock rejection, confirmation flag requirement, refusal gate boundary (0.8428 vs 0.8427), fake provider contracts, and e2e CSV schema.
+  - Exact reproduction commands:
+    - E2E dev evaluation: `rag/.venv/Scripts/python.exe rag/evaluation/run_e2e.py --split dev --provider fake`
+    - Test retrieval evaluation (user only): `rag/.venv/Scripts/python.exe rag/evaluation/run_test_retrieval.py --confirm-test-run`
+    - Generate report: `rag/.venv/Scripts/python.exe rag/evaluation/make_report.py`
+    - Guard unit tests: `rag/.venv/Scripts/python.exe -m pytest rag/tests/test_evaluation_guards.py`
+- **Tested:** Ran full pytest suite in `rag/` (42 pre-existing tests + 11 new guard tests = 53 passed). Verified guard rejection when --confirm-test-run is omitted. Executed dry run of `run_e2e.py --split dev --provider fake`.
+- **Cut or partial:** Test split held out and not run. Human label columns in `e2e.csv` left empty for human scoring.
+- **Differs from the report?** Yes. Primary retrieval configuration pre-registered as multilingual-e5-base hybrid (RRF k=60, top 5); refusal gate threshold pre-registered at 0.8428 on 3 negative dev examples; end-to-end comparison restricted to primary configuration vs no-retrieval baseline; test split evaluation protected by single-run lock. Recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`.
+
+## 2026-11-20: Compliance evaluation dev-12 re-run and BM25 score normalization fix
+
+- **Feature and IDs:** Compliance assistant evaluation, FR-8, NFR-12, NFR-13, NFR-14, NFR-20.
+- **Built:**
+  - Archived old 6-question development results by renaming to `retrieval_dev6_superseded.csv`.
+  - Fixed BM25 score normalization bug in `rag/compliance/retrieve.py` `bm25()`: replaced in-query maximum normalization (`score / max(scores)`) with theoretical upper bound (`sum(IDF(token) * (k1 + 1 + delta))`). Added regression test in `rag/tests/test_retrieve.py`.
+  - Updated `rag/tests/test_evaluation.py` to match the 26-question set and (12, 14) dev/test split.
+  - Re-ran dense, BM25, and hybrid (RRF k=60) retrieval on all 12 development questions for MPNet and multilingual-e5-base.
+  - Promoted standalone evaluation harness to `rag/evaluation/run_dev_retrieval.py` with `--split` argument that enforces `--split dev` and rejects `test`.
+  - Exact reproduction command: `rag/.venv/Scripts/python.exe rag/evaluation/run_dev_retrieval.py --split dev` (or `--regenerate-metadata-only` to refresh tuning and metadata without re-encoding).
+  - Wrote `rag/evaluation/results/retrieval.csv` (72 rows), `rag/evaluation/results/retrieval_summary.csv` (Recall@5, MRR, Wilson 95% CI on answerable questions), and `rag/evaluation/results/abstention_tuning.csv` (including default threshold 0.4 precision/recall/refusal rate metrics, tuned thresholds, perfect separation thresholds, and precision/recall on unanswerable questions).
+  - Updated `rag/evaluation/results/split_sizes.csv` (dev=12, test=14, total=26) and `rag/evaluation/results/run_metadata.csv` (status=dev12_complete, recording exceeding chunk counts 143/240 -> 718 passages for MPNet, 53/240 -> 301 passages for E5, git commit hash, and working_tree_clean=false).
+- **Tested:** Ran full pytest suite for `rag/` from `rag/` directory with `rag/.venv`.
+- **Cut or partial:** BGE-M3 skipped (no usable weights). Test split held out (not run). No end-to-end LLM generation or conflict handling run.
+- **Differs from the report?** Yes. Development split expanded from 6 to 12 questions; BM25 normalization method updated to theoretical upper bound; tuned thresholds supersede the preliminary 6-question values. Recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`.
+
+## 2026-11-19: Expand compliance evaluation development questions (Codex)
+
+- **Feature and IDs:** Compliance assistant evaluation, FR-8, NFR-12, NFR-13, NFR-14, NFR-20.
+- **Built:** Added six requested answerable questions, q022 through q027, to the development split. Confirmed their chunk mappings in `rag/evaluation/gold_verification.md` and recorded them in `supporting_chunk_ids`. Recorded that the development split now has 12 questions and requires a fresh development retrieval run and threshold tuning.
+- **Tested:** JSONL schema and split counts checked locally. No evaluation, test split, model download, or gold-answer generation was run.
+- **Cut or partial:** No evaluation has been re-run after the development split expansion.
+- **Differs from the report?** The committed gold set is now 27 questions, rather than the playbook's approximate 80-question plan. The reason and required re-run are recorded in `docs/DECISIONS.md`.
+
 ## 2026-11-19: Dashboard fix pass (Gemini)
 
 - **Feature and IDs:** Founder Dashboard match badges, Talent hero copy, mock user display names.
@@ -913,4 +955,39 @@ One entry per finished piece of work, newest first. This is what we use to write
   - Statuses stay "Not executed" per instruction (user will run tests, lint, tsc, and build).
 - **Cut or partial:** None. Operates on typed fixtures pending backend API implementation.
 - **Differs from the report?** Yes; tracked in `docs/pending-report-changes.md` (2026-11-19 entry).
+
+## 2026-11-20: RAG evaluation e2e cache directory configuration (Gemini)
+
+- **Feature and IDs:** Compliance Assistant evaluation pipeline, FR-1, NFR-19, NFR-22.
+- **Built:**
+  - Added `--cache-dir` argument to `rag/evaluation/run_e2e.py` defaulting to a private user directory outside the repository (`~/.founders_carnet/llm_cache`), ensuring validation against `backend/app/services/llm_cache.py::_validated_cache_root` without weakening security rules. Created directory if missing.
+  - Added unit test `test_default_llm_cache_dir_passes_validation_and_is_outside_repo` in `rag/tests/test_evaluation_guards.py` verifying that default cache path is strictly outside the repository root, passes validation, and that directories inside repository source roots are rejected.
+- **Tested:** `rag/.venv/Scripts/python.exe -m pytest rag/tests -k "not rehearse_reproduces"`.
+- **Cut or partial:** None.
+- **Differs from the report?** No.
+
+## 2026-11-21: RAG evaluation e2e retrieved passage adapter (Gemini)
+
+- **Feature and IDs:** Compliance Assistant evaluation pipeline, FR-1, FR-8, NFR-11, NFR-12, NFR-13, NFR-14, NFR-19, NFR-22.
+- **Built:**
+  - Fixed passage adapter in `rag/evaluation/run_e2e.py` by introducing `EvaluationDocument`, `EvaluationChunk`, `build_evaluation_chunk`, and `adapt_retrieved_passage` mapped from `rag/corpus_manifest.md` and evaluation chunk metadata.
+  - Resolved `AttributeError: 'NoneType' object has no attribute 'title'` in `backend/app/services/llm_gateway.py` by providing full document metadata (`title`, `issuing_body`, `effective_date`, `source_url`, `consolidation_date`, `retrieved_at`, `file`).
+  - Adapted chunk attributes to present `chunk.text`, parent chunk id with continuation suffix stripped for citation (`canonical_id`), `section`, `page_number`, `page`, `heading_path`, `effective_date`, `source_url`, and `document_file`.
+  - Added unit tests in `rag/tests/test_evaluation_guards.py` verifying that unadapted passages fail gateway prompt building with `AttributeError`, while adapter-built passages succeed through the real gateway prompt builder, answer draft generator, validation code, `_citation_result`, and `_numeric_claims_are_supported` using a stub transport without network access.
+- **Tested:** `rag/.venv/Scripts/python.exe -m pytest rag/tests -v -k "not rehearse_reproduces"`.
+- **Cut or partial:** None.
+- **Differs from the report?** No.
+
+## 2026-11-21: Shared refusal gate and hybrid retrieval ranking alignment (Gemini)
+
+- **Feature and IDs:** Compliance Assistant retrieval and abstention, FR-8, NFR-11, NFR-12, NFR-13, NFR-14.
+- **Built:**
+  - Added shared function `refuse_by_dense_top1(dense_top1_cosine, threshold)` in `rag/compliance/retrieve.py` and used it in both `rag/evaluation/run_e2e.py` and `backend/app/services/compliance_retrieval.py` so the evaluated and deployed gates match.
+  - In `backend/app/services/compliance_retrieval.py` (`method="hybrid"`), fetched candidates without distance filtering, computed dense top-1 cosine across all candidate chunks, applied the refusal gate, and ranked candidates with `hybrid_retrieve(..., minimum_score=0.0)`.
+  - Added `compliance_refusal_threshold: float = 0.8428` in `backend/app/config.py` and wired it into `backend/app/services/wiring.py`.
+- **Tested:** User runs tests manually with pytest.
+- **Cut or partial:** None.
+- **Differs from the report?** Yes; tracked in `docs/pending-report-changes.md` (2026-11-21 entry).
+
+
 

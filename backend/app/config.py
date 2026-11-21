@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     embedding_model_name: str = _DEFAULT_EMBEDDING_MODEL
     compliance_top_k: int = 5
     compliance_minimum_similarity: float = 0.4
+    compliance_refusal_threshold: float = Field(
+        default=0.8428,
+        ge=0.0,
+        le=1.0,
+        description="Dense top-1 cosine refusal threshold, tuned on 3 negative dev examples",
+    )
     verification_low_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     verification_high_threshold: float = Field(default=0.85, ge=0.0, le=1.0)
     verification_rule_version: str = "profile-verification-v2"
