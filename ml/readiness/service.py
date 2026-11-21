@@ -79,7 +79,7 @@ def generate_assessment(
                 + "\nReturn corrected JSON only, with all 7 dimensions exactly once."
             )
             continue
-            except Exception as exc:  # noqa: BLE001 - any model/network failure
+        except Exception as exc:  # noqa: BLE001 - any model/network failure
             last_error = f"model call failed: {exc}"
             continue
 
