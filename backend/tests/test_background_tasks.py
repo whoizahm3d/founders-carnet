@@ -10,7 +10,12 @@ from app.feature_models import EcosystemProfile, ResumeOptimization
 from app.models import Base, ComplianceQuery, ConsentRecord, User
 from app.services import llm_cache, resume_optimizer
 from app.services.matching import profile_match_text
-from app.tasks import purge_due_accounts, regenerate_ecosystem_profile_embedding
+from app.tasks import (
+    index_compliance_corpus,
+    purge_due_accounts,
+    regenerate_ecosystem_profile_embedding,
+    regenerate_stale_embeddings,
+)
 
 
 class FakeEncoder:
@@ -229,3 +234,40 @@ def test_celery_tasks_are_registered_without_running_a_worker():
     assert "app.tasks.purge_due_accounts" in celery_app.tasks
     assert regenerate_ecosystem_profile_embedding.ignore_result is True
     assert purge_due_accounts.ignore_result is True
+
+
+def test_embedding_regeneration_is_idempotent_and_batches_stale_profiles(monkeypatch, tmp_path):
+    engine, session_factory, _settings = _task_database(monkeypatch, tmp_path)
+    encoder = FakeEncoder()
+    monkeypatch.setattr("app.tasks.configured_encoder_factory", lambda: encoder)
+    try:
+        with session_factory() as session:
+            user = _make_user(session, "stale-embedding@example.com")
+            profile = EcosystemProfile(
+                user_id=user.id, sector="logistics", stages=["mvp"], skills=["operations"],
+                availability="open", location="Lahore", summary="Founder profile",
+                consent_version="ecosystem-profile-v1",
+            )
+            session.add(profile)
+            session.commit()
+            profile_id = profile.id
+
+        assert regenerate_ecosystem_profile_embedding.run(profile_id) == "updated"
+        assert regenerate_ecosystem_profile_embedding.run(profile_id) == "skipped"
+        assert regenerate_stale_embeddings.run(batch_size=1) == {"updated": 0, "skipped": 1}
+        with session_factory() as session:
+            profile = session.get(EcosystemProfile, profile_id)
+            profile.summary = "Changed profile text"
+            session.commit()
+        assert regenerate_stale_embeddings.run(batch_size=1) == {"updated": 1, "skipped": 0}
+        assert len(encoder.texts) == 2
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
+
+
+def test_corpus_index_task_wraps_existing_entry_point(monkeypatch):
+    calls = []
+    monkeypatch.setattr("app.tasks.index_corpus_main", lambda: calls.append(True))
+    assert index_compliance_corpus.run() == {"completed": 1}
+    assert calls == [True]

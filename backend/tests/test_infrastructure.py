@@ -44,3 +44,4 @@ def test_openapi_export_contains_existing_api_routes(tmp_path: Path) -> None:
     assert '"/api/v1/auth/register/{role}"' in schema
     assert '"/api/v1/jobs"' in schema
     assert '"/api/v1/verification/me"' in schema
+

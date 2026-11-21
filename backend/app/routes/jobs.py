@@ -35,16 +35,14 @@ SessionDep = Annotated[Session, Depends(get_db)]
 
 def _owned_verified_startup(session: Session, startup_id: int, user_id: int) -> Startup:
     startup = session.scalar(
-        select(Startup)
-        .join(FounderProfile, Startup.founder_profile_id == FounderProfile.id)
-        .where(
-            Startup.id == startup_id,
-            FounderProfile.user_id == user_id,
-            Startup.is_verified.is_(True),
+        select(Startup).join(FounderProfile).where(
+            Startup.id == startup_id, FounderProfile.user_id == user_id
         )
     )
     if startup is None:
-        raise HTTPException(status_code=404, detail="Verified startup not found")
+        raise HTTPException(status_code=404, detail="Startup not found")
+    if not startup.is_verified:
+        raise HTTPException(status_code=403, detail="Startup is not verified")
     return startup
 
 
@@ -56,11 +54,13 @@ def _owned_listing(session: Session, job_id: int, user_id: int) -> JobListing:
         .where(
             JobListing.id == job_id,
             FounderProfile.user_id == user_id,
-            Startup.is_verified.is_(True),
         )
     )
     if listing is None:
         raise HTTPException(status_code=404, detail="Job listing not found")
+    startup = session.get(Startup, listing.startup_id)
+    if startup is None or not startup.is_verified:
+        raise HTTPException(status_code=403, detail="Startup is not verified")
     return listing
 
 

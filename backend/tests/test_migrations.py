@@ -46,8 +46,10 @@ def test_migrations_build_user_schema_from_empty_database():
             "talent_profiles",
             "verification_signals",
             "llm_gateway_call_logs",
+            "startup_verification_requests",
         }.issubset(tables)
         assert "alembic_version" in tables
+        assert len(set(tables) - {"alembic_version"}) == _documented_table_count()
         assert {"consent_version", "consented_at", "embedding"}.issubset(
             {
                 column["name"]
@@ -218,6 +220,23 @@ def test_migrations_build_user_schema_from_empty_database():
             }
         )
 
+    engine.dispose()
+
+
+def _documented_table_count() -> int:
+    dictionary = (BACKEND_ROOT.parent / "docs" / "data_dictionary.md").read_text(encoding="utf-8")
+    return sum(line.startswith("| `") for line in dictionary.splitlines())
+
+
+def test_migrations_upgrade_head_then_downgrade_base_on_empty_sqlite():
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    engine = create_engine("sqlite://", poolclass=StaticPool)
+    with engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.upgrade(config, "head")
+        assert "users" in inspect(connection).get_table_names()
+        command.downgrade(config, "base")
+        assert set(inspect(connection).get_table_names()) <= {"alembic_version"}
     engine.dispose()
 
 

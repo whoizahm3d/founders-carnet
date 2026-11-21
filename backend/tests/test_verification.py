@@ -73,6 +73,8 @@ def create_match_profile(headers):
             "availability": "open",
             "location": "Lahore",
             "summary": "Mentor in fintech product strategy with startup experience.",
+            "ticket_min": 0,
+            "ticket_max": 0,
         },
     )
     assert response.status_code == 200, response.text
@@ -110,9 +112,9 @@ def test_profile_flow_scores_saves_status_and_requires_manual_secp_review():
     submitted = submit_verification(headers)
     assert submitted.status_code == 201, submitted.text
     body = submitted.json()
-    assert body["band"] == "review"
-    assert body["status"] == "pending_review"
-    assert body["score"] == 0.6964
+    assert body["band"] == "high"
+    assert body["status"] == "auto_verified"
+    assert body["score"] == 0.96
     assert body["signals"]["secp_cross_check"] == "pending_manual_review"
     assert body["signals"]["portfolio_link"] == "consistent"
 
@@ -173,7 +175,7 @@ def test_auto_rejected_profile_can_appeal_once_and_report_locks_rescoring():
     assert reported.json()["status"] == "received"
     assert (
         client.get("/api/v1/verification/me", headers=headers).json()["status"]
-        == "pending_review"
+        == "appeal_pending"
     )
     assert (
         client.post(
@@ -280,3 +282,109 @@ def test_thresholds_must_be_ordered():
             verification_low_threshold=0.9,
             verification_high_threshold=0.8,
         )
+
+
+def test_stored_signal_rows_reproduce_total_score_for_mentor_investor_and_talent():
+    from app.database import get_db
+    from app.feature_models import ProfileVerification, VerificationSignal
+
+    install_verification_fakes({"result": "consistent", "reason": "The portfolio supports the submitted profile."})
+    for role in ("mentor", "investor", "talent"):
+        headers = create_user(f"signal-score-{role}@example.com", role)
+        create_match_profile(headers)
+        if role == "talent":
+            assert client.put("/api/v1/talent/me/profile", headers=headers, json={
+                "consent_accepted": True, "github_url": "https://github.com/founder",
+            }).status_code == 200
+        payload = {
+            "processing_consent_accepted": True,
+            "trust_notice_accepted": True,
+            "portfolio_url": "https://example.org/product",
+        }
+        if role != "talent":
+            payload.update({"secp_entity_name": "Example Technologies", "secp_registration_number": "123"})
+        submitted = client.post("/api/v1/verification/me", headers=headers, json=payload)
+        assert submitted.status_code == 201, submitted.text
+
+        generator = app.dependency_overrides[get_db]()
+        session = next(generator)
+        case = session.query(ProfileVerification).filter_by(user_id=submitted.json()["user_id"]).one()
+        rows = session.query(VerificationSignal).filter_by(verification_id=case.id).all()
+        assert {row.signal_name for row in rows} == {
+            "linkedin_oauth", "secp_cross_check", "profile_completeness", "github_for_talent", "portfolio_link",
+        }
+        weights = {
+            "linkedin_oauth": 0.03, "secp_cross_check": 0.02, "profile_completeness": 0.65,
+            "github_for_talent": 0.10, "portfolio_link": 0.20,
+        }
+        assert sum(weights[row.signal_name] * row.score for row in rows) == pytest.approx(case.score, abs=0.0001)
+        if role == "talent":
+            secp = next(row for row in rows if row.signal_name == "secp_cross_check")
+            assert (secp.outcome, secp.score) == ("not_provided", 0.0)
+        try:
+            next(generator)
+        except StopIteration:
+            pass
+
+
+def test_complete_consistent_profile_auto_verifies_without_linkedin_and_incomplete_stays_pending():
+    install_verification_fakes({"result": "consistent", "reason": "The portfolio supports the submitted profile."})
+    complete = create_user("verify-complete@example.com", "mentor")
+    create_match_profile(complete)
+    submitted = submit_verification(complete)
+    assert submitted.status_code == 201, submitted.text
+    assert submitted.json()["status"] == "auto_verified"
+    assert submitted.json()["signals"]["secp_cross_check"] == "pending_manual_review"
+
+    incomplete = create_user("verify-incomplete@example.com", "mentor")
+    assert client.put("/api/v1/matching/me/profile", headers=incomplete, json={
+        "consent_accepted": True, "sector": "fintech", "stages": ["mvp"], "skills": ["strategy"],
+        "availability": "open", "location": "Lahore", "summary": "Incomplete mentor profile.",
+    }).status_code == 200
+    response = submit_verification(incomplete)
+    assert response.status_code == 201
+    assert response.json()["status"] == "pending_review"
+
+
+def test_report_and_block_preserve_rejected_and_appeal_pending_states():
+    install_verification_fakes({"result": "inconsistent", "reason": "The page describes a different business."})
+    target = create_user("verify-block-target@example.com", "mentor")
+    create_match_profile(target)
+    rejected = submit_verification(target)
+    assert rejected.status_code == 201
+    target_id = rejected.json()["user_id"]
+    reporter = create_user("verify-block-reporter@example.com", "talent")
+    block = client.post(
+        f"/api/v1/verification/profiles/{target_id}/block", headers=reporter,
+        json={"reason": "This profile needs an identity review."},
+    )
+    assert block.status_code == 201, block.text
+    assert client.get("/api/v1/verification/me", headers=target).json()["status"] == "auto_rejected"
+    duplicate = client.post(
+        f"/api/v1/verification/profiles/{target_id}/block", headers=reporter,
+        json={"reason": "This profile needs another review."},
+    )
+    assert duplicate.status_code == 409
+    self_block = client.post(
+        f"/api/v1/verification/profiles/{client.get('/api/v1/users/me', headers=reporter).json()['id']}/block",
+        headers=reporter, json={"reason": "This profile needs a review."},
+    )
+    assert self_block.status_code == 400
+
+
+def test_block_moves_verified_profile_to_review_and_locks_rescore():
+    install_verification_fakes({"result": "consistent", "reason": "The portfolio supports the submitted profile."})
+    target = create_user("verify-block-verified-target@example.com", "investor")
+    create_match_profile(target)
+    submitted = submit_verification(target)
+    assert submitted.status_code == 201
+    reporter = create_user("verify-block-verified-reporter@example.com", "founder")
+    response = client.post(
+        f"/api/v1/verification/profiles/{submitted.json()['user_id']}/block",
+        headers=reporter,
+        json={"reason": "Please review identity evidence."},
+    )
+    assert response.status_code == 201, response.text
+    current = client.get("/api/v1/verification/me", headers=target).json()
+    assert current["status"] == "pending_review"
+    assert current["rescore_locked"] is True

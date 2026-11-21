@@ -148,8 +148,6 @@ def test_talent_verification_stores_all_five_signals_and_only_calls_gateway_for_
             "processing_consent_accepted": True,
             "trust_notice_accepted": True,
             "portfolio_url": "https://example.org/product",
-            "secp_entity_name": "Example Technologies (Private) Limited",
-            "secp_registration_number": "0123456",
         },
     )
 
@@ -162,8 +160,10 @@ def test_talent_verification_stores_all_five_signals_and_only_calls_gateway_for_
         "github_for_talent",
         "portfolio_link",
     }
-    assert body["signals"]["secp_cross_check"] == "pending_manual_review"
-    assert body["status"] == "pending_review"
+    assert body["signals"]["secp_cross_check"] == "not_provided"
+    assert body["secp_entity_name"] is None
+    assert body["secp_registration_number"] is None
+    assert body["status"] == "auto_verified"
     assert gateway.calls == 1
 
     db_generator = app.dependency_overrides[get_db]()
@@ -186,6 +186,8 @@ def test_talent_verification_stores_all_five_signals_and_only_calls_gateway_for_
             "github_for_talent",
             "portfolio_link",
         }
+        secp_row = next(row for row in rows if row.signal_name == "secp_cross_check")
+        assert (secp_row.outcome, secp_row.score) == ("not_provided", 0.0)
     finally:
         db_generator.close()
 

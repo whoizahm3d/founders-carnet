@@ -498,3 +498,71 @@ def test_reported_profile_returns_to_queue_with_score_locked():
             )
             == 1
         )
+
+
+def test_admin_decision_history_filters_paginates_and_exposes_audited_fields():
+    headers = create_user("decision-history-investor@example.com", "investor")
+    create_match_profile(headers)
+    verification = submit_verification(headers, result="insufficient")
+    admin_headers = create_admin("decision-history-admin@example.com")
+
+    assert client.get("/api/v1/admin/verification/decisions").status_code == 401
+    assert client.get("/api/v1/admin/verification/decisions", headers=headers).status_code == 403
+    before = client.get(
+        f"/api/v1/admin/verification/decisions?verification_id={verification['id']}",
+        headers=admin_headers,
+    )
+    assert before.status_code == 200, before.text
+    initial = before.json()[0]
+    assert initial["decision"] == "pending_review"
+    assert initial["reviewer_user_id"] is None
+    assert initial["score"] == verification["score"]
+    assert initial["threshold_version"] == verification["threshold_version"]
+    assert len(initial["signals"]) == 5
+
+    decided = client.post(
+        f"/api/v1/admin/verification/{verification['id']}/decision",
+        headers=admin_headers,
+        json={"decision": "approve", "reason": "The reviewer confirmed the submitted evidence."},
+    )
+    assert decided.status_code == 200
+    reviewer_id = client.get("/api/v1/users/me", headers=admin_headers).json()["id"]
+    final = client.get(
+        f"/api/v1/admin/verification/decisions?reviewer_user_id={reviewer_id}&limit=1&offset=0",
+        headers=admin_headers,
+    )
+    assert final.status_code == 200
+    assert len(final.json()) == 1
+    assert final.json()[0]["reviewer_user_id"] == reviewer_id
+    assert final.json()[0]["decision"] == "verified"
+    page_two = client.get(
+        f"/api/v1/admin/verification/decisions?verification_id={verification['id']}&limit=1&offset=1",
+        headers=admin_headers,
+    )
+    assert len(page_two.json()) == 1
+
+
+def test_admin_stats_counts_roles_queue_appeals_and_recent_decisions():
+    first = create_user("stats-pending-investor@example.com", "investor")
+    create_match_profile(first)
+    submit_verification(first, result="insufficient")
+    second = create_user("stats-appeal-investor@example.com", "investor")
+    create_match_profile(second)
+    submit_verification(second, result="inconsistent")
+    appeal = client.post("/api/v1/verification/me/appeals", headers=second, json={
+        "reason": "The older page does not show current product details.",
+        "added_evidence": "The reviewer can inspect the current company product page.",
+    })
+    assert appeal.status_code == 201
+    assert client.get("/api/v1/admin/stats").status_code == 401
+    assert client.get("/api/v1/admin/stats", headers=first).status_code == 403
+
+    admin = create_admin("stats-admin@example.com")
+    response = client.get("/api/v1/admin/stats", headers=admin)
+    assert response.status_code == 200, response.text
+    stats = response.json()
+    assert stats["users_by_role"]["investor"] == 2
+    assert stats["users_by_role"]["admin"] == 1
+    assert stats["pending_verification_queue"] == 2
+    assert stats["pending_appeals"] == 1
+    assert stats["decisions_last_7_days"] >= 3

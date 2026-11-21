@@ -1,7 +1,5 @@
 """Talent resume upload and line-level optimization (FR-5, NFR-7, NFR-19)."""
 
-from __future__ import annotations
-
 import logging
 from typing import Annotated
 
@@ -15,13 +13,15 @@ from fastapi import (
     Response,
     status,
 )
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_roles
+from app.dependencies import ensure_processing_consent, require_roles
 from app.feature_models import ResumeOptimization
 from app.models import User
+from app.rate_limiter import AI_LIMIT, limiter
 from app.resume_schemas import ResumeOptimizationRead, ResumeOptimizationResult
 from app.services.feature_ai import get_gateway
 from app.services.llm_gateway import GeminiGateway
@@ -59,6 +59,7 @@ GatewayDep = Annotated[GeminiGateway, Depends(get_gateway)]
         }
     },
 )
+@limiter.limit(AI_LIMIT, error_message="Rate limit exceeded")
 async def optimize_resume(
     request: Request,
     user: Talent,
@@ -69,6 +70,7 @@ async def optimize_resume(
         default=False, alias="X-Resume-Processing-Consent"
     ),
 ) -> ResumeOptimizationRead:
+    ensure_processing_consent(db, user.id)
     if not processing_consent:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -154,7 +156,7 @@ async def optimize_resume(
             response_schema=ResumeOptimizationResult,
             output_instruction=(
                 "Return up to 30 line edits. Each edit must include the exact source line number and exact before text, "
-                "a revised after text, and a short reason."
+                "a revised after text, and a short reasoning field."
             ),
             cache_scope=user.id,
             operation="resume_optimization",
@@ -163,10 +165,21 @@ async def optimize_resume(
         _validate_line_edits(result, lines)
     except Exception as exc:
         # Validation exceptions can include model input/output; keep resume contents out of logs.
+        validation_issues = None
+        if isinstance(exc, ValidationError):
+            validation_issues = ",".join(
+                f"{'.'.join(str(part) for part in issue['loc'])}:{issue['type']}"
+                for issue in exc.errors(
+                    include_input=False,
+                    include_context=False,
+                    include_url=False,
+                )
+            )
         logger.error(
-            "Resume suggestion generation failed resume_id=%d error_type=%s",
+            "Resume suggestion generation failed resume_id=%d error_type=%s validation_issues=%s",
             record.id,
             type(exc).__name__,
+            validation_issues or "unavailable",
         )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

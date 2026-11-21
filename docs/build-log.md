@@ -102,6 +102,29 @@ One entry per finished piece of work, newest first. This is what we use to write
 
 ## Entries
 
+## 2026-11-22: Frontend integration and startup verification (Codex)
+
+- **Feature and IDs:** Authentication/session contract, founder startup verification, matching/profile reads, consent recovery, verified job posting; FR-17, FR-22, FR-24, FR-27, FR-29, NFR-5, NFR-9, NFR-22.
+- **Built:** Added credentialed CORS with configured origins, LinkedIn session tokens, fake-provider selection and 503 fallback, CLI-only admin provisioning, migration `0013` and owner/admin startup verification routes. Added own-profile reads, substantive-change verification reset, missing-consent backfill, closed-mentor SQL filtering, and clear 403 responses for owned but unverified startups. Corrected the Gemini timeout default to the documented 60 seconds.
+- **Tested:** Baseline backend run: 123 passed and one pre-existing timeout-default failure. After the phase changes and correction, full backend suite: 133 passed, 0 failed. RAG regression suite: 11 passed. PostgreSQL, Redis, Gemini, and real LinkedIn were not used.
+- **Cut or partial:** None within the approved Phase 1 list. Startup approval is a manual admin decision.
+- **Differs from the report?** Startup verification makes the existing verified-founder job path reachable; see the 2026-11-22 decision and pending report row.
+
+## 2026-11-22: Versioned verification scoring and profile blocks (Codex)
+
+- **Feature and IDs:** Profile verification, signals, appeals, and FR-16 blocks; FR-12, FR-14, FR-15, FR-16, FR-19, FR-20, FR-21, NFR-22.
+- **Built:** Added migration `0014`, versioned scoring config, consistent score/signal persistence, high-band automatic status with manual SECP audit, talent SECP `not_provided`, and block-for-review with terminal-state preservation.
+- **Tested:** Full backend suite: 138 passed, 0 failed. RAG regression suite: 11 passed. Scoring checks cover mentor, investor, and talent. No live PostgreSQL or external provider was used.
+- **Cut or partial:** The SECP signal remains manual; the new high-band outcome does not claim an automated registry check.
+- **Differs from the report?** Yes; see the 2026-11-22 verification scoring and FR-16 decisions and pending report rows.
+
+## 2026-11-22: Admin verification history and statistics (Codex)
+
+- **Feature and IDs:** Administrative decision audit and live console counts, FR-26, NFR-5.
+- **Built:** Added the admin-only paginated decision history with verification/reviewer filters and replaced the stats stub with user-role, pending-queue, pending-appeal, and seven-day decision counts.
+- **Tested:** Full backend suite: 140 passed, 0 failed. RAG regression suite: 11 passed. SQLite test data covered pagination, filters, reviewer attribution, authorization, and counts.
+- **Cut or partial:** No live operational database was queried.
+- **Differs from the report?** The report specifies admin decision logging and console but not this endpoint's pagination/filter shape.
 ## 2026-11-15: Step 3c Fix Pass — Landing page background, nav, spacing scale and Button component (Gemini)
 
 - **Feature and IDs:** Public Landing Page and Shared Button, FR-22, NFR-4, NFR-6, NFR-23.
@@ -687,6 +710,38 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Tested:** 122 backend tests passed with 93.8% app line coverage (848/904 executable line starts; 2329.72 seconds). After final test dependency wiring, 29 focused task, infrastructure, matching, and admin tests passed. The isolated compliance regression suite passed 22 tests and the RAG regression suite passed 11. One existing Starlette/AnyIO deprecation warning appeared in backend and compliance runs. Console, JUnit, and coverage outputs are recorded in `docs/test-results/` and `backend/TESTS.md`.
 - **Cut or partial:** No live Redis/Celery deployment or PostgreSQL purge run was performed; task behavior was verified with isolated SQLite, private disk-cache, and PDF fixtures.
 - **Differs from the report?** No known difference from the available requirements summary; `main.tex` is absent from this checkout.
+# 2026-11-21: Resume optimizer schema validation (Codex)
+
+- **Feature and IDs:** Resume optimizer, FR-5, NFR-7.
+- **Built:** Matched the prompt's requested `reasoning` field to the Pydantic response schema and added privacy-safe validation diagnostics containing only field paths and error types.
+- **Tested:** All 10 resume optimizer tests passed; one existing Starlette/AnyIO deprecation warning appeared.
+- **Cut or partial:** No live Gemini call was run; confirm the reported failure is resolved with the configured model in the local app.
+- **Differs from the report?** No change to the feature flow or response contract.
+
+## 2026-11-21: Gemini fallback model wiring (Codex)
+
+- **Feature and IDs:** LLM Gateway, FR-5, NFR-8, NFR-19.
+- **Built:** Passed the configured optional fallback model from settings into the shared Gemini gateway so transient provider failures can use the existing fallback path.
+- **Tested:** The new gateway configuration regression and all LLM gateway tests passed (18 total).
+- **Cut or partial:** No live provider call was run; local `GEMINI_FALLBACK_MODEL` configuration and provider access still need to be confirmed.
+- **Differs from the report?** No change to feature behavior or API contract; this connects an existing configuration option.
+
+
+## 2026-11-22: Consent, rate limits, and runtime guards (Codex)
+
+- **Feature and IDs:** Consent processing rules, rate limits, Gemini/JWT settings, scraping policy, generic server errors; FR-5, FR-7, FR-12, FR-18, FR-23, NFR-4, NFR-9, NFR-19, NFR-21, NFR-23.
+- **Built:** Added consent checks to new processing routes and candidate filtering, pinned slowapi 0.1.10, added configurable request limits, Gemini 2.5 default/warnings, production JWT guard, scrape-domain policy, and a sanitized 500 handler.
+- **Tested:** Integrated full backend suite: 152 passed, 0 failed; RAG regression: 11 passed, 0 failed. No live Redis, PostgreSQL, Gemini, Firecrawl, or LinkedIn was used.
+- **Cut or partial:** Rate limits were verified with the in-memory backend in tests; distributed Redis rate limiting was not exercised.
+- **Differs from the report?** Runtime safeguards and consent processing behavior need report updates; see this phase's pending report row.
+
+## 2026-11-22: Background embedding and corpus tasks (Codex)
+
+- **Feature and IDs:** Profile embedding freshness, corpus indexing task, test inventory, schema and API docs; FR-5, FR-7, NFR-12, NFR-14, NFR-20, NFR-22.
+- **Built:** Added migration `0015` with `ecosystem_profiles.source_hash`, idempotent single-profile and batched stale-embedding regeneration, and a Celery wrapper for the existing corpus indexer. Added BT-08 hard-filter, BT-10 transition, BT-12 migration/dictionary checks; regenerated the model-backed dictionary, 37-concept schema report, API change guide, test ledger, and OpenAPI export.
+- **Tested:** Full backend suite: 152 passed, 0 failed; RAG regression: 11 passed, 0 failed. The empty-SQLite migration suite upgrades to head and downgrades to base.
+- **Cut or partial:** No live Celery worker, PostgreSQL/pgvector, Redis, or corpus re-embedding run was performed.
+- **Differs from the report?** Migration 0015 and the requester self-acceptance 409 behavior are recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`.
 
 ## 2026-11-02: graphify installed, skill-only (Ali, with Claude Code)
 

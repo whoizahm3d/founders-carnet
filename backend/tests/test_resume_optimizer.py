@@ -45,26 +45,34 @@ class FakeGateway:
     def __init__(self):
         self.fail = False
         self.invalid_line = False
+        self.invalid_schema = False
 
     def generate_structured(self, *, response_schema, **kwargs):
         if self.fail:
             raise RuntimeError("mock provider failure")
-        return response_schema.model_validate(
-            {
-                "suggestions": [
-                    {
-                        "line_number": 1,
-                        "before": (
-                            "A line not present in the resume."
-                            if self.invalid_line
-                            else "Built API endpoints for retail clients."
-                        ),
-                        "after": "Built API endpoints serving retail clients.",
-                        "reasoning": "Uses a concise action verb while preserving the original claim.",
-                    }
-                ]
-            }
-        )
+        if self.invalid_schema:
+            return response_schema.model_validate({
+                "suggestions": [{
+                    "line_number": 1,
+                    "before": "Built API endpoints for retail clients.",
+                    "after": "x" * 2001,
+                    "reasoning": "This model output is too long.",
+                }]
+            })
+        return response_schema.model_validate({
+            "suggestions": [
+                {
+                    "line_number": 1,
+                    "before": (
+                        "A line not present in the resume."
+                        if self.invalid_line
+                        else "Built API endpoints for retail clients."
+                    ),
+                    "after": "Built API endpoints serving retail clients.",
+                    "reasoning": "Uses a concise action verb while preserving the original claim.",
+                }
+            ]
+        })
 
 
 def setup_function():
@@ -224,6 +232,23 @@ def test_resume_rejects_model_edits_that_do_not_match_source_lines(
     history = client.get("/api/v1/resumes/history", headers=headers)
     assert history.json()[0]["status"] == "generation_failed"
     assert history.json()[0]["suggestions"] is None
+
+
+def test_resume_schema_failure_logs_only_validation_location_and_type(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr(get_settings(), "resume_storage_dir", tmp_path)
+    fake_gateway.invalid_schema = True
+    headers = create_talent("resume-invalid-schema@example.com")
+
+    response = client.post(
+        "/api/v1/resumes/optimize?target_role=Backend%20Engineer",
+        headers=pdf_headers(headers),
+        content=synthetic_pdf(),
+    )
+
+    assert response.status_code == 502
+    assert "suggestions.0.after:string_too_long" in caplog.text
+    assert "Built API endpoints for retail clients." not in caplog.text
+    assert "This model output is too long." not in caplog.text
 
 
 def test_resume_history_and_delete_are_scoped_to_owner(tmp_path, monkeypatch):

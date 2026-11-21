@@ -44,6 +44,10 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class AuthSessionResponse(TokenResponse):
+    user: UserRead
+
+
 class ConsentStatusRead(BaseModel):
     consent_type: str
     consent_version: str

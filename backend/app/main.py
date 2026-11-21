@@ -1,19 +1,27 @@
-from __future__ import annotations
-
+import logging
 import secrets
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import update
+from slowapi.errors import RateLimitExceeded
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.database import get_db
 from app.dependencies import get_current_user, require_roles
+from app.feature_models import (
+    ProfileVerification,
+    VerificationAppeal,
+    VerificationDecision,
+)
 from app.models import ConsentRecord, OAuthIdentity, User
+from app.rate_limiter import AUTH_LIMIT, limiter
 from app.routes.admin_verification import router as admin_verification_router
 from app.routes.compliance import router as compliance_router
 from app.routes.founders import router as founders_router
@@ -21,8 +29,10 @@ from app.routes.intelligence import router as intelligence_router
 from app.routes.jobs import router as jobs_router
 from app.routes.market_research import router as market_research_router
 from app.routes.resumes import router as resumes_router
+from app.routes.startup_verification import router as startup_verification_router
 from app.routes.verification import router as verification_router
 from app.schemas import (
+    AuthSessionResponse,
     ConsentStatusRead,
     DeletionRequestRead,
     LinkedInSignInRequest,
@@ -37,6 +47,7 @@ from app.services.feature_ai import clear_feature_clients
 from app.services.llm_cache import clear_structured_response_cache
 from app.services.oauth import linkedin_provider
 from app.services.wiring import close_compliance_answer_service
+from app.verification_schemas import AdminStatsRead
 
 
 @asynccontextmanager
@@ -49,6 +60,15 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Founders Carnet API", lifespan=lifespan)
+app.state.limiter = limiter
+_cors_origins = [origin.strip() for origin in get_settings().cors_allowed_origins.split(",") if origin.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(compliance_router)
 app.include_router(admin_verification_router)
 app.include_router(founders_router)
@@ -56,7 +76,15 @@ app.include_router(intelligence_router)
 app.include_router(jobs_router)
 app.include_router(market_research_router)
 app.include_router(resumes_router)
+app.include_router(startup_verification_router)
 app.include_router(verification_router)
+
+logger = logging.getLogger(__name__)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def sanitized_rate_limit_error(_: Request, __: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
 
 
 @app.exception_handler(RequestValidationError)
@@ -76,6 +104,12 @@ async def sanitized_validation_error(
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content={"detail": errors}
     )
+
+
+@app.exception_handler(Exception)
+async def sanitized_internal_error(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled API error on %s %s", request.method, request.url.path, exc_info=exc)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 REGISTRATION_CONSENT_TYPE = "non_essential_processing"
@@ -102,14 +136,9 @@ def _record_consent(db: Session, user_id: int, source: str) -> ConsentRecord:
     return record
 
 
-@app.post(
-    "/api/v1/auth/register/{role}",
-    response_model=UserRead,
-    status_code=status.HTTP_201_CREATED,
-)
-def register_user(
-    role: UserRole, payload: UserRegisterRequest, db: Session = Depends(get_db)
-) -> User:
+@app.post("/api/v1/auth/register/{role}", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@limiter.limit(AUTH_LIMIT, error_message="Rate limit exceeded")
+def register_user(role: UserRole, payload: UserRegisterRequest, request: Request, db: Session = Depends(get_db)) -> User:
     """Register a public role with explicit consent; admin is never public.
 
     FR-17, FR-22, FR-23, NFR-4, NFR-5, NFR-8, NFR-9.
@@ -137,19 +166,20 @@ def register_user(
     return user
 
 
-@app.post(
-    "/api/v1/auth/linkedin/{role}",
-    response_model=UserRead,
-    status_code=status.HTTP_201_CREATED,
-)
+@app.post("/api/v1/auth/linkedin/{role}", response_model=AuthSessionResponse, status_code=status.HTTP_201_CREATED)
 def linkedin_sign_in(
     role: UserRole,
     payload: LinkedInSignInRequest,
     response: Response,
     db: Session = Depends(get_db),
-) -> User:
+) -> AuthSessionResponse:
     """Sign in through the provider boundary using the local fake provider (FR-17, FR-22)."""
     _require_consent(payload.consent_accepted)
+    if get_settings().linkedin_provider.casefold() != "fake":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Configured LinkedIn provider is unavailable",
+        )
     try:
         identity_data = linkedin_provider.authenticate(payload.authorization_code)
     except ValueError as exc:
@@ -172,7 +202,11 @@ def linkedin_sign_in(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is disabled"
             )
         response.status_code = status.HTTP_200_OK
-        return identity.user
+        user = identity.user
+        return AuthSessionResponse(
+            access_token=create_access_token(subject=str(user.id), role=user.role, token_version=user.token_version),
+            user=UserRead.model_validate(user),
+        )
 
     existing = db.query(User).filter(User.email == identity_data.email.lower()).first()
     if existing is not None:
@@ -199,13 +233,15 @@ def linkedin_sign_in(
     _record_consent(db, user.id, "linkedin_registration")
     db.commit()
     db.refresh(user)
-    return user
+    return AuthSessionResponse(
+        access_token=create_access_token(subject=str(user.id), role=user.role, token_version=user.token_version),
+        user=UserRead.model_validate(user),
+    )
 
 
 @app.post("/api/v1/auth/login", response_model=TokenResponse)
-def login_user(
-    payload: UserLoginRequest, db: Annotated[Session, Depends(get_db)]
-) -> TokenResponse:
+@limiter.limit(AUTH_LIMIT, error_message="Rate limit exceeded")
+def login_user(payload: UserLoginRequest, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
     """Sign in and issue a JWT for role-scoped access.
 
     FR-23, NFR-4, NFR-5.
@@ -256,8 +292,25 @@ def withdraw_consent(
             ConsentRecord.user_id == current_user.id,
             ConsentRecord.consent_type == REGISTRATION_CONSENT_TYPE,
         )
-        .one()
+        .first()
     )
+    if record is None:
+        record = ConsentRecord(
+            user_id=current_user.id,
+            consent_type=REGISTRATION_CONSENT_TYPE,
+            consent_version=REGISTRATION_CONSENT_VERSION,
+            source="backfill",
+            withdrawn_at=datetime.utcnow(),
+        )
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+        return ConsentStatusRead(
+            consent_type=record.consent_type,
+            consent_version=record.consent_version,
+            withdrawn=True,
+            withdrawn_at=record.withdrawn_at,
+        )
     if record.withdrawn_at is None:
         record.withdrawn_at = datetime.utcnow()
         db.commit()
@@ -304,15 +357,32 @@ def read_current_user(current_user: Annotated[User, Depends(get_current_user)]) 
     return current_user
 
 
-@app.get("/api/v1/admin/stats")
+@app.get("/api/v1/admin/stats", response_model=AdminStatsRead)
 def admin_stats(
-    current_user: Annotated[User, Depends(require_roles("admin"))],
-) -> dict[str, str]:
-    """Admin-only endpoint for the first access-control slice.
-
-    FR-23, NFR-5.
-    """
-    return {"status": "ok", "role": current_user.role}
+    current_user: User = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> AdminStatsRead:
+    """Return live account and review counts for the admin console (FR-26)."""
+    del current_user
+    user_counts = db.execute(select(User.role, func.count(User.id)).group_by(User.role)).all()
+    pending_queue = db.scalar(
+        select(func.count(ProfileVerification.id)).where(
+            ProfileVerification.status.in_(("pending_review", "appeal_pending"))
+        )
+    ) or 0
+    pending_appeals = db.scalar(
+        select(func.count(VerificationAppeal.id)).where(VerificationAppeal.status == "pending")
+    ) or 0
+    seven_days_ago = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=7)
+    recent_decisions = db.scalar(
+        select(func.count(VerificationDecision.id)).where(VerificationDecision.created_at >= seven_days_ago)
+    ) or 0
+    return AdminStatsRead(
+        users_by_role={role: count for role, count in user_counts},
+        pending_verification_queue=pending_queue,
+        pending_appeals=pending_appeals,
+        decisions_last_7_days=recent_decisions,
+    )
 
 
 @app.get("/")
