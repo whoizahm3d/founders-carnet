@@ -1,0 +1,14 @@
+{
+  "run_type": "test_retrieval",
+  "git_commit": "ff4cf899e234fa54651f30beb6be128c4ed72ba4",
+  "timestamp_utc": "2026-11-22T02:16:41.416345+00:00",
+  "metadata": {
+    "n_questions": 14,
+    "n_answerable": 9,
+    "n_unanswerable": 5,
+    "models": [
+      "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+      "intfloat/multilingual-e5-base"
+    ]
+  }
+}

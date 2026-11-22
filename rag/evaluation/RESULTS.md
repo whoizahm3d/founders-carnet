@@ -30,8 +30,14 @@ Working tree clean: false
 | sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | dev | 9 | 6 | 6/9 (66.7%) | 0.6667 | [0.354, 0.879] |
 | sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | dev | 9 | 7 | 7/9 (77.8%) | 0.5926 | [0.453, 0.937] |
 | sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | dev | 9 | 8 | 8/9 (88.9%) | 0.6556 | [0.565, 0.980] |
+| intfloat/multilingual-e5-base | bm25 | test | 9 | 7 | 7/9 (77.8%) | 0.5093 | [0.453, 0.937] |
+| intfloat/multilingual-e5-base | dense | test | 9 | 8 | 8/9 (88.9%) | 0.6019 | [0.565, 0.980] |
+| intfloat/multilingual-e5-base | hybrid | test | 9 | 9 | 9/9 (100.0%) | 0.7130 | [0.701, 1.000] |
+| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | bm25 | test | 9 | 8 | 8/9 (88.9%) | 0.4389 | [0.565, 0.980] |
+| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | dense | test | 9 | 8 | 8/9 (88.9%) | 0.6889 | [0.565, 0.980] |
+| sentence-transformers/paraphrase-multilingual-mpnet-base-v2 | hybrid | test | 9 | 8 | 8/9 (88.9%) | 0.6667 | [0.565, 0.980] |
 
-Test split retrieval status: Pending (held out until single test run).
+Test split retrieval status: Completed.
 
 ## Abstention Threshold Tuning (Dev Split, N=3 Out-of-Scope)
 

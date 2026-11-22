@@ -5,3 +5,9 @@ intfloat/multilingual-e5-base,hybrid,dev,9,3,8,0.888889,0.740741,0.564994,0.9801
 sentence-transformers/paraphrase-multilingual-mpnet-base-v2,bm25,dev,9,3,6,0.666667,0.666667,0.354197,0.879418
 sentence-transformers/paraphrase-multilingual-mpnet-base-v2,dense,dev,9,3,7,0.777778,0.592593,0.452583,0.936776
 sentence-transformers/paraphrase-multilingual-mpnet-base-v2,hybrid,dev,9,3,8,0.888889,0.655556,0.564994,0.98011
+intfloat/multilingual-e5-base,bm25,test,9,5,7,0.777778,0.509259,0.452583,0.936776
+intfloat/multilingual-e5-base,dense,test,9,5,8,0.888889,0.601852,0.564994,0.98011
+intfloat/multilingual-e5-base,hybrid,test,9,5,9,1.0,0.712963,0.700847,1.0
+sentence-transformers/paraphrase-multilingual-mpnet-base-v2,bm25,test,9,5,8,0.888889,0.438889,0.564994,0.98011
+sentence-transformers/paraphrase-multilingual-mpnet-base-v2,dense,test,9,5,8,0.888889,0.688889,0.564994,0.98011
+sentence-transformers/paraphrase-multilingual-mpnet-base-v2,hybrid,test,9,5,8,0.888889,0.666667,0.564994,0.98011
