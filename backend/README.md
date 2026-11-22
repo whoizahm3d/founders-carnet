@@ -36,7 +36,7 @@ Set-Location ..
 
 The generated schema is saved at `backend/openapi.json`.
 
-The compliance endpoint is `POST /api/v1/compliance/questions` and requires a founder token. Backend settings load the repository-root `.env` even when commands run from `backend/`. Set `GEMINI_API_KEY` there. `GEMINI_REQUEST_TIMEOUT_MS` defaults to `60000` and accepts values from `10000` to `120000`. `EMBEDDING_MODEL_NAME` defaults to `sentence-transformers/paraphrase-multilingual-mpnet-base-v2`; override it only before indexing, because query and corpus embeddings must use the same model.
+The compliance endpoint is `POST /api/v1/compliance/questions` and requires a founder token. Backend settings load the repository-root `.env` even when commands run from `backend/`. Set `GEMINI_API_KEY` there. `GEMINI_REQUEST_TIMEOUT_MS` defaults to `60000` and accepts values from `10000` to `120000`. `EMBEDDING_MODEL_NAME` defaults to `intfloat/multilingual-e5-base`; override it only before indexing, because query and corpus embeddings must use the same model. E5 applies a `query: ` prefix on queries and a `passage: ` prefix on passages automatically. After changing this setting, re-index compliance chunks with `python -m app.services.corpus_indexer` and ecosystem profiles with `python backend/scripts/reembed_all.py`.
 
 After migrations and environment configuration, index the corpus with:
 

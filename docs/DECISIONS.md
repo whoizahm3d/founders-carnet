@@ -1,5 +1,30 @@
 # Decisions log
 
+## 2026-11-22: Change backend default embedding model to intfloat/multilingual-e5-base
+
+**Context:** Backend default embedding model (compliance_chunks, ecosystem_profiles) must match the evaluated primary config (FR-8, NFR-11 to NFR-14).
+
+**What we tried:** Pre-registered evaluation used intfloat/multilingual-e5-base with hybrid retrieval and a dense top-1 cosine refusal threshold of 0.8428. The backend defaulted to sentence-transformers/paraphrase-multilingual-mpnet-base-v2 (provisional since 2026-10-17), causing a mismatch between the served and evaluated configurations.
+
+**Decision:** Change `_DEFAULT_EMBEDDING_MODEL` in `backend/app/config.py` to `intfloat/multilingual-e5-base`. The encoder (`rag.compliance.embeddings.SentenceTransformerEncoder`) already applies `query: ` and `passage: ` prefixes correctly for E5 models in both the compliance query path and the ecosystem profile matching path. No schema migration is needed because both MPNet and E5-base produce 768-dimensional vectors and the pgvector column has no fixed dimension constraint.
+
+Re-embedding is required on any existing database. Two separate steps:
+
+1. **Compliance chunks:** Re-run the corpus indexer (`cd backend; python -m app.services.corpus_indexer`). The indexer calls `encoder.prepare_chunks()`, which correctly splits the 53 of 240 chunks that exceed E5's 512-token limit into continuation passages (producing 301 passages total, matching the evaluated config). The indexer is idempotent for text that has not changed: it re-embeds only rows whose `embedding_model` differs from the configured model. `backend/scripts/reembed_all.py` handles `ecosystem_profiles` only and explicitly refuses `compliance_chunks` with an error directing operators to the indexer instead.
+
+2. **Ecosystem profiles:** Run `python backend/scripts/reembed_all.py`. Profile texts are symmetric (both sides use `encoder.encode()` with the `passage: ` prefix). The matching query in `backend/app/routes/intelligence.py` filters candidates by `EcosystemProfile.embedding_model == embedding_model`, so existing MPNet-encoded profiles are invisible to E5 queries and must be re-embedded. The script is **untested on a live pgvector database** and must be verified on a database snapshot or staging environment first.
+
+**Parity verification and passage splitting:**
+- Fast parity test: `test_e5_query_parity_with_evaluation_path` imports and calls the real `rag.evaluation.run_e2e.encode_query` alongside `SentenceTransformerEncoder.encode_query` on a recording fake model, asserting exact element-by-element equality.
+- Slow parity test: `test_e5_query_parity_with_real_weights` (marked slow) loads real cached weights of `intfloat/multilingual-e5-base` and asserts exact numerical parity (within 1e-6) between the backend encoder and the evaluation encoder; it skips cleanly if the model is not in the local cache.
+- Passage splitting (301 passages from 240 chunks) is handled exclusively by the corpus indexer via `prepare_chunks()`. `reembed_all.py` refuses `compliance_chunks` to eliminate the risk of silent chunk truncation.
+
+**ruff format status:** `ruff check .` passes on the backend. `ruff format --check .` reports 30 pre-existing files that would be reformatted; none were introduced by this branch. Whether CI enforces format checking should be confirmed before merging.
+
+**Why:** Aligns the production serving path with the evaluated design. The refusal gate threshold 0.8428 was tuned specifically on E5 cosine scores. Using MPNet at serving time while the threshold was tuned on E5 would invalidate the abstention calibration.
+
+**Follow-ups:** Run `backend/scripts/reembed_all.py` on any existing database before deploying. Update `docs/ai_rag_and_model_training_playbook.md` Section 4.1. Profile embeddings in `ecosystem_profiles` must also be regenerated since the matching query in `backend/app/routes/intelligence.py` filters candidates by `EcosystemProfile.embedding_model == embedding_model`; existing MPNet-encoded profiles will not be returned.
+
 ## 2026-11-21: Shared dense top-1 cosine refusal gate and hybrid ranking alignment
 
 **Context:** Compliance RAG system retrieval pipeline and abstention gating (FR-8, NFR-11 to NFR-14, Section 4.4 and Section 4.5 of the report). Synchronizing the deployed service refusal logic with the pre-registered evaluation design.

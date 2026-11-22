@@ -1033,7 +1033,23 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Cut or partial:** None.
 - **Differs from the report?** No.
 
-## 2026-11-21: Shared refusal gate and hybrid retrieval ranking alignment (Gemini)
+## 2026-11-22: Change backend default embedding model to intfloat/multilingual-e5-base (Gemini)
+
+- **Feature and IDs:** Compliance retrieval and ecosystem matching, FR-8, NFR-11, NFR-12, NFR-13, NFR-14.
+- **Built:**
+  - Changed `_DEFAULT_EMBEDDING_MODEL` in `backend/app/config.py` from `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` to `intfloat/multilingual-e5-base`.
+  - Updated the assertion in `backend/tests/test_config.py` to expect the new default.
+  - Added test `test_e5_query_encoder_adds_query_prefix` in `backend/tests/test_config.py` verifying that `SentenceTransformerEncoder.encode_query` prepends `query: ` for E5 models.
+  - Created `backend/scripts/reembed_all.py`: re-indexes ecosystem_profiles in-place (batch=64, skip rows already on the new model, idempotent) and explicitly refuses compliance_chunks with an error directing operators to re-run the corpus indexer so passage splitting is preserved. No Alembic migration needed: both models are 768-dimensional and the pgvector column has no dimension constraint.
+  - Added unit test `test_e5_query_parity_with_evaluation_path` calling the real evaluation `encode_query` alongside `SentenceTransformerEncoder.encode_query` on a shared recording fake model, asserting exact element-by-element equality.
+  - Added slow test `test_e5_query_parity_with_real_weights` verifying exact numerical parity on real cached E5 weights (skipped if not cached).
+  - Updated `backend/README.md` to document the new default and the re-embed step.
+  - Added DECISIONS.md entry (2026-11-22) explaining the change and re-embedding requirement.
+- **Tested:** `cd backend; ..\rag\.venv\Scripts\python.exe -m pytest tests/ -v` and `rag\.venv\Scripts\python.exe -m pytest rag/tests/ -v -k "not rehearse_reproduces"`.
+- **Cut or partial:** None. No network calls, no evaluation scripts touched.
+- **Differs from the report?** Yes; default model is now intfloat/multilingual-e5-base. Tracked in docs/DECISIONS.md (2026-11-22).
+
+
 
 - **Feature and IDs:** Compliance Assistant retrieval and abstention, FR-8, NFR-11, NFR-12, NFR-13, NFR-14.
 - **Built:**
