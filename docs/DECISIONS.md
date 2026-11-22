@@ -740,3 +740,9 @@ Dated entries, newest first. Each entry has the context, what was tried, what wa
 - Decision: kept main's 0013 unchanged (it may already be applied) and renumbered Taha's unmerged migrations to 0014, 0015 and 0016. The history is now one line.
 - Also: his branch had committed merge-conflict markers in 14 files. They were resolved keeping his consent, rate-limit and verification code (HEAD side), the compliance_refusal_threshold setting, and both sides of the docs and .env.example.
 - Note: anyone who applied his old 0013 to a local database must reset it.
+
+## 2026-11-22: Answer output limit raised to 4096 tokens
+- Context: the first real dev e2e call on gemini-3.6-flash returned truncated JSON (EOF while parsing a string). It is a thinking model, and its hidden reasoning tokens count against max_output_tokens, so the 1200-token limit cut the answer off.
+- Decision: raised max_output_tokens from 1200 to 4096 on the shared JSON generation call (_generate_json), the path used for compliance answers. Nothing else changed: temperature stays 0, prompts and prompt versions are unchanged, and retrieval is untouched.
+- Scope: this only gives the model room to finish. It does not change what the evaluation measures. It is committed before the test split so that dev and test use the same gateway.
+- Open: the final model id is pinned after the dev e2e completes. The free tier allows 20 requests per day per model, so runs resume from the disk cache.

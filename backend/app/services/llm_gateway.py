@@ -585,7 +585,7 @@ class GeminiGateway:
             config={
                 "system_instruction": system_instruction,
                 "temperature": 0,
-                "max_output_tokens": 1200,
+                "max_output_tokens": 4096,
                 "response_mime_type": "application/json",
                 "response_json_schema": response_schema.model_json_schema(),
             },
