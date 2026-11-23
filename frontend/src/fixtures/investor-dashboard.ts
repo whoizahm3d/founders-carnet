@@ -94,7 +94,7 @@ export const INITIAL_INVESTOR_DASHBOARD_DATA: InvestorDashboardData = {
       startupName: 'Indus Logistics',
       founderName: 'Sara Malik',
       sectorAndStage: 'Supply chain logistics, Seed',
-      city: 'Karachi',
+      city: 'Lahore',
       requestedAt: '1 day ago',
       requestNote:
         'Seeking angel discussion on digital merchant delivery integrations in Sindh and Punjab, and early working capital requirements.',
@@ -113,10 +113,10 @@ export const INITIAL_INVESTOR_DASHBOARD_DATA: InvestorDashboardData = {
       city: 'Lahore',
       requestedAt: '3 days ago',
       requestNote:
-        'Exploring angel syndication for clinic workflow software and digital patient billing across private clinics in Lahore.',
+        'Exploring angel discussion for clinic workflow software and digital patient billing across private clinics in Lahore.',
       discussionTopics: [
         'Clinic digital billing workflows',
-        'Pre-seed angel syndicate structure in Pakistan',
+        'Pre-seed ticket fit for clinic workflow software',
       ],
       simulationSummary:
         'Moderate fit on healthcare software with payment settlement touchpoints.',

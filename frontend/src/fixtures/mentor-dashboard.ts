@@ -179,11 +179,11 @@ export const INITIAL_MENTOR_DASHBOARD_DATA: MentorDashboardData = {
       index: '01',
       startupName: 'Indus Logistics',
       founderName: 'Sara Malik',
-      city: 'Karachi',
+      city: 'Lahore',
       sector: 'Supply chain',
       stage: 'Seed',
       similarityScore: 94,
-      tags: ['B2B SaaS', 'Supply chain', 'Karachi'],
+      tags: ['B2B SaaS', 'Supply chain', 'Lahore'],
       simulationContext:
         'Matches advisory background in multi-party operational workflows and seed unit economics.',
     },

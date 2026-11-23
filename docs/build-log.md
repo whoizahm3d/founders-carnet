@@ -2,6 +2,10 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-24: Fixture text consistency adjustments
+
+- Replaced angel syndication with angel discussion in investor fixture; normalized Indus Logistics city to Lahore across investor and mentor fixtures.
+
 ## 2026-11-24: Investor dashboard implementation, typed fixtures, and Playwright verification spec
 
 - **Feature and IDs:** Investor dashboard, FR-23, FR-7, NFR-6, FT-01, FT-04, FT-06, FT-09.
