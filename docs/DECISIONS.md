@@ -1,5 +1,18 @@
 # Decisions log
 
+## 2026-11-24: Mentor dashboard architecture, typed fixtures, and role consistency
+
+**Context:** The mentor dashboard (/mentor/dashboard) needed implementation to match DESIGN.md v3.9.2, the design reference `mentor_dashboard_asad_khan`, and cross-screen consistency with the founder and talent dashboards.
+
+**Decision:**
+1. Built `/mentor/dashboard` with shared UI components (`Button`, `Card`, `Badge`, `Dialog`, `EmptyState`) and canonical Tailwind tokens, replacing the legacy CSS module implementation.
+2. Created `src/fixtures/mentor-dashboard.ts` using Asad Khan's profile ("Mentor, Ex-VP Product Finja", B2B SaaS and Product ops tags) matching his mentor card on the founder dashboard.
+3. Used purely fictional startup names (Munshi Books, Mehran Works, Chenab Pay, Indus Logistics, Ravi Health, Korangi Tech, Bolan Commerce) with zero real company names, and zero raw contact details (emails or phone numbers).
+4. Counts on the operational summary monolith derive strictly from fixture arrays with no invented statistics, cohort labels, or growth deltas.
+5. Added `mentor: 'Asad Khan'` to `MOCK_DISPLAY_NAMES` in `src/lib/auth.ts`.
+6. Office hours scheduling was omitted because scheduling is not part of the active feature scope.
+
+
 ## 2026-11-22: Change backend default embedding model to intfloat/multilingual-e5-base
 
 **Context:** Backend default embedding model (compliance_chunks, ecosystem_profiles) must match the evaluated primary config (FR-8, NFR-11 to NFR-14).

@@ -71,6 +71,7 @@ function nameFromEmail(email: string): string {
 const MOCK_DISPLAY_NAMES: Partial<Record<UserRole, string>> = {
   founder: 'Bilal Ahmed',
   talent: 'Hamza Rauf',
+  mentor: 'Asad Khan',
 };
 
 function buildMockUser(email: string, role: UserRole, fullName?: string): User {

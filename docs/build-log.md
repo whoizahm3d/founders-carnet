@@ -2,6 +2,19 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-24: Mentor dashboard implementation, typed fixtures, and Playwright verification spec
+
+- **Feature and IDs:** Mentor dashboard, FR-23, FR-7, NFR-6, FT-01, FT-04, FT-06, FT-09.
+- **Built:**
+  - `frontend/src/fixtures/mentor-dashboard.ts`: Strongly typed fixtures for mentor profile (Asad Khan, Ex-VP Product Finja), operational counts (inbound requests, active mentees, advisory matches), incoming requests with discussion topics and simulation summaries, active mentees, recommended founder matches with similarity scores, and onboarding checklist. Strictly fictional Pakistani startup names (Munshi Books, Mehran Works, Chenab Pay, Indus Logistics, Ravi Health, Korangi Tech, Bolan Commerce) and zero emails or phone numbers.
+  - `frontend/src/app/(dashboard)/mentor/dashboard/page.tsx`: Full replacement of legacy CSS module with canonical Tailwind tokens matching DESIGN.md v3.9.2 and the founder/talent dashboard patterns. Includes breadcrumb pill "Mentor / Dashboard", active dashboard vs onboarding view switcher, "Verified profile" badge, greeting with Instrument Serif italic yellow name, availability toggle ("Open to new mentees"), ink summary monolith card with plain counts and advisory focus areas, recommended founder matches with profile similarity badge and single uppercase caption, pending requests with accept/decline actions and request details dialog with simulation and contact privacy notices, and active mentees card.
+  - `frontend/src/lib/auth.ts`: Added mentor entry `mentor: 'Asad Khan'` to `MOCK_DISPLAY_NAMES`.
+  - `frontend/tests/ft-mentor-dashboard.spec.ts`: Playwright test suite covering mentor authentication landing and role redirect assertions (FT-01), viewport overflow checks across 390px, 768px, 1024px, and 1440px (FT-09), and language model attribution and contact privacy assertions (FT-04, FT-06).
+- **Tested:** No test runners or builds executed per explicit instructions (test specs authored for user execution).
+- **Cut or partial:** Venture office hours scheduling dropped as scheduling backend/subsystem is not built; legacy CSS module left unused for manual removal.
+- **Differs from the report?** Yes. Mentor dashboard operates on typed fixtures and client state pending backend mentorship endpoints. Recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`.
+
+
 ## 2026-11-20: Pre-registered compliance evaluation harness, test guards, and end-to-end pipeline
 
 - **Feature and IDs:** Compliance assistant evaluation, FR-8, NFR-11, NFR-12, NFR-13, NFR-14, NFR-20, Research Question 2.

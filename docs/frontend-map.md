@@ -21,7 +21,8 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 | `/founder/matches` | `src/app/(dashboard)/founder/matches/page.tsx` |
 | `/talent/dashboard` | `src/app/(dashboard)/talent/dashboard/page.tsx` |
 | `/talent/*` | `src/app/(dashboard)/talent/` (profile, resume, jobs, matches) |
-| `/mentor/*` | `src/app/(dashboard)/mentor/` (dashboard, profile, sessions, startups, feedback) |
+| `/mentor/dashboard` | `src/app/(dashboard)/mentor/dashboard/page.tsx` |
+| `/mentor/*` | `src/app/(dashboard)/mentor/` (profile, sessions, startups, feedback) |
 | `/investor/*` | `src/app/(dashboard)/investor/` (dashboard, profile, pipeline, matches) |
 | `/admin/*` | `src/app/(dashboard)/admin/` (dashboard, users, analytics) |
 
@@ -116,6 +117,27 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 - Tracked applications: "Tracked *applications*", 3 real applications with statuses: `Applied`, `In review`, `Introduction accepted`.
 - Resume analysis: structured competencies, refinement bullets, and mandatory attribution notice: *"Written by a language model simulation"*.
 - Privacy disclosure: "Contact details stay hidden until both sides accept." on all role cards and match sections. Zero contact details exposed.
+- State handling: Empty, loading, and error states supported.
+
+---
+
+## Mentor Dashboard (`/mentor/dashboard`)
+
+**File:** `frontend/src/app/(dashboard)/mentor/dashboard/page.tsx`
+**Reference:** `frontend/design_reference/mentor_dashboard_asad_khan/`
+**Legacy CSS Module:** `frontend/src/app/(dashboard)/mentor/dashboard/MentorDashboard.module.css` (retained on disk, unimported)
+
+**Key architecture and features (2026-11-24):**
+- Breadcrumb: single white/95 glass pill "Mentor / Dashboard" with `text-text` and `text-ink` labels.
+- View mode switcher: `Active dashboard` vs `First-time onboarding` (persists state locally without backend dependency).
+- Hero section: "Verified profile" badge, "Welcome back, *Asad*" with Instrument Serif italic on `Asad` in `text-carnet-yellow` (`#F5C842`). Subtitle: "Mentor, Ex-VP Product Finja · Karachi Hub · Review inbound founder requests and manage your active mentees across Pakistan."
+- Availability toggle: accessible switch with single label "Open to new mentees" managed via local state.
+- Ink Monolith Card: "Operational summary", plain counts derived strictly from fixture arrays (Inbound requests: 3, Active mentees: 4, Advisory matches: 3), with an advisory focus area sub-panel highlighting B2B SaaS, Product ops, Fintech, Unit economics, and Go-to-market.
+- Recommended founders: "Recommended *founders*", 3 matches (Indus Logistics, Ravi Health, Korangi Tech) with profile similarity badge (`NN%`) and single `PROFILE SIMILARITY` caption per card, match context with simulation notice *"Written by a language model simulation"*, and "View founder carnet" dialog modal.
+- Inbound requests: "Pending *requests*", 3 requests (Munshi Books, Mehran Works, Chenab Pay) with "Accept request", "Decline", and "View details" dialog containing discussion topics, simulation note, and mutual consent disclosure.
+- Active mentees: "Active *mentees*", list of ongoing founder engagements with advisory cadence.
+- Onboarding guide: 4-step actionable checklist (profile, expertise, availability, requests).
+- Privacy disclosure: "Contact details stay hidden until both sides accept." on all request cards, match sections, and dialogs. Zero contact details exposed.
 - State handling: Empty, loading, and error states supported.
 
 ---
