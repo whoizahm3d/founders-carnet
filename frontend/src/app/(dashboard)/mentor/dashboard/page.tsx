@@ -137,7 +137,7 @@ export default function MentorDashboardPage() {
 
           {/* Availability Toggle */}
           <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2 rounded-pill border border-hairline-subtle shadow-sm self-start sm:self-auto">
-            <span className="font-mono text-xs uppercase tracking-[0.05em] font-semibold text-text select-none">
+            <span className="font-mono text-xs uppercase tracking-[0.05em] font-semibold text-ink select-none">
               Open to new mentees
             </span>
             <button
@@ -195,7 +195,7 @@ export default function MentorDashboardPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <span className="w-2 h-2 rounded-full bg-accent" />
                     <span className="font-mono text-xs uppercase tracking-[0.05em] text-white/70 font-medium">
-                      Atelier status
+                      Mentor activity
                     </span>
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight font-sans">

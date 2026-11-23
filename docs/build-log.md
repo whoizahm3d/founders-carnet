@@ -2,6 +2,10 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-24: Mentor dashboard availability pill contrast and card eyebrow token fix
+
+- Fixed "Open to new mentees" pill label to text-ink for WCAG 4.5:1 contrast; replaced "Atelier status" card eyebrow with "Mentor activity".
+
 ## 2026-11-24: Mentor dashboard implementation, typed fixtures, and Playwright verification spec
 
 - **Feature and IDs:** Mentor dashboard, FR-23, FR-7, NFR-6, FT-01, FT-04, FT-06, FT-09.
