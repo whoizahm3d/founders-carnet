@@ -1,5 +1,18 @@
 # Decisions log
 
+## 2026-11-24: Investor dashboard architecture, typed fixtures, and persona consistency
+
+**Context:** The investor dashboard (/investor/dashboard) needed implementation to match DESIGN.md v3.9.2, the design reference `investor_dashboard_sana_rauf`, and persona consistency with the founder dashboard.
+
+**Decision:**
+1. Built `/investor/dashboard` with shared UI components (`Button`, `Badge`, `Dialog`, `EmptyState`) and canonical Tailwind tokens, replacing the legacy CSS module implementation.
+2. Created `src/fixtures/investor-dashboard.ts` using Sana Rauf's persona: Angel Investor, Karachi; Fintech and Digital commerce; Pre-seed; ticket range PKR 2.5M to 10M.
+3. Included Munshi Books (Bilal Ahmed, Karachi, Seed fintech) among the recommended founders alongside other fictional entities (Chenab Pay, Mehran Works, Indus Logistics, Ravi Health, Korangi Tech, Bolan Commerce). Zero real company names.
+4. Omitted readiness scores from investor match cards and dialogs to maintain strict consistency with the no-invented-numbers rule.
+5. Counts on the operational summary monolith derive strictly from fixture arrays with no invented deal metrics or returns.
+6. Added `investor: 'Sana Rauf'` to `MOCK_DISPLAY_NAMES` in `src/lib/auth.ts`.
+
+
 ## 2026-11-24: Mentor dashboard architecture, typed fixtures, and role consistency
 
 **Context:** The mentor dashboard (/mentor/dashboard) needed implementation to match DESIGN.md v3.9.2, the design reference `mentor_dashboard_asad_khan`, and cross-screen consistency with the founder and talent dashboards.

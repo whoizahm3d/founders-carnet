@@ -2,6 +2,19 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-24: Investor dashboard implementation, typed fixtures, and Playwright verification spec
+
+- **Feature and IDs:** Investor dashboard, FR-23, FR-7, NFR-6, FT-01, FT-04, FT-06, FT-09.
+- **Built:**
+  - `frontend/src/fixtures/investor-dashboard.ts`: Strongly typed fixtures for investor profile (Sana Rauf, Angel Investor, Karachi; thesis in Fintech and Digital commerce, Pre-seed, ticket range PKR 2.5M to 10M), operational counts, 2 inbound requests, 2 active introductions, 3 recommended founder matches (including Munshi Books / Bilal Ahmed), and a 4-step onboarding checklist. Fictional startup names only, zero readiness scores, and zero contact details.
+  - `frontend/src/app/(dashboard)/investor/dashboard/page.tsx`: Full replacement of legacy CSS module with canonical Tailwind tokens matching DESIGN.md v3.9.2 and the mentor dashboard pattern. Features breadcrumb pill "Investor / Dashboard", active dashboard vs onboarding view switcher, "Verified profile" badge, greeting with Instrument Serif italic yellow name, ink summary monolith card with plain counts and investment thesis panel, recommended founder matches with profile similarity badge and single uppercase caption, request introduction action, pending requests with accept/decline actions and request details dialog with simulation and contact privacy notices, and active introductions card.
+  - `frontend/src/lib/auth.ts`: Added investor entry `investor: 'Sana Rauf'` to `MOCK_DISPLAY_NAMES`.
+  - `frontend/tests/ft-investor-dashboard.spec.ts`: Playwright test suite covering investor authentication landing and role redirect assertions (FT-01), viewport overflow checks across 390px, 768px, 1024px, and 1440px (FT-09), and language model attribution and contact privacy assertions (FT-04, FT-06).
+- **Tested:** No test runners or builds executed per explicit instructions (test specs authored for user execution).
+- **Cut or partial:** Legacy CSS module `InvestorDashboard.module.css` left unimported on disk for manual removal.
+- **Differs from the report?** Yes. Investor dashboard operates on typed fixtures and client state pending backend investment dealflow endpoints. Recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`.
+
+
 ## 2026-11-24: Mentor dashboard availability pill contrast and card eyebrow token fix
 
 - Fixed "Open to new mentees" pill label to text-ink for WCAG 4.5:1 contrast; replaced "Atelier status" card eyebrow with "Mentor activity".

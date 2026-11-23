@@ -1,214 +1,852 @@
 'use client';
 
-import { PageHeader } from '@/components/layout/PageHeader';
-import { Button } from '@/components/ui';
-import { useState } from 'react';
-import styles from './InvestorDashboard.module.css';
+/**
+ * Investor Dashboard (/investor/dashboard)
+ * Rebuilt from design reference: investor_dashboard_sana_rauf
+ * Conforms to DESIGN.md v3.9.2 and project rules:
+ * - Sentence case headings and labels
+ * - No em or en dashes (hyphens or commas only)
+ * - Profile similarity label shown once per card (no funding probability claims)
+ * - Language model simulation attribution notice without AI badges
+ * - Mutual consent contact privacy: contact details hidden until both sides accept
+ * - Pakistani context: Karachi, Lahore, Islamabad, PKR
+ * - Fictional startup names only (Munshi Books, Chenab Pay, Mehran Works, Indus Logistics, Ravi Health, Korangi Tech, Bolan Commerce)
+ */
 
-interface FounderMatch {
-  rank: number;
-  initial: string;
-  name: string;
-  desc: string;
-  tags: string[];
-  score: number;
-  similarity: number;
-}
-
-const FOUNDERS: FounderMatch[] = [
-  {
-    rank: 1,
-    initial: 'N',
-    name: 'NovaPay',
-    desc: 'Digital wallet for unbanked communities.',
-    tags: ['Fintech', 'Seed'],
-    score: 4.2,
-    similarity: 95,
-  },
-  {
-    rank: 2,
-    initial: 'S',
-    name: 'SaaSFlow',
-    desc: 'Automated accounting workflows for e-commerce founders.',
-    tags: ['B2B SaaS', 'Seed'],
-    score: 3.9,
-    similarity: 88,
-  },
-  {
-    rank: 3,
-    initial: 'C',
-    name: 'CryptoHive',
-    desc: 'Institutional trading infrastructure for crypto markets.',
-    tags: ['Fintech', 'Seed'],
-    score: 3.6,
-    similarity: 82,
-  },
-  {
-    rank: 4,
-    initial: 'M',
-    name: 'MediLink',
-    desc: 'Telehealth platform connecting rural patients to specialists.',
-    tags: ['B2B SaaS', 'Seed'],
-    score: 3.3,
-    similarity: 75,
-  },
-];
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import {
+  INITIAL_INVESTOR_DASHBOARD_DATA,
+  InvestorIntroductionRequest,
+  InvestorFounderMatch,
+} from '@/fixtures/investor-dashboard';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Dialog } from '@/components/ui/Dialog';
+import { EmptyState } from '@/components/ui/EmptyState';
+import {
+  ArrowRightIcon,
+  LockIcon,
+  CheckIcon,
+} from '@/components/ui/icons';
 
 export default function InvestorDashboardPage() {
-  const [requestedIds, setRequestedIds] = useState<number[]>([]);
+  const { user } = useAuth();
+  const [data] = useState(INITIAL_INVESTOR_DASHBOARD_DATA);
 
-  const handleRequest = (rank: number) => {
-    setRequestedIds((prev) => [...prev, rank]);
+  // View state switcher: active dashboard vs first-time onboarding
+  const [viewMode, setViewMode] = useState<'active' | 'onboarding'>('active');
+
+  // Inbound requests interaction state
+  const [requestDecisions, setRequestDecisions] = useState<
+    Record<string, 'accepted' | 'declined'>
+  >({});
+  const [introRequestedMatches, setIntroRequestedMatches] = useState<
+    Record<string, boolean>
+  >({});
+
+  const [selectedRequest, setSelectedRequest] =
+    useState<InvestorIntroductionRequest | null>(null);
+  const [selectedMatch, setSelectedMatch] =
+    useState<InvestorFounderMatch | null>(null);
+
+  const displayName = user?.fullName || data.profile.fullName;
+  const firstName = displayName.split(' ')[0] || 'Sana';
+
+  const pendingRequestsCount = data.incomingRequests.filter(
+    (req) => !requestDecisions[req.id]
+  ).length;
+
+  const handleAcceptRequest = (id: string) => {
+    setRequestDecisions((prev) => ({ ...prev, [id]: 'accepted' }));
+    if (selectedRequest?.id === id) {
+      setSelectedRequest(null);
+    }
+  };
+
+  const handleDeclineRequest = (id: string) => {
+    setRequestDecisions((prev) => ({ ...prev, [id]: 'declined' }));
+    if (selectedRequest?.id === id) {
+      setSelectedRequest(null);
+    }
+  };
+
+  const handleRequestIntroduction = (id: string) => {
+    setIntroRequestedMatches((prev) => ({ ...prev, [id]: true }));
   };
 
   return (
-    <div className={styles.dashboard}>
-      <PageHeader
-        title="Dashboard"
-        subtitle="Your profile is verified by admin and visible to founders."
-        action={
-          <span style={{ backgroundColor: '#ffffff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-full)', padding: '4px 12px', fontSize: 'var(--font-size-xs)' }}>
-            Verified
+    <div className="flex flex-col w-full max-w-[1200px] mx-auto space-y-8 pb-12 antialiased">
+      {/* 1. Sub-Header Bar: Breadcrumb and View Mode Toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-pill bg-white/95 backdrop-blur-md border border-hairline-subtle shadow-sm self-start">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+          <span className="font-mono text-xs uppercase tracking-[0.05em] text-text font-medium">
+            Investor
           </span>
-        }
-      />
-
-      <div className={styles.topRowLayout}>
-        <div className={styles.topLeftCol}>
-          {/* Top 3 Stat Cards */}
-          <div className={styles.statsRow}>
-            <div className={styles.statCard}>
-              <span className={styles.statLabel}>Verified Founders</span>
-              <span className={styles.statNumber}>18</span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statLabel}>Pending Match Requests</span>
-              <span className={styles.statNumber}>1</span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statLabel}>Accepted Matches</span>
-              <span className={styles.statNumber}>1</span>
-            </div>
-          </div>
-
-          {/* Investment Profile */}
-          <div className={styles.investmentProfileCard}>
-            <div className={styles.cardTitle}>Investment Profile</div>
-            <div className={styles.thesisTagsRow}>
-              <span className={styles.thesisTag}>Thesis: Fintech, SaaS</span>
-              <span className={styles.thesisTag}>Stage: Seed</span>
-              <span className={styles.thesisTag}>Ticket: PKR 2M to 10M</span>
-              <span className={styles.thesisTag}>Geography: Pakistan</span>
-            </div>
-            <button
-              type="button"
-              className={styles.editLink}
-              onClick={() => alert('Edit investment profile')}
-            >
-              Edit investment profile
-            </button>
-          </div>
+          <span className="text-text-muted text-xs font-mono">/</span>
+          <span className="font-mono text-xs uppercase tracking-[0.05em] text-ink font-bold">
+            Dashboard
+          </span>
         </div>
 
-        {/* Right Match Requests */}
-        <div className={styles.requestsCard}>
-          <div className={styles.cardTitle}>Match requests</div>
-
-          <div className={styles.requestItem}>
-            <div>
-              <div className={styles.requestName}>Dastak Exchange</div>
-              <div className={styles.requestSent}>Sent 2 days ago</div>
-            </div>
-            <span className={styles.statusPending}>Pending</span>
-          </div>
-
-          <div className={styles.requestItem}>
-            <div>
-              <div className={styles.requestName}>SaaSFlow</div>
-              <div className={styles.requestSent}>Sent 1 week ago</div>
-            </div>
-            <span className={styles.statusAccepted}>Accepted</span>
-          </div>
-
-          <div className={styles.requestItem}>
-            <div>
-              <div className={styles.requestName}>CryptoHive</div>
-              <div className={styles.requestSent}>Sent 2 weeks ago</div>
-            </div>
-            <span className={styles.statusDeclined}>Declined</span>
-          </div>
+        {/* View Mode Switcher */}
+        <div
+          role="group"
+          aria-label="Dashboard view mode"
+          className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1.5 rounded-pill border border-hairline-subtle shadow-sm self-start sm:self-auto"
+        >
+          <button
+            type="button"
+            onClick={() => setViewMode('active')}
+            className={`px-3.5 py-1.5 rounded-pill text-xs font-mono uppercase tracking-[0.05em] transition-all duration-200 min-h-[36px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent ${viewMode === 'active'
+                ? 'bg-ink text-white font-semibold shadow-sm'
+                : 'text-text-secondary hover:text-ink'
+              }`}
+          >
+            Active dashboard
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('onboarding')}
+            className={`px-3.5 py-1.5 rounded-pill text-xs font-mono uppercase tracking-[0.05em] transition-all duration-200 min-h-[36px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent ${viewMode === 'onboarding'
+                ? 'bg-ink text-white font-semibold shadow-sm'
+                : 'text-text-secondary hover:text-ink'
+              }`}
+          >
+            First-time onboarding
+          </button>
         </div>
       </div>
 
-      {/* Recommended founders table */}
-      <div className={styles.foundersSection}>
-        <div className={styles.sectionHeaderRow}>
-          <div>
-            <h2 className={styles.sectionHeading}>Recommended founders</h2>
-            <div className={styles.sectionSubhead}>
-              Only verified startups with a completed readiness assessment are shown.
-            </div>
-          </div>
-          <span className={styles.matchesBadge}>4 Matches</span>
+      {/* 2. Hero Greeting Section */}
+      <section
+        aria-labelledby="investor-welcome-heading"
+        className="flex flex-col gap-4 text-white"
+      >
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-pill bg-white/95 backdrop-blur border border-hairline-subtle shadow-sm self-start">
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+          </span>
+          <span className="font-mono text-xs uppercase tracking-[0.05em] font-bold text-accent-deep">
+            {data.profile.verificationBadgeText}
+          </span>
         </div>
 
-        <div className={styles.founderList}>
-          {FOUNDERS.map((f) => (
-            <div key={f.rank} className={styles.founderRow}>
-              <div className={styles.founderLeft}>
-                <div className={styles.rankCircle}>{f.rank}</div>
-                <div className={styles.initialAvatar}>{f.initial}</div>
-                <div className={styles.founderMeta}>
-                  <div className={styles.founderNameRow}>
-                    <span className={styles.founderName}>{f.name}</span>
-                    <span className={styles.aiPill}>AI-generated</span>
+        <div className="flex flex-col gap-2 max-w-3xl">
+          <h1
+            id="investor-welcome-heading"
+            className="text-4xl sm:text-5xl font-bold tracking-tight text-white leading-tight font-sans"
+          >
+            Welcome back,{' '}
+            <span className="font-serif italic font-normal text-carnet-yellow">
+              {firstName}
+            </span>
+          </h1>
+          <p className="font-sans text-base sm:text-lg text-white/90 leading-relaxed">
+            <strong className="font-semibold text-white">
+              {data.profile.roleTitle}
+            </strong>{' '}
+            · {data.profile.location} · Review introduction requests from
+            founders and explore startups aligned with your investment thesis.
+          </p>
+        </div>
+      </section>
+
+      {/* VIEW A: ACTIVE DASHBOARD */}
+      {viewMode === 'active' && (
+        <div className="flex flex-col space-y-8 w-full transition-opacity duration-300">
+          {/* 3. Dark Summary Card (Monolith / Ink Card) */}
+          <section
+            aria-label="Operational overview"
+            className="relative w-full rounded-card bg-ink text-canvas p-6 sm:p-8 lg:p-10 shadow-card overflow-hidden border border-ink-border"
+          >
+            <div className="relative z-10 flex flex-col lg:flex-row justify-between gap-8">
+              {/* Left Column: Operational Summary & Plain Counts */}
+              <div className="flex-1 space-y-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2 h-2 rounded-full bg-accent" />
+                    <span className="font-mono text-xs uppercase tracking-[0.05em] text-white/70 font-medium">
+                      Investor activity
+                    </span>
                   </div>
-                  <div className={styles.founderDesc}>{f.desc}</div>
-                  <div className={styles.sectorTags}>
-                    {f.tags.map((t) => (
-                      <span key={t} className={styles.miniTag}>
-                        {t}
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight font-sans">
+                    Operational summary
+                  </h2>
+                </div>
+
+                <div className="h-px w-full bg-ink-border" />
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
+                  <div className="space-y-1">
+                    <div className="text-3xl sm:text-4xl font-bold text-white font-mono tracking-tight">
+                      {pendingRequestsCount}
+                    </div>
+                    <div className="text-sm font-semibold text-white/90">
+                      Inbound requests
+                    </div>
+                    <p className="text-xs text-text-muted">
+                      Pending introduction review
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-3xl sm:text-4xl font-bold text-white font-mono tracking-tight">
+                      {data.activeIntroductions.length}
+                    </div>
+                    <div className="text-sm font-semibold text-white/90">
+                      Active introductions
+                    </div>
+                    <p className="text-xs text-text-muted">
+                      Accepted founder dialogues
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-3xl sm:text-4xl font-bold text-white font-mono tracking-tight">
+                      {data.founderMatches.length}
+                    </div>
+                    <div className="text-sm font-semibold text-white/90">
+                      Recommended founders
+                    </div>
+                    <p className="text-xs text-text-muted">
+                      Matched by profile similarity
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Investment Thesis & Focus Sub-panel */}
+              <div className="lg:w-80 bg-ink-raised rounded-2xl p-5 border border-ink-border flex flex-col justify-between gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs uppercase tracking-[0.05em] text-white/70 font-semibold">
+                      Investment thesis
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-[11px] font-mono uppercase tracking-[0.05em] text-text-muted block mb-1">
+                        Sectors
                       </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {data.profile.thesis.sectors.map((sec) => (
+                          <span
+                            key={sec}
+                            className="px-2.5 py-0.5 rounded-pill bg-ink-border/80 text-white/90 font-mono text-xs tracking-tight"
+                          >
+                            {sec}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-mono uppercase tracking-[0.05em] text-text-muted block mb-1">
+                        Stage & Ticket
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {data.profile.thesis.stages.map((stg) => (
+                          <span
+                            key={stg}
+                            className="px-2.5 py-0.5 rounded-pill bg-ink-border/80 text-white/90 font-mono text-xs tracking-tight"
+                          >
+                            {stg}
+                          </span>
+                        ))}
+                        <span className="px-2.5 py-0.5 rounded-pill bg-ink-border/80 text-carnet-yellow font-mono text-xs tracking-tight">
+                          {data.profile.thesis.ticketRange}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-ink-border/50">
+                  <Link
+                    href="/investor/profile"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.05em] text-accent hover:text-white transition-colors py-1 focus:outline-none focus-visible:underline"
+                  >
+                    <span>Update investment thesis</span>
+                    <ArrowRightIcon className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 4. Two-Column Main Content Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* LEFT COLUMN: Recommended Founders (Wide: 7 cols) */}
+            <section
+              aria-labelledby="recommended-founders-heading"
+              className="lg:col-span-7 bg-card rounded-card border border-row-line p-6 sm:p-8 shadow-sm space-y-6"
+            >
+              <div className="space-y-2 border-b border-row-line pb-4">
+                <div className="flex items-center justify-between">
+                  <h2
+                    id="recommended-founders-heading"
+                    className="text-xl sm:text-2xl font-bold tracking-tight text-ink font-sans"
+                  >
+                    Recommended{' '}
+                    <span className="font-serif italic font-normal text-accent">
+                      founders
+                    </span>
+                  </h2>
+                  <Badge variant="accent">
+                    {data.founderMatches.length} matches
+                  </Badge>
+                </div>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Profile similarity, not a funding probability. Contact
+                  details stay hidden until both sides accept.
+                </p>
+              </div>
+
+              {data.founderMatches.length === 0 ? (
+                <EmptyState
+                  title="No founder matches yet"
+                  description="When new Pakistani founders align with your investment thesis, they will appear here."
+                />
+              ) : (
+                <div className="space-y-4">
+                  {data.founderMatches.map((match) => {
+                    const isRequested = introRequestedMatches[match.id];
+                    return (
+                      <article
+                        key={match.id}
+                        className="p-5 rounded-2xl border border-hairline hover:border-accent/40 hover:shadow-card-hover transition-all bg-card space-y-4"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono text-xs uppercase tracking-[0.05em] text-text-muted font-bold">
+                                {match.index}.
+                              </span>
+                              <h3 className="font-bold text-ink text-base">
+                                {match.founderName}
+                              </h3>
+                              <span className="text-xs text-text-secondary">
+                                · {match.startupName}
+                              </span>
+                            </div>
+                            <p className="text-xs text-text-muted">
+                              {match.sector} · {match.stage} · {match.city}
+                            </p>
+                          </div>
+
+                          {/* Similarity Score Badge & Single Caption per Card */}
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <Badge variant="accent" className="font-bold">
+                              {match.similarityScore}%
+                            </Badge>
+                            <span className="font-mono text-[10px] uppercase tracking-[0.05em] text-text-muted font-medium">
+                              Profile similarity
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Simulation Note & Context */}
+                        <div className="bg-fill/60 rounded-xl p-3 space-y-1.5 border border-hairline-subtle">
+                          <p className="text-xs text-text-secondary leading-relaxed">
+                            {match.simulationContext}
+                          </p>
+                          <p className="font-mono text-[10px] uppercase tracking-[0.05em] text-text-muted">
+                            Written by a language model simulation
+                          </p>
+                        </div>
+
+                        {/* Tags & Action Buttons */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                          <div className="flex flex-wrap gap-1.5">
+                            {match.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-2 py-0.5 rounded-pill bg-fill text-text-secondary font-mono text-[11px]"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end sm:self-auto">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setSelectedMatch(match)}
+                              className="text-xs min-h-[44px] sm:min-h-[36px]"
+                            >
+                              View founder carnet
+                            </Button>
+                            {isRequested ? (
+                              <Badge variant="success">
+                                Introduction requested
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() =>
+                                  handleRequestIntroduction(match.id)
+                                }
+                                className="text-xs min-h-[44px] sm:min-h-[36px]"
+                              >
+                                Request introduction
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            {/* RIGHT COLUMN: Pending Requests & Active Introductions (Narrow: 5 cols) */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Card 1: Inbound Introduction Requests */}
+              <section
+                aria-labelledby="pending-requests-heading"
+                className="bg-card rounded-card border border-row-line p-6 shadow-sm space-y-5"
+              >
+                <div className="flex items-center justify-between border-b border-row-line pb-4">
+                  <div>
+                    <h2
+                      id="pending-requests-heading"
+                      className="text-xl font-bold tracking-tight text-ink font-sans"
+                    >
+                      Pending{' '}
+                      <span className="font-serif italic font-normal text-accent">
+                        requests
+                      </span>
+                    </h2>
+                    <p className="text-xs text-text-secondary mt-0.5">
+                      Contact details stay hidden until both sides accept.
+                    </p>
+                  </div>
+                  <Badge variant="accent">{pendingRequestsCount}</Badge>
+                </div>
+
+                {data.incomingRequests.length === 0 ? (
+                  <EmptyState
+                    title="No incoming requests"
+                    description="You have no pending founder introduction requests."
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    {data.incomingRequests.map((request) => {
+                      const decision = requestDecisions[request.id];
+                      return (
+                        <article
+                          key={request.id}
+                          className="p-4 rounded-xl border border-hairline bg-card space-y-3 hover:border-ink transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h3 className="font-bold text-ink text-sm">
+                                {request.startupName}
+                              </h3>
+                              <p className="text-[11px] text-text-muted">
+                                {request.sectorAndStage} · {request.city} ·{' '}
+                                {request.founderName}
+                              </p>
+                            </div>
+                            <span className="font-mono text-[10px] uppercase tracking-[0.05em] text-text-muted shrink-0">
+                              {request.requestedAt}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">
+                            {request.requestNote}
+                          </p>
+
+                          {decision ? (
+                            <div className="flex items-center justify-between pt-1">
+                              <Badge
+                                variant={
+                                  decision === 'accepted' ? 'success' : 'default'
+                                }
+                              >
+                                {decision === 'accepted'
+                                  ? 'Request accepted'
+                                  : 'Request declined'}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedRequest(request)}
+                                className="text-xs min-h-[44px] sm:min-h-[36px]"
+                              >
+                                View details
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleAcceptRequest(request.id)
+                                  }
+                                  className="text-xs min-h-[44px] sm:min-h-[36px]"
+                                >
+                                  Accept request
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleDeclineRequest(request.id)
+                                  }
+                                  className="text-xs min-h-[44px] sm:min-h-[36px]"
+                                >
+                                  Decline
+                                </Button>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedRequest(request)}
+                                className="text-xs min-h-[44px] sm:min-h-[36px]"
+                              >
+                                Details
+                              </Button>
+                            </div>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+              {/* Card 2: Active Introductions */}
+              <section
+                aria-labelledby="active-introductions-heading"
+                className="bg-card rounded-card border border-row-line p-6 shadow-sm space-y-4"
+              >
+                <div className="flex items-center justify-between border-b border-row-line pb-3">
+                  <h2
+                    id="active-introductions-heading"
+                    className="text-lg font-bold tracking-tight text-ink font-sans"
+                  >
+                    Active{' '}
+                    <span className="font-serif italic font-normal text-accent">
+                      introductions
+                    </span>
+                  </h2>
+                  <Badge variant="default">
+                    {data.activeIntroductions.length}
+                  </Badge>
+                </div>
+
+                {data.activeIntroductions.length === 0 ? (
+                  <EmptyState
+                    title="No active introductions"
+                    description="When you accept founder requests or introductions are confirmed, active dialogues will appear here."
+                  />
+                ) : (
+                  <div className="divide-y divide-hairline">
+                    {data.activeIntroductions.map((intro) => (
+                      <div
+                        key={intro.id}
+                        className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-3"
+                      >
+                        <div className="space-y-0.5">
+                          <h3 className="font-semibold text-ink text-sm">
+                            {intro.startupName}
+                          </h3>
+                          <p className="text-xs text-text-muted">
+                            {intro.founderName} · {intro.city} · {intro.sector}
+                          </p>
+                        </div>
+                        <span className="font-mono text-[11px] uppercase tracking-[0.05em] text-text-secondary bg-fill px-2.5 py-1 rounded-pill shrink-0">
+                          {intro.statusText}
+                        </span>
+                      </div>
                     ))}
                   </div>
-                </div>
-              </div>
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div className={styles.scoreArea}>
-                <span className={styles.readinessText}>{f.score} / 5</span>
-                <div className={styles.scoreTrack}>
+      {/* VIEW B: FIRST-TIME ONBOARDING */}
+      {viewMode === 'onboarding' && (
+        <section
+          aria-labelledby="investor-onboarding-heading"
+          className="bg-card rounded-card border border-row-line p-6 sm:p-8 shadow-sm space-y-6"
+        >
+          <div className="border-b border-row-line pb-4 space-y-1">
+            <h2
+              id="investor-onboarding-heading"
+              className="text-2xl font-bold tracking-tight text-ink font-sans"
+            >
+              Investor onboarding{' '}
+              <span className="font-serif italic font-normal text-accent">
+                guide
+              </span>
+            </h2>
+            <p className="text-xs text-text-secondary">
+              Configure your investor profile, thesis parameters, and ticket
+              range to begin receiving relevant founder introduction requests.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {data.onboardingChecklist.map((step, idx) => (
+              <div
+                key={step.id}
+                className="p-5 rounded-2xl border border-hairline bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
+                <div className="flex items-start gap-3">
                   <div
-                    className={styles.scoreBar}
-                    style={{ width: `${(f.score / 5) * 100}%` }}
-                  />
+                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 font-mono text-xs font-semibold ${step.completed
+                        ? 'bg-status-success text-white'
+                        : 'bg-fill text-text-secondary'
+                      }`}
+                  >
+                    {step.completed ? (
+                      <CheckIcon className="w-3.5 h-3.5" />
+                    ) : (
+                      idx + 1
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-ink text-sm sm:text-base">
+                      {step.title}
+                    </h3>
+                    <p className="text-xs text-text-secondary max-w-xl">
+                      {step.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="self-end sm:self-auto shrink-0">
+                  {step.completed ? (
+                    <Badge variant="success">Completed</Badge>
+                  ) : (
+                    <Link href={step.href}>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="text-xs min-h-[44px] sm:min-h-[36px]"
+                      >
+                        {step.actionLabel}
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-              <div className={styles.similarityCol}>
-                <span className={styles.similarityPercent}>{f.similarity}% similarity</span>
-                <div className={styles.fitTagsRow}>
-                  <span className={styles.fitPill}>Thesis fit</span>
-                  <span className={styles.fitPill}>Stage fit</span>
-                </div>
+      {/* MODAL 1: Request Details Dialog */}
+      <Dialog
+        open={!!selectedRequest}
+        onOpenChange={(open) => !open && setSelectedRequest(null)}
+        title={
+          selectedRequest ? (
+            <div className="space-y-1">
+              <span className="font-mono text-xs uppercase tracking-[0.05em] text-accent font-semibold">
+                Inbound founder introduction request
+              </span>
+              <h3 className="text-xl font-bold text-ink">
+                {selectedRequest.startupName}
+              </h3>
+            </div>
+          ) : null
+        }
+      >
+        {selectedRequest && (
+          <div className="space-y-5 pt-2">
+            <div className="p-3 bg-fill/60 rounded-xl space-y-1 border border-hairline-subtle text-xs text-text-secondary">
+              <p>
+                <strong className="text-ink">Founder:</strong>{' '}
+                {selectedRequest.founderName}
+              </p>
+              <p>
+                <strong className="text-ink">Venture:</strong>{' '}
+                {selectedRequest.sectorAndStage} · {selectedRequest.city}
+              </p>
+              <p>
+                <strong className="text-ink">Received:</strong>{' '}
+                {selectedRequest.requestedAt}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-bold text-xs uppercase font-mono tracking-wider text-text">
+                Request note
+              </h4>
+              <p className="text-sm text-text-secondary leading-relaxed bg-card p-3 rounded-xl border border-hairline">
+                {selectedRequest.requestNote}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-bold text-xs uppercase font-mono tracking-wider text-text">
+                Proposed discussion topics
+              </h4>
+              <ul className="space-y-1.5 text-xs text-text-secondary list-disc pl-4">
+                {selectedRequest.discussionTopics.map((topic, i) => (
+                  <li key={i}>{topic}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="p-3 rounded-xl bg-fill/50 border border-hairline-subtle space-y-1">
+              <p className="text-xs text-text-secondary">
+                {selectedRequest.simulationSummary}
+              </p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.05em] text-text-muted">
+                Written by a language model simulation
+              </p>
+            </div>
+
+            {/* Contact Details Privacy Notice */}
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-accent-wash border border-accent/20 text-xs text-accent-deep">
+              <LockIcon className="w-4 h-4 shrink-0" />
+              <span>Contact details stay hidden until both sides accept.</span>
+            </div>
+
+            {/* Dialog Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-hairline">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedRequest(null)}
+                className="text-xs min-h-[44px] sm:min-h-[36px]"
+              >
+                Close
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleDeclineRequest(selectedRequest.id)}
+                className="text-xs min-h-[44px] sm:min-h-[36px]"
+              >
+                Decline
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleAcceptRequest(selectedRequest.id)}
+                className="text-xs min-h-[44px] sm:min-h-[36px]"
+              >
+                Accept request
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+
+      {/* MODAL 2: Founder Match Details Dialog */}
+      <Dialog
+        open={!!selectedMatch}
+        onOpenChange={(open) => !open && setSelectedMatch(null)}
+        title={
+          selectedMatch ? (
+            <div className="space-y-1">
+              <span className="font-mono text-xs uppercase tracking-[0.05em] text-accent font-semibold">
+                Founder carnet preview
+              </span>
+              <h3 className="text-xl font-bold text-ink">
+                {selectedMatch.founderName} · {selectedMatch.startupName}
+              </h3>
+            </div>
+          ) : null
+        }
+      >
+        {selectedMatch && (
+          <div className="space-y-5 pt-2">
+            <div className="flex items-center justify-between p-3 bg-fill/60 rounded-xl border border-hairline-subtle">
+              <div className="text-xs text-text-secondary">
+                <p>
+                  <strong className="text-ink">Sector & Stage:</strong>{' '}
+                  {selectedMatch.sector} · {selectedMatch.stage}
+                </p>
+                <p>
+                  <strong className="text-ink">Location:</strong>{' '}
+                  {selectedMatch.city}
+                </p>
               </div>
+              <div className="flex flex-col items-end gap-1">
+                <Badge variant="accent">
+                  {selectedMatch.similarityScore}%
+                </Badge>
+                <span className="font-mono text-[9px] uppercase tracking-wider text-text-muted">
+                  Profile similarity
+                </span>
+              </div>
+            </div>
 
-              <div className={styles.actionButtons}>
-                <Button variant="secondary" size="sm" onClick={() => alert(`View ${f.name}`)}>
-                  View founder
-                </Button>
+            <div className="space-y-2">
+              <h4 className="font-bold text-xs uppercase font-mono tracking-wider text-text">
+                Thesis alignment analysis
+              </h4>
+              <p className="text-sm text-text-secondary leading-relaxed bg-card p-3 rounded-xl border border-hairline">
+                {selectedMatch.simulationContext}
+              </p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.05em] text-text-muted">
+                Written by a language model simulation
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {selectedMatch.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 rounded-pill bg-fill text-text-secondary font-mono text-[11px]"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-accent-wash border border-accent/20 text-xs text-accent-deep">
+              <LockIcon className="w-4 h-4 shrink-0" />
+              <span>Contact details stay hidden until both sides accept.</span>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-hairline">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedMatch(null)}
+                className="text-xs min-h-[44px] sm:min-h-[36px]"
+              >
+                Close
+              </Button>
+              {introRequestedMatches[selectedMatch.id] ? (
+                <Badge variant="success">Introduction requested</Badge>
+              ) : (
                 <Button
                   variant="primary"
                   size="sm"
-                  disabled={requestedIds.includes(f.rank)}
-                  onClick={() => handleRequest(f.rank)}
+                  onClick={() => {
+                    handleRequestIntroduction(selectedMatch.id);
+                  }}
+                  className="text-xs min-h-[44px] sm:min-h-[36px]"
                 >
-                  {requestedIds.includes(f.rank) ? 'Requested' : 'Request match'}
+                  Request introduction
                 </Button>
-              </div>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }
