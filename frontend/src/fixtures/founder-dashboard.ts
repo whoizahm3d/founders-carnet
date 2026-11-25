@@ -17,8 +17,6 @@ export interface FounderCompanyMeta {
   cohortTarget?: string;
   activeCorridors?: string;
   isVerified: boolean;
-  verificationBadgeText: string;
-  verificationSubline: string;
 }
 
 export interface RubricDimension {
@@ -101,8 +99,6 @@ export const INITIAL_FOUNDER_DASHBOARD_DATA: FounderDashboardData = {
     sectorAndStage: 'Seed fintech, Karachi',
     hubLocation: 'Karachi Hub',
     isVerified: true,
-    verificationBadgeText: 'Verified profile',
-    verificationSubline: 'Verified profile',
   },
   readiness: {
     compositeScore: 3.1,

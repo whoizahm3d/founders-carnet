@@ -75,24 +75,37 @@ export default function MentorDashboardPage() {
 
   return (
     <div className="flex flex-col w-full max-w-[1200px] mx-auto space-y-8 pb-12 antialiased">
-      {/* 1. Sub-Header Bar: Breadcrumb and View Mode Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-pill bg-white/95 backdrop-blur-md border border-hairline-subtle shadow-sm self-start">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-          <span className="font-mono text-xs uppercase tracking-[0.05em] text-text font-medium">
-            Mentor
+      {/* 1. Sub-Header Bar: View Mode Switcher and Availability Toggle */}
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+        {/* Availability Toggle */}
+        <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-pill border border-hairline-subtle shadow-sm">
+          <span className="font-mono text-xs uppercase tracking-[0.05em] font-semibold text-ink select-none">
+            Open to new mentees
           </span>
-          <span className="text-text-muted text-xs font-mono">/</span>
-          <span className="font-mono text-xs uppercase tracking-[0.05em] text-ink font-bold">
-            Dashboard
-          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={openToMentees}
+            onClick={() => setOpenToMentees((prev) => !prev)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${
+              openToMentees ? 'bg-accent' : 'bg-disabled'
+            }`}
+          >
+            <span className="sr-only">Toggle mentee availability</span>
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                openToMentees ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
         </div>
 
         {/* View Mode Switcher */}
         <div
           role="group"
           aria-label="Dashboard view mode"
-          className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1.5 rounded-pill border border-hairline-subtle shadow-sm self-start sm:self-auto"
+          className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1.5 rounded-pill border border-hairline-subtle shadow-sm"
         >
           <button
             type="button"
@@ -124,42 +137,6 @@ export default function MentorDashboardPage() {
         aria-labelledby="mentor-welcome-heading"
         className="flex flex-col gap-4 text-white"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-pill bg-white/95 backdrop-blur border border-hairline-subtle shadow-sm self-start">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
-            </span>
-            <span className="font-mono text-xs uppercase tracking-[0.05em] font-bold text-accent-deep">
-              {data.profile.verificationBadgeText}
-            </span>
-          </div>
-
-          {/* Availability Toggle */}
-          <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2 rounded-pill border border-hairline-subtle shadow-sm self-start sm:self-auto">
-            <span className="font-mono text-xs uppercase tracking-[0.05em] font-semibold text-ink select-none">
-              Open to new mentees
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={openToMentees}
-              onClick={() => setOpenToMentees((prev) => !prev)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${
-                openToMentees ? 'bg-accent' : 'bg-disabled'
-              }`}
-            >
-              <span className="sr-only">Toggle mentee availability</span>
-              <span
-                aria-hidden="true"
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  openToMentees ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
         <div className="flex flex-col gap-2 max-w-3xl">
           <h1
             id="mentor-welcome-heading"

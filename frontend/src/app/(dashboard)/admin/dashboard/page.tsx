@@ -92,24 +92,13 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col w-full max-w-[1200px] mx-auto space-y-8 pb-12 antialiased">
-      {/* 1. Sub-Header Bar: Breadcrumb and View Mode Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-pill bg-white/95 backdrop-blur-md border border-hairline-subtle shadow-sm self-start">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-          <span className="font-mono text-xs uppercase tracking-[0.05em] text-text font-medium">
-            Admin
-          </span>
-          <span className="text-text-muted text-xs font-mono">/</span>
-          <span className="font-mono text-xs uppercase tracking-[0.05em] text-ink font-bold">
-            Dashboard
-          </span>
-        </div>
-
+      {/* 1. Sub-Header Bar: View Mode Switcher */}
+      <div className="flex justify-end pt-2">
         {/* View Mode Switcher */}
         <div
           role="group"
           aria-label="Admin console view mode"
-          className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1.5 rounded-pill border border-hairline-subtle shadow-sm self-start sm:self-auto"
+          className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1.5 rounded-pill border border-hairline-subtle shadow-sm"
         >
           <button
             type="button"
@@ -141,16 +130,6 @@ export default function AdminDashboardPage() {
         aria-labelledby="admin-welcome-heading"
         className="flex flex-col gap-4 text-white"
       >
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-pill bg-white/95 backdrop-blur border border-hairline-subtle shadow-sm self-start">
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
-          </span>
-          <span className="font-mono text-xs uppercase tracking-[0.05em] font-bold text-accent-deep">
-            {data.profile.consoleBadgeText}
-          </span>
-        </div>
-
         <div className="flex flex-col gap-2 max-w-3xl">
           <h1
             id="admin-welcome-heading"
