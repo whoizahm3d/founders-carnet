@@ -2,6 +2,23 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-26: Landing page Product preview section with five role dashboard switcher
+
+- **Feature and IDs:** Public Landing Page Product preview, FR-22, NFR-4, NFR-6, NFR-23.
+- **Built:**
+  - `frontend/src/components/landing/ProductPreview.tsx`: Client component implementing Section 6 Product preview with anchor `#preview`. Features a five-tab role switcher (Founders, Talent, Mentors, Investors, Admin; default Founders) inside a single glass frame with warm glow backing. Includes accessible `role="tablist"`, `role="tab"`, and `role="tabpanel"` semantics, roving `tabIndex`, full keyboard navigation (ArrowLeft, ArrowRight, Home, End), 44px mobile touch targets, 2px focus ring, CSS-only reduced-motion support (`motion-reduce:transition-none`), individual descriptive alt texts per role dashboard, and sample data disclosure caption "Screens show sample data." below the frame.
+  - `frontend/src/app/page.tsx`: Embedded `ProductPreview` as Section 6 with anchor `#preview` between Roles (Section 5) and Principles (Section 7). Nav and footer links preserve matching anchor targets.
+  - `frontend/public/previews/`: Previews directory hosting static high-resolution desktop captures for each role (`founder_dashboard_1440.png`, `talent_dashboard_1440.png`, `mentor_dashboard_1440.png`, `investor_dashboard_1440.png`, `admin_dashboard_1440.png`). Founder preview loads with priority; other tabs use lazy loading.
+  - `scripts/capture_landing_preview.mjs`: Standalone multi-breakpoint screenshot capture and verification script. Starts Next.js production server with `NEXT_PUBLIC_HIDE_MOCK_BANNER=true` on port 3000, evaluates text and accessibility guards, captures 11 clipped and full-page artifacts into `frontend/screenshots/`, and cleanly releases port 3000.
+- **Tested:**
+  - `npm run lint`: 0 errors.
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run build`: 27 of 27 static routes generated successfully.
+  - `npm run test:e2e`: All 38 Playwright tests passed.
+  - `capture_landing_preview.mjs`: Verified heading "A look inside the workspace.", 5 ARIA tabs, single initial active tab, keyboard navigation (ArrowRight, End, Home), caption "Screens show sample data.", absence of banned words and dashes, absence of horizontal overflow at 1440, 768, and 390, and 44px mobile touch targets. Note on image loading: the capture script's naturalWidth check for lazy-loaded mentor and investor images reads 0 when run right after a programmatic tab click during rapid automation, while the captured screenshots show them loaded and fully rendered.
+- **Cut or partial:** None.
+- **Differs from the report?** No. The report does not describe the landing page sections or visual previews.
+
 ## 2026-11-25: Admin dashboard rebuild, typed fixtures, and Playwright verification spec
 
 - **Feature and IDs:** Admin console and moderation dashboard, FR-21, FR-26, FR-7, NFR-6, FT-01, FT-04, FT-06, FT-09.

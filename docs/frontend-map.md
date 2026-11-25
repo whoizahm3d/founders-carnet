@@ -67,6 +67,12 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 
 ---
 
+## Landing Components (`src/components/landing/`)
+
+- **ProductPreview** `ProductPreview.tsx`: Section 6 Product preview with five role switcher tabs (Founders, Talent, Mentors, Investors, Admin; default Founders). Accessible `role="tablist"` / `role="tab"` / `role="tabpanel"` markup, roving `tabIndex`, arrow key and Home/End keyboard navigation, 44px mobile touch targets, 2px focus ring, and `Screens show sample data.` disclosure caption under the glass frame.
+
+---
+
 ## Auth, Nav and Fixtures
 
 - **`src/lib/auth.ts`**: `loginApi`, `registerApi`, `authStorage`, `buildMockUser`, `nameFromEmail` fallback; mock mode active when `NEXT_PUBLIC_USE_MOCK !== 'false'`
@@ -75,6 +81,32 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 - **`src/fixtures/founder-dashboard.ts`**: `INITIAL_FOUNDER_DASHBOARD_DATA` for `/founder/dashboard` (company meta, 7-dimension readiness rubric, next actions, pitch feedback logs, matches preview, onboarding checklist). `cohortTarget` and `activeCorridors` are optional fields. `hubLocation` is `'Karachi Hub'` (no stage suffix). Match tag ticker ranges use a hyphen separator (not an en dash). Pitch feedback `gainNote` fields use `'Focus area: ...'` format without numeric deltas. Mentor match 2 updated to Asad Khan to prevent namespace collision with talent persona.
 - **`src/fixtures/talent-dashboard.ts`**: `INITIAL_TALENT_DASHBOARD_DATA` for `/talent/dashboard` (Hamza Iqbal profile, Lahore, 3 operational counts: applications submitted, introductions accepted, startup matches; recommended roles with PKR salary ranges; tracked applications with Applied/In review/Introduction accepted statuses; founding team matches; resume analysis with mandatory simulation notice; onboarding checklist).
 - **`src/fixtures/admin-dashboard.ts`**: `INITIAL_ADMIN_DASHBOARD_DATA` for `/admin/dashboard` (Maryam Siddiqui profile, Karachi, operational counts derived from fixtures: escalated profiles, active appeals, decided today; Munshi Books / Bilal Ahmed and Chenab Pay / Daniyal Shah escalation cards; Nida Farooq talent appeal card; recent determinations audit list; zero contact details).
+
+---
+
+## Public Landing Page (`/`)
+
+**File:** `frontend/src/app/page.tsx`
+
+**Static Assets (`frontend/public/previews/`):**
+Desktop dashboard captures (1440px wide) used by `ProductPreview.tsx`:
+- `founder_dashboard_1440.png` (loaded with priority)
+- `talent_dashboard_1440.png` (lazy loaded)
+- `mentor_dashboard_1440.png` (lazy loaded)
+- `investor_dashboard_1440.png` (lazy loaded)
+- `admin_dashboard_1440.png` (lazy loaded)
+
+**Sections in order:**
+1. Glass pill nav (`#top`): logo, anchor links, Karachi time, Sign in, Create account. Mobile menu trigger.
+2. Hero (`#hero`): headline with Instrument Serif italic, subline, CTA buttons, floating glass note cards.
+3. What it is (`#what-it-is`): core problem, platform role, exclusions statement.
+4. How it works (`#how-it-works`): four numbered hairline rows with arrow badge hover.
+5. Roles (`#roles`): four role capability rows (Founders, Talent, Mentors, Investors).
+6. Product preview (`#preview`): five-tab role switcher (Founders, Talent, Mentors, Investors, Admin) inside a single glass frame over soft glow, with sample data notice.
+7. Principles (`#principles`): ink panel with four core commitments.
+8. FAQ (`#faq`): five expandable hairline rows.
+9. Contact (`#contact`): two-column section with white message form card.
+10. Closing and footer: closing headline, Create account action, and full PublicFooter ink band.
 
 ---
 

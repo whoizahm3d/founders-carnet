@@ -1,5 +1,18 @@
 # Decisions log
 
+## 2026-11-26: Landing page Product preview role switcher architecture
+
+**Context:** The landing page Section 6 (#preview) required a product preview demonstrating the workspace. DESIGN.md originally envisioned a single glass-framed image of the Founder dashboard screen.
+
+**Decision:**
+Implemented a role switcher presenting five distinct dashboard tabs (Founders, Talent, Mentors, Investors, Admin; default Founders) within one single glass frame:
+1. Five real dashboards: The platform serves five distinct user roles with dedicated interfaces. Showing only the founder dashboard obscured the talent job board, mentor advisory queue, investor dealflow, and admin review console.
+2. Single glass frame: Rather than a grid of five separate cards, only one dashboard image is visible at a time inside the glass frame, preserving the intentional visual focus, soft glow composition, and clean whitespace mandated by DESIGN.md.
+3. Accessible tablist pattern: Accessible keyboard navigation (ArrowLeft and ArrowRight, Home, End), roving tabIndex, 44px touch targets on mobile, 2px focus ring, and motion-reduce:transition-none styling.
+4. Transparency notice: Added "Screens show sample data." below the frame to state clearly that the names and metrics are fictional sample data.
+
+**Why:** Gives prospective users an honest, representative view of all five workspaces while maintaining a single focal point and zero visual clutter.
+
 ## 2026-11-25: Admin dashboard architecture, typed fixtures, and finality rule consistency
 
 **Context:** The admin console (/admin/dashboard) needed implementation to match DESIGN.md v3.9.2, the design reference `admin_console`, and consistency with the mentor and investor dashboards.
