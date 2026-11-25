@@ -17,6 +17,7 @@
  *   admin_dashboard_full_1440.png   viewport height set to document scrollHeight at 1440 wide
  *   admin_inspect_dialog_1440.png   Inspect details dialog open, viewport 1440x1200
  *   admin_confirm_dialog_1440.png   Confirm decision dialog open, viewport 1440x1200
+ *   admin_appeals_1440.png          Appeals review view full height, viewport 1440x900
  *   admin_dashboard_390_top.png     viewport 390x844, top of page
  *   admin_dashboard_768_top.png     viewport 768x1024, top of page
  */
@@ -314,9 +315,13 @@ async function run() {
     // ---------------------------------------------------------------- //
     // 5. admin_confirm_dialog_1440.png  -- Confirm decision dialog open
     // ---------------------------------------------------------------- //
-    console.log('[5/7] admin_confirm_dialog_1440.png  (Confirm decision dialog open, 1440x1200)');
+    console.log('[5/8] admin_confirm_dialog_1440.png  (Confirm decision dialog open, 1440x1200)');
     {
       const { context, page, errors } = await signInAsAdmin(browser, 1440, 1200);
+
+      const reasonInput = page.locator('textarea').first();
+      await reasonInput.waitFor({ state: 'visible', timeout: 8000 });
+      await reasonInput.fill('Manual verification check completed');
 
       const rejectBtn = page.locator('button:has-text("Reject")').first();
       await rejectBtn.waitFor({ state: 'visible', timeout: 8000 });
@@ -335,9 +340,37 @@ async function run() {
     }
 
     // ---------------------------------------------------------------- //
-    // 6. admin_dashboard_390_top.png  -- viewport 390x844
+    // 6. admin_appeals_1440.png  -- Appeals review tab clicked, viewport 1440x900 full height
     // ---------------------------------------------------------------- //
-    console.log('[6/7] admin_dashboard_390_top.png  (viewport 390x844, deviceScaleFactor 2)');
+    console.log('[6/8] admin_appeals_1440.png  (Appeals review view, viewport 1440x900, full height)');
+    {
+      const { context, page, errors } = await signInAsAdmin(browser, 1440, 900);
+      const appealsTab = page.locator('button:has-text("Appeals review")').first();
+      await appealsTab.waitFor({ state: 'visible', timeout: 8000 });
+      await appealsTab.click();
+      await page.waitForTimeout(600);
+
+      const docHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+      await page.setViewportSize({ width: 1440, height: docHeight });
+      await page.waitForTimeout(500);
+
+      const scroll = await measureScroll(page);
+      const isOverflow = scroll.scrollWidth > scroll.innerWidth;
+      overflowResults['admin_appeals_1440.png'] = { ...scroll, overflow: isOverflow };
+      console.log(`  docHeight=${docHeight}  scrollWidth=${scroll.scrollWidth}  innerWidth=${scroll.innerWidth}  overflow=${isOverflow}`);
+
+      const fp = path.join(OUT_DIR, 'admin_appeals_1440.png');
+      await page.screenshot({ path: fp, fullPage: true });
+      const { w, h } = pngDims(fp);
+      console.log(`  Saved: admin_appeals_1440.png  (${w}x${h} px)`);
+      if (errors.length) console.warn(`  Console errors: ${errors.join(' | ')}`);
+      await context.close();
+    }
+
+    // ---------------------------------------------------------------- //
+    // 7. admin_dashboard_390_top.png  -- viewport 390x844
+    // ---------------------------------------------------------------- //
+    console.log('[7/8] admin_dashboard_390_top.png  (viewport 390x844, deviceScaleFactor 2)');
     {
       const { context, page, errors } = await signInAsAdmin(browser, 390, 844);
 
@@ -355,9 +388,9 @@ async function run() {
     }
 
     // ---------------------------------------------------------------- //
-    // 7. admin_dashboard_768_top.png  -- viewport 768x1024
+    // 8. admin_dashboard_768_top.png  -- viewport 768x1024
     // ---------------------------------------------------------------- //
-    console.log('[7/7] admin_dashboard_768_top.png  (viewport 768x1024, deviceScaleFactor 2)');
+    console.log('[8/8] admin_dashboard_768_top.png  (viewport 768x1024, deviceScaleFactor 2)');
     {
       const { context, page, errors } = await signInAsAdmin(browser, 768, 1024);
 

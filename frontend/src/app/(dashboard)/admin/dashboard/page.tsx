@@ -244,13 +244,6 @@ export default function AdminDashboardPage() {
                 Review escalated profiles and appeals. Rejection is final. Manual verification required for flagged profiles.
               </p>
             </div>
-
-            <div className="pt-2 border-t border-ink-border/60">
-              <div className="flex items-center gap-2 text-xs font-mono text-white/60 uppercase tracking-[0.05em]">
-                <span className="w-2 h-2 rounded-full bg-accent-soft" />
-                Standard queue active
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -265,10 +258,10 @@ export default function AdminDashboardPage() {
             <div className="flex items-center gap-3">
               <h2
                 id="escalations-heading"
-                className="text-2xl sm:text-3xl font-bold text-ink tracking-tight font-sans"
+                className="text-2xl sm:text-3xl font-bold text-white tracking-tight font-sans"
               >
                 Active human{' '}
-                <span className="font-serif italic font-normal text-accent">
+                <span className="font-serif italic font-normal text-carnet-yellow">
                   escalations
                 </span>
               </h2>
@@ -276,7 +269,7 @@ export default function AdminDashboardPage() {
                 {escalatedCount} pending
               </span>
             </div>
-            <p className="text-xs font-mono uppercase tracking-[0.05em] text-text-secondary">
+            <p className="text-xs font-mono uppercase tracking-[0.05em] text-white/90">
               Contact details stay hidden until both sides accept.
             </p>
           </div>
@@ -285,6 +278,7 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {data.escalatedProfiles.map((item) => {
               const isDecided = decisions[item.id];
+              const hasReason = Boolean(reasons[item.id]?.trim());
               return (
                 <article
                   key={item.id}
@@ -406,33 +400,43 @@ export default function AdminDashboardPage() {
                             placeholder="Enter reason for decision..."
                             className="w-full px-3.5 py-2.5 rounded-xl border border-input-border text-sm font-sans text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent bg-white transition"
                           />
+                          {!hasReason && (
+                            <p className="text-xs text-text-muted font-sans italic">
+                              Add a reason to continue.
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-                          <button
+                          <Button
                             type="button"
+                            variant="secondary"
+                            size="sm"
                             onClick={() => setInspectItem(item)}
-                            className="px-4 py-2.5 rounded-pill border border-hairline text-xs font-mono uppercase tracking-[0.05em] text-ink font-semibold hover:bg-fill transition min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent text-center"
                           >
                             Inspect details
-                          </button>
+                          </Button>
 
                           <div className="flex items-center gap-3">
-                            <button
+                            <Button
                               type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={!hasReason}
                               onClick={() =>
                                 initiateDecision(item.id, item.name, 'rejected', false)
                               }
-                              className="px-4 py-2.5 rounded-pill border border-error text-xs font-mono uppercase tracking-[0.05em] text-error font-semibold hover:bg-error-wash transition min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-error"
+                              className="border-error text-error hover:bg-error-wash active:bg-error-wash focus:ring-error"
                             >
                               Reject
-                            </button>
+                            </Button>
 
                             <Button
                               type="button"
                               variant="primary"
                               size="sm"
                               hasBadge
+                              disabled={!hasReason}
                               onClick={() =>
                                 initiateDecision(item.id, item.name, 'approved', false)
                               }
@@ -464,10 +468,10 @@ export default function AdminDashboardPage() {
             <div className="flex items-center gap-3">
               <h2
                 id="appeals-heading"
-                className="text-2xl sm:text-3xl font-bold text-ink tracking-tight font-sans"
+                className="text-2xl sm:text-3xl font-bold text-white tracking-tight font-sans"
               >
                 Appeals{' '}
-                <span className="font-serif italic font-normal text-accent">
+                <span className="font-serif italic font-normal text-carnet-yellow">
                   adjudication
                 </span>
               </h2>
@@ -475,7 +479,7 @@ export default function AdminDashboardPage() {
                 {appealsCount} active
               </span>
             </div>
-            <p className="text-xs font-mono uppercase tracking-[0.05em] text-text-secondary">
+            <p className="text-xs font-mono uppercase tracking-[0.05em] text-white/90">
               Contact details stay hidden until both sides accept.
             </p>
           </div>
@@ -484,6 +488,7 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {data.appeals.map((appeal) => {
               const isDecided = decisions[appeal.id];
+              const hasAppealReason = Boolean(reasons[appeal.id]?.trim());
               return (
                 <article
                   key={appeal.id}
@@ -611,33 +616,43 @@ export default function AdminDashboardPage() {
                             placeholder="Enter reason for appeal determination..."
                             className="w-full px-3.5 py-2.5 rounded-xl border border-input-border text-sm font-sans text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent bg-white transition"
                           />
+                          {!hasAppealReason && (
+                            <p className="text-xs text-text-muted font-sans italic">
+                              Add a reason to continue.
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
-                          <button
+                          <Button
                             type="button"
+                            variant="secondary"
+                            size="sm"
                             onClick={() => setInspectItem(appeal)}
-                            className="px-4 py-2.5 rounded-pill border border-hairline text-xs font-mono uppercase tracking-[0.05em] text-ink font-semibold hover:bg-fill transition min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent text-center"
                           >
                             Inspect details
-                          </button>
+                          </Button>
 
                           <div className="flex items-center gap-3">
-                            <button
+                            <Button
                               type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={!hasAppealReason}
                               onClick={() =>
                                 initiateDecision(appeal.id, appeal.name, 'rejected', true)
                               }
-                              className="px-4 py-2.5 rounded-pill border border-error text-xs font-mono uppercase tracking-[0.05em] text-error font-semibold hover:bg-error-wash transition min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-error"
+                              className="border-error text-error hover:bg-error-wash active:bg-error-wash focus:ring-error"
                             >
                               Reject
-                            </button>
+                            </Button>
 
                             <Button
                               type="button"
                               variant="primary"
                               size="sm"
                               hasBadge
+                              disabled={!hasAppealReason}
                               onClick={() =>
                                 initiateDecision(appeal.id, appeal.name, 'approved', true)
                               }
@@ -749,16 +764,18 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-hairline-subtle">
-            <button
-              type="button"
-              onClick={() => setPendingAction(null)}
-              className="px-4 py-2 rounded-pill border border-hairline text-xs font-mono uppercase tracking-[0.05em] text-text hover:bg-fill transition min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              Cancel
-            </button>
             <Button
               type="button"
-              variant={pendingAction?.decision === 'rejected' ? 'secondary' : 'primary'}
+              variant="secondary"
+              size="sm"
+              onClick={() => setPendingAction(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
               onClick={confirmDecision}
             >
               Confirm determination
@@ -842,13 +859,14 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="flex justify-end pt-2 border-t border-hairline-subtle">
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="sm"
                 onClick={() => setInspectItem(null)}
-                className="px-5 py-2 rounded-pill bg-ink text-white text-xs font-mono uppercase tracking-[0.05em] font-semibold hover:bg-ink-raised transition min-h-[44px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 Close inspection
-              </button>
+              </Button>
             </div>
           </div>
         )}
