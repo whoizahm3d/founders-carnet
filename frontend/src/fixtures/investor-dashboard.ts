@@ -13,7 +13,6 @@ export interface InvestorProfileMeta {
   fullName: string;
   roleTitle: string;
   location: string;
-  verificationBadgeText: string;
   thesis: {
     sectors: string[];
     stages: string[];
@@ -79,7 +78,6 @@ export const INITIAL_INVESTOR_DASHBOARD_DATA: InvestorDashboardData = {
     fullName: 'Sana Rauf',
     roleTitle: 'Angel Investor',
     location: 'Karachi',
-    verificationBadgeText: 'Verified profile',
     thesis: {
       sectors: ['Fintech', 'Digital commerce'],
       stages: ['Pre-seed'],

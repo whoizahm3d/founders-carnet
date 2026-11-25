@@ -14,6 +14,8 @@ colors:
   accent-deep: "#964E22"
   accent-wash: "#F8EDE5"
   accent-soft: "#D48B5D"
+  carnet-yellow: "#F5C842"
+  carnet-dark: "#130100"
   text: "#0A0A0A"
   text-secondary: "#52525B"
   text-muted: "#71717A"
@@ -58,7 +60,7 @@ glass:
 
 # Palette lock (read first)
 
-These are the only colors allowed in the UI: canvas #FAF9F7, fill #F1F0EE, card #FFFFFF, trough #E8E6E1, ink #0A0A0A, ink raised #171717, ink border #262626, accent #B15F2C, accent deep #964E22, accent wash #F8EDE5, text #0A0A0A, #52525B, #71717A, hairlines #E2DFD9, #E6E5E2 and #ECEAE5, disabled fill #E3E2DF, input border #8D8D8D, and the three status pairs below.
+These are the only colors allowed in the UI: canvas #FAF9F7, fill #F1F0EE, card #FFFFFF, trough #E8E6E1, ink #0A0A0A, ink raised #171717, ink border #262626, accent #B15F2C, accent deep #964E22, accent wash #F8EDE5, carnet-yellow #F5C842, carnet-dark #130100, text #0A0A0A, #52525B, #71717A, hairlines #E2DFD9, #E6E5E2 and #ECEAE5, disabled fill #E3E2DF, input border #8D8D8D, and the three status pairs below. carnet-dark #130100 is used for the deep dark anchor stops (70% and 100%) of the shared page artwork gradient.
 
 Use no color outside this list anywhere, including buttons, chips, icons, outlines, selected states and focus rings. The design system theme in the tool must use these values (primary #B15F2C, secondary #52525B, tertiary #964E22, neutral #71717A, background #FAF9F7) and Hanken Grotesk for headline, body and label. If the tool proposes its own theme colors, override them with these.
 
@@ -77,11 +79,20 @@ Icons are thin line icons, 16 to 20 px, bare (the same family on every screen). 
 
 # Page background (every screen, no exceptions)
 
-Every screen, desktop and mobile, uses this warm gradient as its page background, fixed behind the content (the same look as the current Founder, Investor and Admin dashboards): bright yellow glow at the top right, orange across the middle, red orange, then deep brown at the bottom left. Use this exact CSS and nothing else, with the same values on every screen:
+Every screen, desktop and mobile, uses this warm gradient as its page background, fixed behind the content (the same look as the current Founder, Investor and Admin dashboards): bright yellow glow at the top right, orange across the middle, red orange, then deep brown into carnet-dark at the bottom left. Defined as `--gradient-artwork` in `src/app/globals.css`:
 
-background: radial-gradient(circle at 85% 15%, #F5C842 0%, #FF8A2B 30%, #C4451A 55%, #3A1206 100%) fixed; min-height: 100vh;
+Desktop:
+background: radial-gradient(circle at 85% 15%, #FFF6E2 0%, #F5C842 8%, #FF8A2B 24%, #C4451A 38%, #3A1206 52%, #130100 70%, #130100 100%) fixed; min-height: 100vh;
 
-Do not substitute white, off white, peach, brown, tinted or lighter versions. Do not use photos or illustrations as the background. On mobile use the same gradient. Do not use a different size, position or color stops on any screen (no white highlight, no 120% size, no 90% 70% ellipse).
+Mobile (max-width: 1023px, origin shifts to top-right):
+background: radial-gradient(circle at 160% 0%, #FFF6E2 0%, #F5C842 8%, #FF8A2B 24%, #C4451A 38%, #3A1206 52%, #130100 70%, #130100 100%) fixed;
+
+Where it applies:
+- `body`: `background: var(--gradient-artwork) fixed; min-height: 100vh;` across every dashboard and public route.
+- `.bg-page-gradient`: fixed viewport layer (`position: fixed; inset: 0; z-index: -1; pointer-events: none;`) ensuring consistent rendering behind scrolling content on both desktop and mobile.
+- `.bg-hero-gradient`: full-bleed hero container on `/login`, `/register`, and the landing hero/closing sections.
+
+Do not substitute white, off white, peach, brown, tinted or lighter versions. Do not use photos or illustrations as the background. On mobile use the same gradient stops. Do not use a different size, position or color stops on any screen.
 
 Content never sits directly on the gradient except the greeting, a short subline, the nav pill, and the footer line, which are white text over the darker area. Everything else sits on white cards (#FFFFFF, radius 24, 1px #E6E5E2) or ink cards (#0A0A0A). Modals and drawers open over the blurred page. The nav pill and Karachi time chip are glass (white at 70 percent, blur 12). Accent #B15F2C is used on white and ink surfaces only, never on the gradient.
 
@@ -111,6 +122,7 @@ The Mentor dashboard is the accepted reference for simplicity. Every app screen 
 
 Structure to copy:
 - Floating white pill nav: logo and wordmark, a small role chip, centered nav pill with the active item in ink, a time chip and initials avatar on the right.
+- Right-aligned view switcher (Active dashboard vs First-time onboarding), plus the "Open to new mentees" availability toggle switch.
 - Greeting at 36 to 48 px weight 600 with a one or two line muted subline under it.
 - One ink card: a short headline on the left with a hairline divider and three plain stats under it (number 30 to 36 px, label 14 px, one muted line), and on the right a darker inner panel with the user's own tags and one white pill button.
 - Below, two columns. Left (wide): one white card with a title, one muted line, then rows divided by hairlines. Each row has a mono index (01, 02), the name in 18 px weight 600, small muted meta (founder, sector, stage, city), a "Profile similarity" line with the percentage, one sentence of context, 2 to 3 plain tags (squarish, #F1F0EE), and two buttons at the bottom right: a neutral pill ("View founder carnet") and an ink pill ("Review advisory request" with a small inline arrow glyph, no circle).
@@ -130,7 +142,7 @@ Rules that override the reference where it broke our rules (remove these from an
 
 The Founder's Carnet is a role based web app (founder, talent, mentor, investor, admin) with one AI engine behind it. It must feel like a serious, calm professional tool in a trust sensitive domain. Visual voice: editorial and print like, warm paper background, big confident headlines, ink black anchors, one burnt orange accent, lots of whitespace.
 
-This file replaces the earlier DESIGN.md and the Stitch exported "Editorial Sovereign" file. Layout, shapes and components follow the accepted Stitch prototypes. Content and claims rules follow the project docs. Where the Stitch export contradicted the project (compliance claims, sidebar, AI badge, invented statistics), this file wins.
+This file replaces the earlier DESIGN.md and the Stitch exported "Editorial Sovereign" file. Layout, shapes and components follow the accepted Stitch prototypes. Content and claims rules follow the project docs. Where the Stitch export contradicted the project (compliance claims, sidebar, AI claims, invented statistics), this file wins.
 
 Do not copy Lumora's name, logo, copy or imagery. Only the visual language is borrowed.
 
@@ -153,7 +165,7 @@ Honesty rules the UI must show:
 - Contact details stay hidden until mutual acceptance. Caption: "Contact details after mutual acceptance".
 - Verification is automated checks plus a human reviewer. Rejection is final after one appeal.
 
-Claims that must never appear: regulatory compliance or certification (no "SECP compliant", "PSEB certified", "PECA compliant"), security or encryption claims, "NFR" or any requirement IDs, "AI-generated" badges, invented statistics (cohort medians, deltas, funding figures, admission cohorts, registry status), jargon like "telemetry", "frontier", "syndicate", "sovereign", "dossier", "rig", and fake identifiers such as session IDs, hashes, NTN, CNIC, CUIN, case or batch numbers. No payments, brokerage, equity, legal or tax advice anywhere.
+Claims that must never appear: regulatory compliance or certification (no "SECP compliant", "PSEB certified", "PECA compliant"), security or encryption claims, "NFR" or any requirement IDs, "AI-generated" markers, invented statistics (cohort medians, deltas, funding figures, admission cohorts, registry status), jargon like "telemetry", "frontier", "syndicate", "sovereign", "dossier", "rig", and fake identifiers such as session IDs, hashes, NTN, CNIC, CUIN, case or batch numbers. No payments, brokerage, equity, legal or tax advice anywhere.
 
 # Colors
 
@@ -168,7 +180,7 @@ Light theme is the default. Cards are flat or glass. Allowed light effects: the 
 
 Dark mode (optional later): backgrounds only #000000, #181818, #1F1F1F, #272727, #313131. Accent becomes #CF8047.
 
-Sign-in artwork palette (artwork only, never UI color): #3A1206, #C4451A, #FF8A2B, #F5C842, highlight #FFF6E2. Warm light falling from the top right into deep shade at the bottom left, soft and grainless.
+Sign-in and page artwork palette (artwork only, never UI color): highlight #FFF6E2, #F5C842 (carnet-yellow), #FF8A2B, #C4451A, #3A1206, and #130100 (carnet-dark). Warm light falling from the top right into deep dark shade at the bottom left, soft and grainless.
 
 # Typography
 
@@ -188,7 +200,7 @@ Sizes follow the Tailwind scale only (12, 14, 16, 18, 20, 24, 30, 36, 48, 60).
 | Label | 14 / 20 | 600 | +1% | Buttons, nav, field labels |
 | Caption | 12 / 16 | 500 | +2% | Honesty captions, metadata, chips |
 
-Headings and body text are sentence case. Mono labels are uppercase. Headings have no trailing period except the sign-in headline. Page subtitle capped at 680 px. Honesty captions never drop below 12 px or 4.5:1 contrast. Chips and badges use 12 px, not 11.
+Headings and body text are sentence case. Mono labels are uppercase. Headings have no trailing period except the sign-in headline. Page subtitle capped at 680 px. Honesty captions never drop below 12 px or 4.5:1 contrast. Chips use 12 px, not 11.
 
 # Spacing, radius and layout
 
@@ -199,7 +211,8 @@ Radius: cards and major containers 24, inputs and small containers 12, buttons, 
 Layout:
 - Max content width 1280, centered. Margins 32 desktop, 24 tablet, 16 mobile.
 - Frames: 1440 desktop, 768 tablet, 390 mobile.
-- Dashboard: nav, greeting headline, one ink monolith card, a two column row, then an asymmetric card row (one featured, two smaller). No equal three card rows.
+- Dashboard header: floating glass pill nav (`TopNav`), then the right-aligned view switcher (Active dashboard vs First-time onboarding, or Active queue vs Appeals review on Admin; accompanied by the "Open to new mentees" availability switch on Mentor), then the headline (`Welcome back, <FirstName>` with the name in Instrument Serif italic #F5C842).
+- Dashboard body: one ink monolith card, a two column row, then an asymmetric card row (one featured, two smaller). No equal three card rows.
 - Do not use boxes inside boxes. Use hairline divided lists inside cards, not grey pill rows.
 
 # Navigation (no sidebar)
@@ -255,7 +268,7 @@ Page heading block: a small eyebrow only when it adds meaning (a 6 px dot plus a
 
 Modal: white, radius 24, max width 512, padding 24 to 32, close button 36 px circle in #F1F0EE top right, backdrop ink at 30 percent with 16 px blur. Fields use the input spec above, labels in sentence case 14 px. On mobile the modal sits at the bottom of the screen.
 
-Chips and badges: pill, 24 px high, caption style. Status chips use the wash colors with an icon. Entity tags use #F8EDE5 with #964E22 text. Squarer chips (8 px radius) are allowed for tags to avoid a wall of pills.
+Chips: pill, 24 px high, caption style. Status chips use the wash colors with an icon. Entity tags use #F8EDE5 with #964E22 text. Squarer chips (8 px radius) are allowed for tags to avoid a wall of pills.
 
 Readiness score card (flat ink monolith): greeting-sized number (Display 2 or larger) with "/ 5", a 1 to 5 ruler with tick marks and a marker pill reading the current value, the caption "A rubric guide, not a funding probability", and one pill button "Inspect rubric breakdown". Never show a probability, percentile or matrix.
 
@@ -285,11 +298,13 @@ The motion set is closed. Use only these and invent no others:
 
 # Sign in and Register
 
-One screen with two states (Login and Register tabs), built as two routes, /login and /register, linked by the tabs. Full bleed warm gradient artwork behind everything. The form is a solid white card (not glass) on the right, and the note card floats at a different height on the left. Left: top row with logo and name, a Display 1 headline "Introductions for Pakistan's startup ecosystem" with "Pakistan's startup ecosystem." in Instrument Serif italic at weight 400 (three words: the one exception to the last one or two words rule, used only on the Sign in, Register and Landing hero headline), the subline "A network that introduces founders, talent, mentors and investors across Karachi, Lahore and Islamabad. Contact details stay private until both sides accept.", and a dark translucent glass note card (ink at about 35 percent, blur 12, white text at 4.5:1 or better) with three short product notes and prev and next arrows (mutual consent introductions, profile similarity not success odds, human review of unclear profiles). No eyebrow pill, no city chips and no extra feature cards. Right: a white form card 480 px wide, radius 24, 64 px from the right edge at desktop, starting higher than the left block.
+One screen with two states (Login and Register tabs), built as two routes, /login and /register, linked by the tabs. Full bleed warm gradient artwork behind everything. The form is a solid white card (not glass) on the right, and the note card floats at a different height on the left. Top header on desktop (`hidden md:flex`): displays the inverted Logo on the left and a floating quick links glass pill on the right (`hidden lg:flex`). The pill shows three links: About (`/#what-it-is`), FAQ (`/#faq`), and Contact (`/#contact`). Style: `px-3 py-1 rounded-pill bg-white/70 backdrop-blur-glass border border-hairline/70 shadow-sm text-sm font-sans`, with link items in `px-2 py-1 rounded-pill text-ink hover:text-ink-raised font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ink`.
+
+Left: top row with logo and name, a Display 1 headline "Introductions for Pakistan's startup ecosystem" with "Pakistan's startup ecosystem." in Instrument Serif italic at weight 400 (three words: the one exception to the last one or two words rule, used only on the Sign in, Register and Landing hero headline), the subline "A network that introduces founders, talent, mentors and investors across Karachi, Lahore and Islamabad. Contact details stay private until both sides accept.", and a dark translucent glass note card (ink at about 35 percent, blur 12, white text at 4.5:1 or better) with three short product notes and prev and next arrows (mutual consent introductions, profile similarity not success odds, human review of unclear profiles). No eyebrow pill, no city chips and no extra feature cards. Right: a white form card 480 px wide, radius 24, 64 px from the right edge at desktop, starting higher than the left block.
 - Login: Welcome back, email, password, remember me, forgot password, Sign in pill, the social options, link to Register. No consent box and no step counter. No role picker. In mock mode a short banner appears and the role is chosen from the start of the email (founder, talent, mentor, investor or admin, default founder). Setting NEXT_PUBLIC_HIDE_MOCK_BANNER to true hides the banner on Sign in and Register, for report screenshots only. (The role picker and consent box belong to Register only.)
 - Register: Create account, email, password with a strength bar, role select (founder, talent, mentor, investor, never admin), ConsentBox, Create account pill (disabled until consent is checked), the social options, link to Sign in.
 - Social options, on both screens: "Continue with LinkedIn" as a full width outlined pill, then "Google" and "GitHub" as two half width outlined pills side by side below it. Icons are the official LinkedIn, Google and GitHub logos, used unmodified: taken from each provider's brand assets as inline SVG, never redrawn or recolored by hand (provider brand rules forbid it). They are the only third-party colors allowed in the app. The buttons stay disabled and keep the caption. All three are disabled until the backend supports them, with one short visible caption under the group ("Not available yet"). Remember me and forgot password are also visible but disabled with the same caption.
-- Footer on these screens: a flat ink (#0A0A0A) band with rounded top corners at the bottom of the page, white text, logo and name on the left and "© 2026 The Founder's Carnet" on the right. Privacy, Terms and Contact links are added when those pages exist. No status, compliance or security claims.
+- Footer on these screens and all role dashboards: uses the compact `PublicFooter` variant (`variant="compact"`, rendered in `DashboardLayout` and `AuthLayout`), a flat ink (`#0A0A0A`) band with rounded top corners (`rounded-t-card`) at the bottom of the page, z-index 10. Left: inverted logo with wordmark (`size={32}`), a bullet separator (`•`), and `© 2026 The Founder's Carnet` in JetBrains Mono 12px uppercase (`text-white/70`). Right: three compact links in Hanken Grotesk (`text-white/70 hover:text-white min-h-control px-2 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-control`): **Privacy** (`/privacy`), **Terms** (`/terms`), and **Contact** (`/#contact`). The landing page uses the default full `PublicFooter` variant (`variant="default"`), which adds `What it is`, `How it works`, and `Roles` alongside Contact, Privacy, and Terms. No status, compliance or security claims.
 - Alignment: at every breakpoint the logo, the headline block, the note card and the form card share one left edge and one right edge (a single column below lg). No block is inset relative to another.
 - Instrument Serif italic uses normal letter spacing, never negative tracking.
 - Mobile: the artwork shrinks to a header band above the form with the logo and a 36 px headline. The subline and the note card are hidden so the form is visible on the first screen at 390 px. No horizontal scroll, 48 px controls.
@@ -325,7 +340,7 @@ Keep content, fields, copy, navigation items and functionality of all 12 prototy
 6. Pitch feedback: session header with "Investor persona: Seed-stage fintech investor" and "Session 3 of 3", score and gaps
 7. Match feed: ranked match cards, filters as chips
 8. Talent dashboard and job board: job rows with hover fill and tags
-9. Mentor dashboard: verification banner and request rows
+9. Mentor dashboard: request rows, availability switch, and mentee list
 10. Investor dashboard: thesis summary, founder matches, request rows
 11. Admin console: one line of plain counts, review queue with status chips, review drawer
 12. Shared shell: top nav, mobile menu overlay

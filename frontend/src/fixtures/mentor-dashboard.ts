@@ -12,7 +12,6 @@ export interface MentorProfileMeta {
   fullName: string;
   roleTitle: string;
   location: string;
-  verificationBadgeText: string;
   openToMentees: boolean;
   expertiseAreas: string[];
 }
@@ -74,7 +73,6 @@ export const INITIAL_MENTOR_DASHBOARD_DATA: MentorDashboardData = {
     fullName: 'Asad Khan',
     roleTitle: 'Mentor, Ex-VP Product Finja',
     location: 'Karachi',
-    verificationBadgeText: 'Verified profile',
     openToMentees: true,
     expertiseAreas: [
       'B2B SaaS',

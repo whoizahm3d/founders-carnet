@@ -17,7 +17,6 @@ export interface AdminProfileMeta {
   fullName: string;
   roleTitle: string;
   location: string;
-  consoleBadgeText: string;
 }
 
 export interface AdminSignalItem {
@@ -85,7 +84,6 @@ export const INITIAL_ADMIN_DASHBOARD_DATA: AdminDashboardData = {
     fullName: 'Maryam Siddiqui',
     roleTitle: 'Platform Administrator',
     location: 'Karachi',
-    consoleBadgeText: 'Admin console',
   },
   escalatedProfiles: [
     {
