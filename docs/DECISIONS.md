@@ -1,5 +1,20 @@
 # Decisions log
 
+## 2026-11-25: Admin dashboard architecture, typed fixtures, and finality rule consistency
+
+**Context:** The admin console (/admin/dashboard) needed implementation to match DESIGN.md v3.9.2, the design reference `admin_console`, and consistency with the mentor and investor dashboards.
+
+**Decision:**
+1. Built `/admin/dashboard` using canonical Tailwind tokens and shared UI components (`Button`, `Badge`, `Dialog`), completely eliminating legacy CSS modules (`Dashboard.module.css`, `AdminQueue.module.css`).
+2. Created `src/fixtures/admin-dashboard.ts` using Maryam Siddiqui's persona: Platform Administrator, Karachi.
+3. Used purely fictional cast members: Munshi Books (Bilal Ahmed, Karachi, Seed), Chenab Pay (Daniyal Shah, Lahore, Seed), Nida Farooq (Senior Flutter Developer, Karachi), Mehran Works (Tariq Mehmood, Karachi, Pre-seed), and Bolan Commerce (Haris Khan, Karachi).
+4. Reconciled finality wording to strictly match what was in the existing page: "Review escalated profiles and appeals. Rejection is final." and "Rejection is final. The user cannot appeal."
+5. SECP status displayed strictly as a plain field label with "Provided" or "Not provided" with zero verification claims.
+6. Readiness scores carry the mandatory caption "A rubric guide, not a funding probability"; made-up profile strength percentages dropped; completeness retained only as from existing page.
+7. Verification policy panel text replaced with plain note on existing review rules.
+8. Added `admin: 'Maryam Siddiqui'` to `MOCK_DISPLAY_NAMES` in `src/lib/auth.ts`.
+
+
 ## 2026-11-24: Investor dashboard architecture, typed fixtures, and persona consistency
 
 **Context:** The investor dashboard (/investor/dashboard) needed implementation to match DESIGN.md v3.9.2, the design reference `investor_dashboard_sana_rauf`, and persona consistency with the founder dashboard.

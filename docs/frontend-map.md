@@ -74,6 +74,7 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 - **`src/context/AuthContext.tsx`**: `AuthProvider`, `AuthContext`, `useAuth`
 - **`src/fixtures/founder-dashboard.ts`**: `INITIAL_FOUNDER_DASHBOARD_DATA` for `/founder/dashboard` (company meta, 7-dimension readiness rubric, next actions, pitch feedback logs, matches preview, onboarding checklist). `cohortTarget` and `activeCorridors` are optional fields. `hubLocation` is `'Karachi Hub'` (no stage suffix). Match tag ticker ranges use a hyphen separator (not an en dash). Pitch feedback `gainNote` fields use `'Focus area: ...'` format without numeric deltas. Mentor match 2 updated to Asad Khan to prevent namespace collision with talent persona.
 - **`src/fixtures/talent-dashboard.ts`**: `INITIAL_TALENT_DASHBOARD_DATA` for `/talent/dashboard` (Hamza Iqbal profile, Lahore, 3 operational counts: applications submitted, introductions accepted, startup matches; recommended roles with PKR salary ranges; tracked applications with Applied/In review/Introduction accepted statuses; founding team matches; resume analysis with mandatory simulation notice; onboarding checklist).
+- **`src/fixtures/admin-dashboard.ts`**: `INITIAL_ADMIN_DASHBOARD_DATA` for `/admin/dashboard` (Maryam Siddiqui profile, Karachi, operational counts derived from fixtures: escalated profiles, active appeals, decided today; Munshi Books / Bilal Ahmed and Chenab Pay / Daniyal Shah escalation cards; Nida Farooq talent appeal card; recent determinations audit list; zero contact details).
 
 ---
 
@@ -160,6 +161,26 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 - Onboarding guide: 4-step actionable checklist (profile, thesis, requests, founders).
 - Privacy disclosure: "Contact details stay hidden until both sides accept." on all request cards, match sections, and dialogs. Zero contact details exposed.
 - State handling: Empty, loading, and error states supported.
+
+---
+
+## Admin Dashboard (`/admin/dashboard`)
+
+**File:** `frontend/src/app/(dashboard)/admin/dashboard/page.tsx`
+**Reference:** `frontend/design_reference/admin_console/`
+**Legacy CSS Modules:** `frontend/src/app/(dashboard)/admin/dashboard/AdminQueue.module.css`, `frontend/src/components/layout/Dashboard.module.css` (retained on disk, unimported)
+
+**Key architecture and features (2026-11-25):**
+- Breadcrumb: single white/95 glass pill "Admin / Dashboard" with `text-text` and `text-ink` labels.
+- View mode switcher: `Active queue` vs `Appeals review` (persists state locally without backend dependency).
+- Hero section: "Admin console" badge, "Welcome back, *Maryam*" with Instrument Serif italic on `Maryam` in `text-carnet-yellow` (`#F5C842`). Subtitle: "Platform Administrator · Karachi · Review escalated profiles and appeals. Rejection is final."
+- Ink Monolith Card: "Operational summary", plain counts derived strictly from fixture arrays (Escalated profiles, Appeals, Decided today), with a review protocol panel stating review rules strictly from existing page.
+- Escalation cards: "Active human *escalations*", cards for Munshi Books (Bilal Ahmed) and Chenab Pay (Daniyal Shah) with signals (LinkedIn, Link check, Completeness, SECP registration with plain Provided label), readiness score with caption "A rubric guide, not a funding probability", simulation notice *"Written by a language model simulation"*, reason input, inspect details dialog, and reject/approve actions with confirmation dialog.
+- Appeals adjudication: "Appeals *adjudication*", single appeal review for Nida Farooq (Talent profile, Karachi) with appeal statement, evidence files, signals, reason input, and uphold/approve actions.
+- Recent determinations: "Recent determinations", audit log of decisions made today.
+- Finality wording: strictly consistent ("Rejection is final." and "Rejection is final. The user cannot appeal.").
+- Privacy disclosure: "Contact details stay hidden until both sides accept." on all review cards, dialogs, and sections. Zero contact details exposed.
+- State handling: Local confirmation dialog for determinations, inspect details modal.
 
 ---
 
