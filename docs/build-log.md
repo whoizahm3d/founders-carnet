@@ -2,6 +2,20 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-25: Admin dashboard rebuild, typed fixtures, and Playwright verification spec
+
+- **Feature and IDs:** Admin console and moderation dashboard, FR-21, FR-26, FR-7, NFR-6, FT-01, FT-04, FT-06, FT-09.
+- **Built:**
+  - `frontend/src/fixtures/admin-dashboard.ts`: Strongly typed fixtures for admin profile (Maryam Siddiqui, Platform Administrator, Karachi), operational counts (escalated profiles, active appeals, decided today), escalated profiles (Munshi Books / Bilal Ahmed, Chenab Pay / Daniyal Shah) with signals, SECP status ("Provided"), and readiness rubric scores with mandatory caption; talent appeal (Nida Farooq) with candidate statement, evidence items, and signals (completeness 85%); and decided today logs (Mehran Works, Bolan Commerce). Zero raw contact details.
+  - `frontend/src/app/(dashboard)/admin/dashboard/page.tsx`: Full replacement of legacy CSS modules (`Dashboard.module.css`, `AdminQueue.module.css`) with canonical Tailwind tokens matching DESIGN.md v3.9.2 and the mentor/investor dashboard pattern. Features breadcrumb pill "Admin / Dashboard", view switcher between "Active queue" and "Appeals review", greeting with Instrument Serif italic yellow name, ink summary monolith card with plain counts and review protocol panel, active human escalations grid with inspect details and approve/reject actions with confirmation dialog, appeals review view, and recent determinations section.
+  - `frontend/src/lib/auth.ts`: Added admin entry `admin: 'Maryam Siddiqui'` to `MOCK_DISPLAY_NAMES`.
+  - `frontend/tests/ft-admin-dashboard.spec.ts`: Playwright test suite covering admin authentication landing and role redirect assertions (FT-01), viewport overflow checks across 390px, 768px, 1024px, and 1440px (FT-09), and language model attribution and contact privacy assertions (FT-04, FT-06).
+  - `scripts/capture_admin_dashboard.mjs`: Multi-breakpoint screenshot capture script with pre-capture text guards for required admin elements and forbidden words.
+- **Tested:** No test runners or builds executed per explicit instructions (test specs and capture script authored for user execution).
+- **Cut or partial:** Legacy CSS modules `Dashboard.module.css` and `AdminQueue.module.css` left unimported on disk for manual removal.
+- **Differs from the report?** Yes. Admin dashboard operates on typed fixtures and client state pending backend moderation and verification endpoints. Recorded in `docs/DECISIONS.md` and `docs/pending-report-changes.md`.
+
+
 ## 2026-11-24: Fixture text consistency adjustments
 
 - Replaced angel syndication with angel discussion in investor fixture; normalized Indus Logistics city to Lahore across investor and mentor fixtures.
