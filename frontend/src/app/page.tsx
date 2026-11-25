@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { ChevronDownIcon, ArrowRightIcon } from '@/components/ui/icons';
 import { PublicNav, PublicFooter } from '@/components/layout';
+import { ProductPreview } from '@/components/landing/ProductPreview';
 
 const PLATFORM_NOTES = [
   'Mutual consent introductions: Contact details remain hidden until both parties accept an introduction request.',
@@ -373,6 +374,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* 6. Product preview Section */}
+      <ProductPreview />
 
       {/* 7. Principles Section (flat ink monolith, single column below lg) */}
       <section id="principles" className="bg-canvas px-4 sm:px-6 md:px-16 py-16 lg:py-20">
