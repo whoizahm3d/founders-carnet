@@ -117,7 +117,7 @@ export const INITIAL_TALENT_DASHBOARD_DATA: TalentDashboardData = {
     {
       id: 'role-2',
       title: 'Senior Python / Go Engineer',
-      company: 'Finja',
+      company: 'Sindhu Pay',
       location: 'Lahore',
       stage: 'Series A',
       workType: 'Full-time',

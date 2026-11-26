@@ -89,9 +89,6 @@ export default function FounderDashboardPage() {
           aria-label="Dashboard view mode"
           className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md p-1.5 rounded-pill border border-hairline-subtle shadow-sm"
         >
-          <span className="font-mono text-xs uppercase tracking-[0.05em] text-text pl-2.5 pr-1 font-semibold select-none">
-            View:
-          </span>
           <button
             type="button"
             onClick={() => setViewMode('active')}

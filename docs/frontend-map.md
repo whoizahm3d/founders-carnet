@@ -145,7 +145,7 @@ Desktop dashboard captures (1440px wide) used by `ProductPreview.tsx`:
 - Hero section: "Welcome back, *Hamza*" with Instrument Serif italic on `Hamza` in `text-carnet-yellow` (`#F5C842`). Subtitle: "Backend developer, Lahore. Track your applications, interviews, and roles that match your profile across Pakistan."
 - Profile completeness: interactive bar and GitHub link modal triggering instant update to 100%.
 - Ink Monolith Card: "Operational summary", counts ledger (3 applications submitted, 1 introductions accepted, 8 startup matches) with active Lahore profile indicator.
-- Recommended roles: "Roles that match your *profile*", 4 roles (Munshi Books, Finja, Ravi Health, Mehran Works) with PKR salary ranges, profile similarity label shown once, and "Apply now" button with circular badge.
+- Recommended roles: "Roles that match your *profile*", 4 roles (Munshi Books, Sindhu Pay, Ravi Health, Mehran Works) with PKR salary ranges, profile similarity label shown once, and "Apply now" button with circular badge.
 - Role Details: reusable `Dialog` component displaying role summary, stack alignment, PKR range, and similarity.
 - Founding team matches: "Founding team *matches*", Pakistani startups looking for technical co-builders with introduction request actions.
 - Tracked applications: "Tracked *applications*", 3 real applications with statuses: `Applied`, `In review`, `Introduction accepted`.
@@ -164,7 +164,7 @@ Desktop dashboard captures (1440px wide) used by `ProductPreview.tsx`:
 **Key architecture and features (2026-11-24):**
 - Breadcrumb: single white/95 glass pill "Mentor / Dashboard" with `text-text` and `text-ink` labels.
 - View mode switcher: `Active dashboard` vs `First-time onboarding` (persists state locally without backend dependency).
-- Hero section: "Verified profile" badge, "Welcome back, *Asad*" with Instrument Serif italic on `Asad` in `text-carnet-yellow` (`#F5C842`). Subtitle: "Mentor, Ex-VP Product Finja · Karachi Hub · Review inbound founder requests and manage your active mentees across Pakistan."
+- Hero section: "Verified profile" badge, "Welcome back, *Asad*" with Instrument Serif italic on `Asad` in `text-carnet-yellow` (`#F5C842`). Subtitle: "Mentor, Ex-VP Product Sindhu Pay · Karachi Hub · Review inbound founder requests and manage your active mentees across Pakistan."
 - Availability toggle: accessible switch with single label "Open to new mentees" managed via local state.
 - Ink Monolith Card: "Operational summary", plain counts derived strictly from fixture arrays (Inbound requests: 3, Active mentees: 4, Advisory matches: 3), with an advisory focus area sub-panel highlighting B2B SaaS, Product ops, Fintech, Unit economics, and Go-to-market.
 - Recommended founders: "Recommended *founders*", 3 matches (Indus Logistics, Ravi Health, Korangi Tech) with profile similarity badge (`NN%`) and single `PROFILE SIMILARITY` caption per card, match context with simulation notice *"Written by a language model simulation"*, and "View founder carnet" dialog modal.
