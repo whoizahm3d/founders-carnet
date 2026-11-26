@@ -71,7 +71,7 @@ export interface MentorDashboardData {
 export const INITIAL_MENTOR_DASHBOARD_DATA: MentorDashboardData = {
   profile: {
     fullName: 'Asad Khan',
-    roleTitle: 'Mentor, Ex-VP Product Finja',
+    roleTitle: 'Mentor, Ex-VP Product Sindhu Pay',
     location: 'Karachi',
     openToMentees: true,
     expertiseAreas: [

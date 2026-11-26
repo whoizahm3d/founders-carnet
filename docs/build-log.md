@@ -2,6 +2,21 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-26: Dashboard view switcher label removal, talent subline typography polish, and fictional company renaming
+
+- **Feature and IDs:** Dashboard polish and ecosystem anonymization, FR-1, FR-22, FR-23, NFR-4, NFR-6.
+- **Built:**
+  - `frontend/src/app/(dashboard)/founder/dashboard/page.tsx`: Removed redundant "VIEW:" label text span in front of the view switcher so it aligns with the other four dashboards, while preserving the switcher itself, pill styling, and `aria-label="Dashboard view mode"`.
+  - `frontend/src/app/(dashboard)/talent/dashboard/page.tsx`: Styled the lead phrase ("Backend developer") in bold (`font-semibold text-white`) in the hero subline, matching the pattern of the other four dashboards.
+  - Replaced the real fintech company name everywhere across repository fixtures, docs, and design references with the fictional name "Sindhu Pay" (and domain references with `sindhupay.pk`), ensuring strictly fictional entity naming across all files outside `docs/report/`.
+- **Tested:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run lint`: 0 errors.
+  - `npx playwright test`: All 38 Playwright tests passed cleanly.
+  - Repository-wide search: 0 occurrences of the real fintech company name remain outside `node_modules`, `.next`, and `docs/report/`.
+- **Cut or partial:** None.
+- **Differs from the report?** No.
+
 ## 2026-11-26: Landing page Product preview section with five role dashboard switcher
 
 - **Feature and IDs:** Public Landing Page Product preview, FR-22, NFR-4, NFR-6, NFR-23.
@@ -58,7 +73,7 @@ One entry per finished piece of work, newest first. This is what we use to write
 
 - **Feature and IDs:** Mentor dashboard, FR-23, FR-7, NFR-6, FT-01, FT-04, FT-06, FT-09.
 - **Built:**
-  - `frontend/src/fixtures/mentor-dashboard.ts`: Strongly typed fixtures for mentor profile (Asad Khan, Ex-VP Product Finja), operational counts (inbound requests, active mentees, advisory matches), incoming requests with discussion topics and simulation summaries, active mentees, recommended founder matches with similarity scores, and onboarding checklist. Strictly fictional Pakistani startup names (Munshi Books, Mehran Works, Chenab Pay, Indus Logistics, Ravi Health, Korangi Tech, Bolan Commerce) and zero emails or phone numbers.
+  - `frontend/src/fixtures/mentor-dashboard.ts`: Strongly typed fixtures for mentor profile (Asad Khan, Ex-VP Product Sindhu Pay), operational counts (inbound requests, active mentees, advisory matches), incoming requests with discussion topics and simulation summaries, active mentees, recommended founder matches with similarity scores, and onboarding checklist. Strictly fictional Pakistani startup names (Munshi Books, Mehran Works, Chenab Pay, Indus Logistics, Ravi Health, Korangi Tech, Bolan Commerce) and zero emails or phone numbers.
   - `frontend/src/app/(dashboard)/mentor/dashboard/page.tsx`: Full replacement of legacy CSS module with canonical Tailwind tokens matching DESIGN.md v3.9.2 and the founder/talent dashboard patterns. Includes breadcrumb pill "Mentor / Dashboard", active dashboard vs onboarding view switcher, "Verified profile" badge, greeting with Instrument Serif italic yellow name, availability toggle ("Open to new mentees"), ink summary monolith card with plain counts and advisory focus areas, recommended founder matches with profile similarity badge and single uppercase caption, pending requests with accept/decline actions and request details dialog with simulation and contact privacy notices, and active mentees card.
   - `frontend/src/lib/auth.ts`: Added mentor entry `mentor: 'Asad Khan'` to `MOCK_DISPLAY_NAMES`.
   - `frontend/tests/ft-mentor-dashboard.spec.ts`: Playwright test suite covering mentor authentication landing and role redirect assertions (FT-01), viewport overflow checks across 390px, 768px, 1024px, and 1440px (FT-09), and language model attribution and contact privacy assertions (FT-04, FT-06).

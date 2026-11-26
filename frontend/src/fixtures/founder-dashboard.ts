@@ -249,7 +249,7 @@ export const INITIAL_FOUNDER_DASHBOARD_DATA: FounderDashboardData = {
       name: 'Asad Khan',
       initials: 'AK',
       role: 'Mentor',
-      titleAndFirm: 'Mentor · Ex-VP Product Finja',
+      titleAndFirm: 'Mentor · Ex-VP Product Sindhu Pay',
       similarityScore: 88,
       tags: ['B2B SaaS', 'Product ops'],
       whyMatch: 'Advises founders on merchant acquisition funnels and low-friction mobile ledger UX.',

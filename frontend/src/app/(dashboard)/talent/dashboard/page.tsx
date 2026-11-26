@@ -129,8 +129,11 @@ export default function TalentDashboardPage() {
               {firstName}
             </span>
           </h1>
-          <p className="text-base sm:text-lg text-white/85 max-w-2xl font-normal leading-relaxed">
-            Backend developer, Lahore. Track your applications and roles that match your profile across Pakistan.
+          <p className="font-sans text-base sm:text-lg text-white/90 leading-relaxed">
+            <strong className="font-semibold text-white">
+              Backend developer
+            </strong>
+            , Lahore. Track your applications and roles that match your profile across Pakistan.
           </p>
         </div>
 
