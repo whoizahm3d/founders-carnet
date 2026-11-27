@@ -1,6 +1,23 @@
 import { test, expect } from 'playwright/test';
 
 test.describe('FT-01 & FT-09 & FT-04 & FT-06: Investor Dashboard Specs', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/auth/login', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ access_token: ['stub', 'test-token-investor'].join('-'), token_type: 'bearer' }),
+      });
+    });
+    await page.route('**/api/v1/users/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 4, email: 'investor@carnet.pk', full_name: 'Sana Rauf', role: 'investor' }),
+      });
+    });
+  });
+
   test.describe('FT-01: Investor Authentication and Role Guard (FR-23)', () => {
     test('signing in with investor account lands on /investor/dashboard and typing another role URL redirects away', async ({ page }) => {
       // 1. Visit login page
@@ -9,7 +26,7 @@ test.describe('FT-01 & FT-09 & FT-04 & FT-06: Investor Dashboard Specs', () => {
 
       // 2. Submit credentials for investor account
       await page.fill('#login-email', 'investor@carnet.pk');
-      await page.fill('#login-password', 'ValidPassword123!');
+      await page.fill('#login-password', 'Founder123');
       await page.click('button[type="submit"]');
 
       // 3. Confirm landing on investor dashboard
@@ -46,7 +63,7 @@ test.describe('FT-01 & FT-09 & FT-04 & FT-06: Investor Dashboard Specs', () => {
         window.localStorage.setItem(
           'carnet_user',
           JSON.stringify({
-            id: 'mock-investor-sana',
+            id: 4,
             email: 'investor@carnet.pk',
             role: 'investor',
             fullName: 'Sana Rauf',
@@ -102,7 +119,7 @@ test.describe('FT-01 & FT-09 & FT-04 & FT-06: Investor Dashboard Specs', () => {
         window.localStorage.setItem(
           'carnet_user',
           JSON.stringify({
-            id: 'mock-investor-sana',
+            id: 4,
             email: 'investor@carnet.pk',
             role: 'investor',
             fullName: 'Sana Rauf',

@@ -1,5 +1,28 @@
 # Decisions log
 
+## 2026-11-27: Built schema follows backend code as tested source of truth
+
+**Context:** The report data dictionary and ERD in `docs/report/main.tex` and the deployed FastAPI backend models/schemas in `backend/app/` have differences in table structures, naming conventions, primary key types, and specific columns (such as unified `ecosystem_profiles` vs separate mentor/investor profile tables, integer IDs vs UUIDs, `ticket_size_min_pkr` Float vs `ticket_min` numeric, and compliance outcome statuses `answered`/`abstained`/`failed` vs `answer`/`refuse`/`fail`).
+
+**Decision:**
+1. The built frontend and API client treat the backend implementation (`backend/app`) as the executable source of truth for all API shapes, request payloads, response bodies, and primary key types (`id: number`).
+2. Mappings and adapters are used where frontend view models benefit from specific structures, without mutating backend request or response contracts.
+3. Every difference between `docs/report/main.tex` and the code is documented with an explicit reason in `docs/pending-report-changes.md`.
+4. The report design baseline tables that are not yet built in code (`match_request`, `reranking_score`, `rank_position`, `model_version`, separate `compliance_answer`) are recorded as design baselines rather than runtime discrepancies.
+
+**Why:** Prevents breaking running, tested backend routes and maintains full synchronization between running client code and server schemas, while creating an audit trail for future report revisions.
+
+## 2026-11-27: Register form includes Full Name input field
+
+**Context:** DESIGN.md originally specified registration fields as "email, password with a strength bar, role select". The backend registration schema (`UserRegisterRequest`) requires `full_name` (1 to 255 characters). Deriving full name from email creates noisy, incorrect persona names.
+
+**Decision:**
+1. Added a required "Full name" text input (`autocomplete="name"`, minLength 1, maxLength 255) to the register form (`frontend/src/app/(auth)/register/page.tsx`).
+2. Updated DESIGN.md and frontend test contracts to reflect the required `Full name` field.
+3. Passed `fullName` directly to `registerApi` which delivers `full_name` in the POST `/api/v1/auth/register/{role}` payload.
+
+**Why:** Eliminates client-side heuristics, provides clean user profile names matching backend validation rules, and ensures first-class compatibility with the backend auth contract.
+
 ## 2026-11-26: Landing page Product preview role switcher architecture
 
 **Context:** The landing page Section 6 (#preview) required a product preview demonstrating the workspace. DESIGN.md originally envisioned a single glass-framed image of the Founder dashboard screen.

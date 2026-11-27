@@ -75,9 +75,10 @@ Generated 2026-11-15. Updated 2026-11-16. Source of truth for routes, components
 
 ## Auth, Nav and Fixtures
 
-- **`src/lib/auth.ts`**: `loginApi`, `registerApi`, `authStorage`, `buildMockUser`, `nameFromEmail` fallback; mock mode active when `NEXT_PUBLIC_USE_MOCK !== 'false'`
+- **`src/lib/api.ts`**: type-safe `apiFetch` wrapper injecting Bearer token, handling FastAPI error details (400, 401, 403, 409, 422, 429), and dispatching session expiry events on 401
+- **`src/lib/auth.ts`**: `loginApi` (POST `/auth/login` + GET `/users/me`), `registerApi` (POST `/auth/register/{role}` + `loginApi`), `logoutApi` (POST `/auth/logout`), `authStorage` (supporting `localStorage` when Remember me is checked and `sessionStorage` when unchecked). Mock mode, mock banners, and artificial delays completely removed; role is resolved strictly from `/users/me`
 - **`src/lib/navigation.ts`**: `ROLE_NAVIGATION: Record<UserRole, {label, items}>` keyed by `founder` `talent` `mentor` `investor` `admin`; `NavItem: {label, href, icon?}`
-- **`src/context/AuthContext.tsx`**: `AuthProvider`, `AuthContext`, `useAuth`
+- **`src/context/AuthContext.tsx`**: `AuthProvider`, `AuthContext`, `useAuth`. Performs session verification against `/users/me` on initial load (clears session on explicit 401, retains session across transient network errors), and synchronizes route guards during verification
 - **`src/fixtures/founder-dashboard.ts`**: `INITIAL_FOUNDER_DASHBOARD_DATA` for `/founder/dashboard` (company meta, 7-dimension readiness rubric, next actions, pitch feedback logs, matches preview, onboarding checklist). `cohortTarget` and `activeCorridors` are optional fields. `hubLocation` is `'Karachi Hub'` (no stage suffix). Match tag ticker ranges use a hyphen separator (not an en dash). Pitch feedback `gainNote` fields use `'Focus area: ...'` format without numeric deltas. Mentor match 2 updated to Asad Khan to prevent namespace collision with talent persona.
 - **`src/fixtures/talent-dashboard.ts`**: `INITIAL_TALENT_DASHBOARD_DATA` for `/talent/dashboard` (Hamza Iqbal profile, Lahore, 3 operational counts: applications submitted, introductions accepted, startup matches; recommended roles with PKR salary ranges; tracked applications with Applied/In review/Introduction accepted statuses; founding team matches; resume analysis with mandatory simulation notice; onboarding checklist).
 - **`src/fixtures/admin-dashboard.ts`**: `INITIAL_ADMIN_DASHBOARD_DATA` for `/admin/dashboard` (Maryam Siddiqui profile, Karachi, operational counts derived from fixtures: escalated profiles, active appeals, decided today; Munshi Books / Bilal Ahmed and Chenab Pay / Daniyal Shah escalation cards; Nida Farooq talent appeal card; recent determinations audit list; zero contact details).
@@ -228,8 +229,9 @@ Backdrop: `backdrop-blur-glass`
 
 ## Decisions
 
-- **Mock mode role from email prefix**: role determined from email prefix (`founder@`, `talent@`, `mentor@`, `investor@`, `admin@`) inside mock branch of `auth.ts`
-- **`NEXT_PUBLIC_HIDE_MOCK_BANNER`**: hides mock banner on `/login` and `/register` when true; mock behavior unchanged
+- **Real backend authentication**: login and registration connect directly to FastAPI backend (`/api/v1/auth/login`, `/api/v1/auth/register/{role}`, `/api/v1/auth/logout`, `/api/v1/users/me`). Mock mode completely removed
+- **Session storage and Remember me**: Remember me checked stores token in `localStorage`; unchecked stores token in `sessionStorage`. Session validated on initial load against `/users/me`
+- **Registration Full name**: required input field added to Register form, sending `full_name` directly to backend schema
 - **Gradient token**: single `--gradient-artwork` radial gradient in `globals.css`; all screens inherit via `.bg-page-gradient`; no second gradient definition allowed
 - **No social login**: LinkedIn / Google / GitHub buttons rendered as disabled with `(Not available yet)` captions
 - **Shared PublicNav and PublicFooter**: used across all public routes including `/login` and `/register`
@@ -239,7 +241,7 @@ Backdrop: `backdrop-blur-glass`
 
 ## Known Gaps (see `docs/api_gaps.md`)
 
-- Real auth endpoints not yet integrated; `loginApi` and `registerApi` fall back to mock
+- Real auth endpoints are fully integrated (`/api/v1/auth/*`, `/api/v1/users/me`). E2E suite covers 43 passing tests (including FT-13 through FT-17)
 - Match data is static placeholder; `/*/matches` pages use seeded mock objects
 - Readiness and pitch scoring endpoints not built; `PlaceholderPage` stands in
 - File upload for resume not wired; `talent/resume` page is a shell

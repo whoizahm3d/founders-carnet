@@ -1,13 +1,10 @@
 export type UserRole = 'founder' | 'talent' | 'mentor' | 'investor' | 'admin';
 
 export interface User {
-  id: string;
+  id: number;
   email: string;
   role: UserRole;
-  fullName?: string;
-  avatarUrl?: string;
-  isVerified?: boolean;
-  createdAt: string;
+  fullName: string;
 }
 
 export interface AuthSession {
@@ -20,13 +17,25 @@ export interface AuthSession {
 export interface LoginCredentials {
   email: string;
   password: string;
-  role?: UserRole; // Used in mock mode so any email can test any role
+  rememberMe?: boolean;
 }
 
 export interface RegisterData {
   email: string;
   password: string;
   role: UserRole;
-  fullName?: string; // Optional: not collected on the registration form; generated from email in mock mode
+  fullName: string;
   agreedToTerms: boolean;
+}
+
+export interface BackendUserRead {
+  id: number;
+  email: string;
+  full_name: string;
+  role: string;
+}
+
+export interface BackendTokenResponse {
+  access_token: string;
+  token_type: string;
 }

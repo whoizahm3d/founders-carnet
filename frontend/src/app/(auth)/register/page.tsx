@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types/auth';
-import { Select, Button, ConsentBox, Spinner } from '@/components/ui';
+import { Button, Select, ConsentBox, Spinner } from '@/components/ui';
 import { AuthHeroPanel } from '@/components/auth/AuthHeroPanel';
+import { ApiError } from '@/lib/api';
 import {
   EyeIcon,
   EyeOffIcon,
@@ -16,8 +17,6 @@ import {
   GitHubIcon,
 } from '@/components/ui/icons';
 
-const HIDE_MOCK_BANNER = process.env.NEXT_PUBLIC_HIDE_MOCK_BANNER === 'true';
-
 const ROLE_OPTIONS = [
   { value: 'founder', label: 'Founder' },
   { value: 'talent', label: 'Talent' },
@@ -26,28 +25,28 @@ const ROLE_OPTIONS = [
 ];
 
 const ROLE_HINTS: Record<UserRole, string> = {
-  founder: 'Building an early-stage startup in Pakistan',
-  talent: 'Looking for startup roles or internships',
-  mentor: 'Advising early-stage founders',
-  investor: 'Evaluating startup deal flow and founders',
-  admin: 'Console access',
+  founder: 'Building or scaling a startup in Pakistan',
+  talent: 'Software, design, product or growth operator',
+  mentor: 'Advising early-stage founders with domain expertise',
+  investor: 'Angel, syndicate, or venture fund allocating capital',
+  admin: '',
 };
 
-function getPasswordStrength(pw: string): { level: 0 | 1 | 2 | 3; label: string } {
-  if (!pw) return { level: 0, label: '' };
-  const hasLength = pw.length >= 8;
-  const hasUpper = /[A-Z]/.test(pw);
-  const hasNumber = /[0-9]/.test(pw);
-  const hasSpecial = /[^A-Za-z0-9]/.test(pw);
-  const score = [hasLength, hasUpper, hasNumber, hasSpecial].filter(Boolean).length;
-  if (score <= 1) return { level: 1, label: 'Weak' };
-  if (score === 2 || score === 3) return { level: 2, label: 'Fair' };
+function getPasswordStrength(pass: string): { level: number; label: string } {
+  if (pass.length === 0) return { level: 0, label: '' };
+  if (pass.length < 8) return { level: 1, label: 'Too short' };
+  let score = 0;
+  if (pass.length >= 8) score++;
+  if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score++;
+  if (/\d/.test(pass) || /[^A-Za-z0-9]/.test(pass)) score++;
+  if (score === 1) return { level: 1, label: 'Weak' };
+  if (score === 2) return { level: 2, label: 'Good' };
   return { level: 3, label: 'Strong' };
 }
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { user, register, isMockEnabled, isLoading } = useAuth();
+  const { user, register, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -55,6 +54,7 @@ export default function RegisterPage() {
     }
   }, [user, isLoading, router]);
 
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -71,6 +71,11 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
+    if (!fullName.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
+
     if (!email || !password) {
       setError('Please fill in both email and password.');
       return;
@@ -81,14 +86,20 @@ export default function RegisterPage() {
       return;
     }
 
+    if (password.length > 128) {
+      setError('Password must not exceed 128 characters.');
+      return;
+    }
+
     if (!agreedToTerms) {
-      setError('Please accept the terms before creating your account.');
+      setError('You must agree to the terms and privacy policy before registering.');
       return;
     }
 
     try {
       setSubmitting(true);
       const newUser = await register({
+        fullName: fullName.trim(),
         email,
         password,
         role,
@@ -96,7 +107,25 @@ export default function RegisterPage() {
       });
       router.push(`/${newUser.role}/dashboard`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          setError('An account with this email address already exists. Please sign in instead.');
+        } else if (err.status === 400) {
+          setError('You must agree to the terms and privacy policy before registering.');
+        } else if (err.status === 403) {
+          setError(err.detail || 'Admin accounts cannot be registered publicly.');
+        } else if (err.status === 422) {
+          setError(err.detail || 'Validation error. Please check your inputs.');
+        } else if (err.status === 429) {
+          setError('Too many attempts. Please wait a minute and try again.');
+        } else if (err.status === 0) {
+          setError('Unable to connect to the server. Please check your internet connection.');
+        } else {
+          setError(err.detail || 'Registration failed. Please try again.');
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -112,52 +141,52 @@ export default function RegisterPage() {
 
   return (
     <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
-      {/* Left Column: Hero branding and floating platform note card (offset lower via lg:pt-12) */}
+      {/* Left Column: Hero branding and floating platform note card */}
       <section aria-label="Introduction" className="lg:col-span-7 animate-entrance-delayed">
         <AuthHeroPanel />
       </section>
 
-      {/* Right Column: 480px White Form Card (starts higher) */}
-      <section aria-label="Register" className="lg:col-span-5 w-full flex justify-center lg:justify-end animate-entrance">
-        <div className="w-full max-w-auth-card bg-card rounded-card p-6 sm:p-10 border border-hairline shadow-modal-elevation">
-          {/* Tab Switcher: Sign in / Register with sliding underline */}
-          <div aria-label="Account access options" className="flex items-center gap-8 border-b border-hairline mb-6 relative" role="tablist">
+      {/* Right Column: 480px White Form Card */}
+      <section
+        aria-label="Account registration form"
+        className="w-full max-w-auth-card lg:col-span-5 bg-white rounded-auth-card border border-hairline shadow-auth-card p-6 sm:p-10 mx-auto lg:mr-0 transition-all duration-300 ease-carnet animate-entrance"
+      >
+        <div className="w-full">
+          {/* Segmented Control Tabs */}
+          <div
+            role="tablist"
+            aria-label="Authentication Options"
+            className="flex p-1 mb-8 rounded-pill bg-canvas border border-hairline shadow-inner max-w-[280px]"
+          >
             <Link
               href="/login"
               role="tab"
               aria-selected="false"
-              className="py-3 font-mono text-sm uppercase tracking-wider text-text-secondary hover:text-ink font-semibold transition-colors duration-200"
+              className="flex-1 py-1.5 px-4 rounded-pill text-xs font-mono uppercase tracking-wider font-semibold transition-all duration-300 ease-carnet text-text-muted hover:text-ink text-center"
             >
               Sign in
             </Link>
-            <div
+            <button
+              type="button"
               role="tab"
               aria-selected="true"
-              className="py-3 font-mono text-sm uppercase tracking-wider relative font-bold text-ink"
+              className="flex-1 py-1.5 px-4 rounded-pill text-xs font-mono uppercase tracking-wider font-semibold transition-all duration-300 ease-carnet bg-white text-ink shadow-sm cursor-default"
             >
               Register
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-ink transition-all duration-300 ease-carnet" />
-            </div>
+            </button>
           </div>
 
-          {/* Heading */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-ink tracking-tight">
+          {/* Form Header */}
+          <div className="space-y-2 mb-6">
+            <h1 className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-ink">
               Create account
-            </h2>
-            <p className="text-base text-text-secondary mt-1 leading-relaxed">
-              Connect with founders, talent, mentors, and investors across Pakistan.
+            </h1>
+            <p className="font-sans text-sm text-text-secondary leading-relaxed">
+              Join Pakistan&apos;s startup network with verified introductions.
             </p>
           </div>
 
-          {/* Mock mode banner */}
-          {isMockEnabled && !HIDE_MOCK_BANNER && (
-            <div className="mb-5 px-4 py-3 rounded-control bg-accent-wash border border-accent/20 text-sm text-accent font-medium">
-              Mock mode is on: registration will use the mock API.
-            </div>
-          )}
-
-          {/* Error alert with 4px rise animation */}
+          {/* Error alert */}
           {error && (
             <div
               role="alert"
@@ -169,6 +198,24 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            {/* Full Name input */}
+            <div className="space-y-1.5">
+              <label htmlFor="register-fullname" className="block font-sans text-sm font-semibold text-text tracking-wide">
+                Full name
+              </label>
+              <input
+                id="register-fullname"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. Bilal Ahmed"
+                autoComplete="name" maxLength={255}
+                required
+                disabled={submitting}
+                className="w-full h-12 px-4 rounded-control border border-input-border bg-white text-ink placeholder:text-text-muted text-base focus:border-accent focus:ring-[3px] focus:ring-accent-wash outline-none transition-all duration-300 ease-carnet disabled:bg-fill disabled:cursor-not-allowed"
+              />
+            </div>
+
             {/* Email input */}
             <div className="space-y-1.5">
               <label htmlFor="register-email" className="block font-sans text-sm font-semibold text-text tracking-wide">
@@ -182,7 +229,8 @@ export default function RegisterPage() {
                 placeholder="name@company.com"
                 autoComplete="email"
                 required
-                className="w-full h-12 px-4 rounded-control border border-input-border bg-white text-ink placeholder:text-text-muted text-base focus:border-accent focus:ring-[3px] focus:ring-accent-wash outline-none transition-all duration-300 ease-carnet"
+                disabled={submitting}
+                className="w-full h-12 px-4 rounded-control border border-input-border bg-white text-ink placeholder:text-text-muted text-base focus:border-accent focus:ring-[3px] focus:ring-accent-wash outline-none transition-all duration-300 ease-carnet disabled:bg-fill disabled:cursor-not-allowed"
               />
             </div>
 
@@ -207,7 +255,8 @@ export default function RegisterPage() {
                   placeholder="At least 8 characters"
                   autoComplete="new-password"
                   required
-                  className="w-full h-12 px-4 pr-11 rounded-control border border-input-border bg-white text-ink placeholder:text-text-muted text-base focus:border-accent focus:ring-[3px] focus:ring-accent-wash outline-none transition-all duration-300 ease-carnet"
+                  disabled={submitting}
+                  className="w-full h-12 px-4 pr-11 rounded-control border border-input-border bg-white text-ink placeholder:text-text-muted text-base focus:border-accent focus:ring-[3px] focus:ring-accent-wash outline-none transition-all duration-300 ease-carnet disabled:bg-fill disabled:cursor-not-allowed"
                 />
                 <button
                   type="button"
@@ -243,7 +292,7 @@ export default function RegisterPage() {
               hint={ROLE_HINTS[role]}
             />
 
-            {/* Consent and Data Notice Box per prompt instruction 2 */}
+            {/* Consent and Data Notice Box */}
             <ConsentBox
               id="consent-checkbox"
               checked={agreedToTerms}
@@ -273,7 +322,7 @@ export default function RegisterPage() {
               . Profiles undergo verification before introduction requests are active. Contact details stay hidden until both sides accept.
             </ConsentBox>
 
-            {/* Submit Button: disabled until consent is checked, 48px height, circular badge, loading animation */}
+            {/* Submit Button */}
             <div className="pt-2">
               <Button
                 type="submit"

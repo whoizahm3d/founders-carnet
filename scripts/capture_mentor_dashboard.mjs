@@ -6,7 +6,7 @@
  *
  * Requires a production build already in frontend/.next:
  *   cd frontend
- *   NEXT_PUBLIC_USE_MOCK=true NEXT_PUBLIC_HIDE_MOCK_BANNER=true npm run build
+ *   npm run build
  *
  * Run from the repo root:
  *   node scripts/capture_mentor_dashboard.mjs
@@ -89,6 +89,19 @@ async function signInAsMentor(browser, viewportWidth, viewportHeight) {
   const page = await context.newPage();
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
+  });  await page.route('**/api/v1/auth/login', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ access_token: ['stub', 'test-token-mentor'].join('-'), token_type: 'bearer' }),
+    });
+  });
+  await page.route('**/api/v1/users/me', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 3, email: 'mentor@carnet.pk', full_name: 'Asad Khan', role: 'mentor' }),
+    });
   });
 
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle', timeout: 30000 });
@@ -129,8 +142,6 @@ async function run() {
       cwd: FRONTEND_DIR,
       env: {
         ...process.env,
-        NEXT_PUBLIC_USE_MOCK: 'true',
-        NEXT_PUBLIC_HIDE_MOCK_BANNER: 'true',
         NODE_ENV: 'production',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
