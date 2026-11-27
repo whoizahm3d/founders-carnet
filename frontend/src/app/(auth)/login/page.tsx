@@ -66,55 +66,50 @@ export default function LoginPage() {
   };
 
   // Prevent flash while checking auth
-  if (isLoading) {
+  if (isLoading || user) {
     return (
-      <div className="min-h-screen bg-canvas flex items-center justify-center">
-        <Spinner size="large" />
+      <div className="w-full flex items-center justify-center py-20">
+        <Spinner variant="white" size="large" />
       </div>
     );
   }
 
   return (
-    <div className="w-full flex-1 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16 pt-2 pb-12">
-      {/* Left Column: Brand Story and Note Card */}
-      <AuthHeroPanel />
+    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-start">
+      {/* Left Column: Hero branding and floating platform note card (offset lower via lg:pt-12) */}
+      <section aria-label="Introduction" className="lg:col-span-7 animate-entrance-delayed">
+        <AuthHeroPanel />
+      </section>
 
-      {/* Right Column: Form Container Card */}
-      <section
-        aria-label="Sign in form"
-        className="w-full max-w-auth-card lg:w-[480px] bg-white rounded-auth-card border border-hairline shadow-auth-card p-6 sm:p-10 mx-auto lg:mr-0 lg:ml-auto transition-all duration-300 ease-carnet"
-      >
-        <div className="w-full">
-          {/* Segmented Control Tabs */}
-          <div
-            role="tablist"
-            aria-label="Authentication Options"
-            className="flex p-1 mb-8 rounded-pill bg-canvas border border-hairline shadow-inner max-w-[280px]"
-          >
-            <button
-              type="button"
+      {/* Right Column: 480px White Form Card (starts higher) */}
+      <section aria-label="Sign in form" className="lg:col-span-5 w-full flex justify-center lg:justify-end animate-entrance">
+        <div className="w-full max-w-auth-card bg-card rounded-card p-6 sm:p-10 border border-hairline shadow-modal-elevation">
+          {/* Tab Switcher: Sign in / Register with sliding underline */}
+          <div aria-label="Account access options" className="flex items-center gap-8 border-b border-hairline mb-6 relative" role="tablist">
+            <div
               role="tab"
               aria-selected="true"
-              className="flex-1 py-1.5 px-4 rounded-pill text-xs font-mono uppercase tracking-wider font-semibold transition-all duration-300 ease-carnet bg-white text-ink shadow-sm cursor-default"
+              className="py-3 font-mono text-sm uppercase tracking-wider relative font-bold text-ink"
             >
               Sign in
-            </button>
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-ink transition-all duration-300 ease-carnet" />
+            </div>
             <Link
               href="/register"
               role="tab"
               aria-selected="false"
-              className="flex-1 py-1.5 px-4 rounded-pill text-xs font-mono uppercase tracking-wider font-semibold transition-all duration-300 ease-carnet text-text-muted hover:text-ink text-center"
+              className="py-3 font-mono text-sm uppercase tracking-wider text-text-secondary hover:text-ink font-semibold transition-colors duration-200"
             >
               Register
             </Link>
           </div>
 
-          {/* Form Header */}
-          <div className="space-y-2 mb-6">
-            <h1 className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-ink">
+          {/* Heading */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold text-ink tracking-tight">
               Welcome back
-            </h1>
-            <p className="font-sans text-sm text-text-secondary leading-relaxed">
+            </h2>
+            <p className="text-base text-text-secondary mt-1 leading-relaxed">
               Enter your credentials to access your workspace.
             </p>
           </div>

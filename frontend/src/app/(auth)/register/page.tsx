@@ -146,42 +146,35 @@ export default function RegisterPage() {
         <AuthHeroPanel />
       </section>
 
-      {/* Right Column: 480px White Form Card */}
-      <section
-        aria-label="Account registration form"
-        className="w-full max-w-auth-card lg:col-span-5 bg-white rounded-auth-card border border-hairline shadow-auth-card p-6 sm:p-10 mx-auto lg:mr-0 transition-all duration-300 ease-carnet animate-entrance"
-      >
-        <div className="w-full">
-          {/* Segmented Control Tabs */}
-          <div
-            role="tablist"
-            aria-label="Authentication Options"
-            className="flex p-1 mb-8 rounded-pill bg-canvas border border-hairline shadow-inner max-w-[280px]"
-          >
+      {/* Right Column: 480px White Form Card (starts higher) */}
+      <section aria-label="Account registration form" className="lg:col-span-5 w-full flex justify-center lg:justify-end animate-entrance">
+        <div className="w-full max-w-auth-card bg-card rounded-card p-6 sm:p-10 border border-hairline shadow-modal-elevation">
+          {/* Tab Switcher: Sign in / Register with sliding underline */}
+          <div aria-label="Account access options" className="flex items-center gap-8 border-b border-hairline mb-6 relative" role="tablist">
             <Link
               href="/login"
               role="tab"
               aria-selected="false"
-              className="flex-1 py-1.5 px-4 rounded-pill text-xs font-mono uppercase tracking-wider font-semibold transition-all duration-300 ease-carnet text-text-muted hover:text-ink text-center"
+              className="py-3 font-mono text-sm uppercase tracking-wider text-text-secondary hover:text-ink font-semibold transition-colors duration-200"
             >
               Sign in
             </Link>
-            <button
-              type="button"
+            <div
               role="tab"
               aria-selected="true"
-              className="flex-1 py-1.5 px-4 rounded-pill text-xs font-mono uppercase tracking-wider font-semibold transition-all duration-300 ease-carnet bg-white text-ink shadow-sm cursor-default"
+              className="py-3 font-mono text-sm uppercase tracking-wider relative font-bold text-ink"
             >
               Register
-            </button>
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-ink transition-all duration-300 ease-carnet" />
+            </div>
           </div>
 
-          {/* Form Header */}
-          <div className="space-y-2 mb-6">
-            <h1 className="font-sans text-2xl sm:text-3xl font-bold tracking-tight text-ink">
+          {/* Heading */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold text-ink tracking-tight">
               Create account
-            </h1>
-            <p className="font-sans text-sm text-text-secondary leading-relaxed">
+            </h2>
+            <p className="text-base text-text-secondary mt-1 leading-relaxed">
               Join Pakistan&apos;s startup network with verified introductions.
             </p>
           </div>
