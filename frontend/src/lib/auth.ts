@@ -1,10 +1,16 @@
-import type { User, UserRole, LoginCredentials, RegisterData } from '@/types/auth';
+import { api } from '@/lib/api';
+import type {
+  User,
+  UserRole,
+  LoginCredentials,
+  RegisterData,
+  BackendTokenResponse,
+  BackendUserRead,
+} from '@/types/auth';
 
 const TOKEN_KEY = 'carnet_token';
 const USER_KEY = 'carnet_user';
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const REMEMBER_KEY = 'carnet_remember';
 
 export interface AuthResponse {
   token: string;
@@ -13,39 +19,64 @@ export interface AuthResponse {
 
 const isBrowser = () => typeof window !== 'undefined';
 
-/** Session persistence. Safe to call during SSR (returns null / no-ops). */
+/**
+ * Session storage abstraction supporting Remember me:
+ * - When Remember me is checked: writes to localStorage.
+ * - When Remember me is unchecked: writes to sessionStorage.
+ * - Reads check localStorage first, then sessionStorage.
+ * - clear() removes tokens from both storages.
+ */
 export const authStorage = {
+  isRemembered(): boolean {
+    if (!isBrowser()) return false;
+    try {
+      return window.localStorage.getItem(REMEMBER_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  },
   getToken(): string | null {
     if (!isBrowser()) return null;
     try {
-      return window.localStorage.getItem(TOKEN_KEY);
+      return window.localStorage.getItem(TOKEN_KEY) || window.sessionStorage.getItem(TOKEN_KEY);
     } catch {
       return null;
-    }
-  },
-  setToken(token: string): void {
-    if (!isBrowser()) return;
-    try {
-      window.localStorage.setItem(TOKEN_KEY, token);
-    } catch {
-      /* storage unavailable */
     }
   },
   getUser(): User | null {
     if (!isBrowser()) return null;
     try {
-      const raw = window.localStorage.getItem(USER_KEY);
-      return raw ? (JSON.parse(raw) as User) : null;
+      const raw = window.localStorage.getItem(USER_KEY) || window.sessionStorage.getItem(USER_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return {
+        id: typeof parsed.id === 'number' ? parsed.id : parseInt(String(parsed.id), 10) || 1,
+        email: parsed.email || '',
+        role: parsed.role as UserRole,
+        fullName: parsed.fullName || parsed.full_name || '',
+      };
     } catch {
       return null;
     }
   },
-  setUser(user: User): void {
+  setSession(token: string, user: User, rememberMe: boolean): void {
     if (!isBrowser()) return;
     try {
-      window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+      if (rememberMe) {
+        window.localStorage.setItem(TOKEN_KEY, token);
+        window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+        window.localStorage.setItem(REMEMBER_KEY, 'true');
+        window.sessionStorage.removeItem(TOKEN_KEY);
+        window.sessionStorage.removeItem(USER_KEY);
+      } else {
+        window.sessionStorage.setItem(TOKEN_KEY, token);
+        window.sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+        window.localStorage.removeItem(TOKEN_KEY);
+        window.localStorage.removeItem(USER_KEY);
+        window.localStorage.removeItem(REMEMBER_KEY);
+      }
     } catch {
-      /* storage unavailable */
+      /* storage quota or access restriction */
     }
   },
   clear(): void {
@@ -53,105 +84,81 @@ export const authStorage = {
     try {
       window.localStorage.removeItem(TOKEN_KEY);
       window.localStorage.removeItem(USER_KEY);
+      window.localStorage.removeItem(REMEMBER_KEY);
+      window.sessionStorage.removeItem(TOKEN_KEY);
+      window.sessionStorage.removeItem(USER_KEY);
     } catch {
       /* storage unavailable */
     }
   },
 };
 
-function nameFromEmail(email: string): string {
-  const local = email.split('@')[0] || 'User';
-  return local
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(' ');
-}
-
-const MOCK_DISPLAY_NAMES: Partial<Record<UserRole, string>> = {
-  founder: 'Bilal Ahmed',
-  talent: 'Hamza Rauf',
-  mentor: 'Asad Khan',
-  investor: 'Sana Rauf',
-  admin: 'Maryam Siddiqui',
-};
-
-function buildMockUser(email: string, role: UserRole, fullName?: string): User {
+export function mapBackendUser(backendUser: BackendUserRead): User {
   return {
-    id: `mock-${role}-${email.toLowerCase()}`,
-    email,
-    role,
-    fullName: fullName || MOCK_DISPLAY_NAMES[role] || nameFromEmail(email),
-    isVerified: true,
-    createdAt: new Date().toISOString(),
+    id: typeof backendUser.id === 'number' ? backendUser.id : parseInt(String(backendUser.id), 10) || 1,
+    email: backendUser.email,
+    role: backendUser.role as UserRole,
+    fullName: backendUser.full_name,
   };
 }
 
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-async function request<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    let message = 'Request failed. Please try again.';
-    try {
-      const data = await res.json();
-      if (typeof data?.detail === 'string') message = data.detail;
-      else if (typeof data?.message === 'string') message = data.message;
-    } catch {
-      /* non-JSON error body */
-    }
-    throw new Error(message);
-  }
-  return (await res.json()) as T;
-}
-
-const MOCK_ROLES: UserRole[] = ['founder', 'talent', 'mentor', 'investor', 'admin'];
-
-/** Derives a UserRole from the email prefix (the part before @).
- *  Trims whitespace and lower-cases before matching.
- *  Only used inside the mock branch; the real API path is unaffected.
- */
-function roleFromEmail(email: string): UserRole {
-  const prefix = email.split('@')[0].trim().toLowerCase();
-  const matched = MOCK_ROLES.find((r) => prefix === r || prefix.startsWith(r));
-  return matched ?? 'founder';
-}
-
 export async function loginApi(credentials: LoginCredentials): Promise<AuthResponse> {
-  if (USE_MOCK) {
-    await delay(300);
-    const role = roleFromEmail(credentials.email);
-    return {
-      token: `mock-token-${role}-${Date.now()}`,
-      user: buildMockUser(credentials.email, role),
-    };
-  }
-  return request<AuthResponse>('/auth/login', {
-    email: credentials.email,
-    password: credentials.password,
+  // Step 1: Obtain bearer token (skip global 401 redirect so form can display error)
+  const tokenRes = await api.post<BackendTokenResponse>(
+    '/auth/login',
+    {
+      email: credentials.email,
+      password: credentials.password,
+    },
+    { skipAuthRedirect: true }
+  );
+
+  // Step 2: Fetch current user profile using the issued token
+  const userRes = await api.get<BackendUserRead>('/users/me', {
+    token: tokenRes.access_token,
+    skipAuthRedirect: true,
   });
+
+  const user = mapBackendUser(userRes);
+  authStorage.setSession(tokenRes.access_token, user, !!credentials.rememberMe);
+
+  return {
+    token: tokenRes.access_token,
+    user,
+  };
 }
 
 export async function registerApi(data: RegisterData): Promise<AuthResponse> {
-  const fullName = data.fullName?.trim() || nameFromEmail(data.email);
-  if (USE_MOCK) {
-    await delay(400);
-    if (!data.agreedToTerms) {
-      throw new Error('You must agree to the terms to create an account.');
-    }
-    return {
-      token: `mock-token-${data.role}-${Date.now()}`,
-      user: buildMockUser(data.email, data.role, fullName),
-    };
-  }
-  return request<AuthResponse>(`/api/v1/auth/register/${data.role}`, {
+  // Step 1: Register user with role, full name, and explicit consent
+  await api.post<BackendUserRead>(`/auth/register/${data.role}`, {
     email: data.email,
     password: data.password,
-    full_name: fullName,
+    full_name: data.fullName.trim(),
     consent_accepted: data.agreedToTerms,
   });
+
+  // Step 2: Authenticate newly created user
+  try {
+    return await loginApi({
+      email: data.email,
+      password: data.password,
+      rememberMe: true,
+    });
+  } catch (err: unknown) {
+    const reason = err instanceof Error ? err.message : 'Invalid credentials';
+    throw new Error(`Account created successfully, but automatic sign-in failed: ${reason}. Please sign in.`);
+  }
+}
+
+export async function logoutApi(): Promise<void> {
+  const token = authStorage.getToken();
+  try {
+    if (token) {
+      await api.post('/auth/logout', undefined, { token });
+    }
+  } catch {
+    /* Ignore network or 401 errors during logout */
+  } finally {
+    authStorage.clear();
+  }
 }

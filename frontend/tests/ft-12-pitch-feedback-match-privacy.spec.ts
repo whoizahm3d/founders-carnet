@@ -8,7 +8,7 @@ test.describe('FT-12: Pitch Simulation Notices and Match Privacy Guard (FR-7, NF
       window.localStorage.setItem(
         'carnet_user',
         JSON.stringify({
-          id: 'mock-founder-bilal',
+          id: 1,
           email: 'founder@carnet.pk',
           role: 'founder',
           fullName: 'Bilal Ahmed',

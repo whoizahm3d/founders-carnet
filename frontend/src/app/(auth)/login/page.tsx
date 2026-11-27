@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Spinner } from '@/components/ui';
 import { AuthHeroPanel } from '@/components/auth/AuthHeroPanel';
+import { ApiError } from '@/lib/api';
 import {
   EyeIcon,
   EyeOffIcon,
@@ -15,11 +16,9 @@ import {
   GitHubIcon,
 } from '@/components/ui/icons';
 
-const HIDE_MOCK_BANNER = process.env.NEXT_PUBLIC_HIDE_MOCK_BANNER === 'true';
-
 export default function LoginPage() {
   const router = useRouter();
-  const { user, login, isMockEnabled, isLoading } = useAuth();
+  const { user, login, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -29,6 +28,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -44,15 +44,28 @@ export default function LoginPage() {
 
     try {
       setSubmitting(true);
-      const loggedInUser = await login({ email, password });
+      const loggedInUser = await login({ email, password, rememberMe });
       router.push(`/${loggedInUser.role}/dashboard`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Invalid credentials. Please try again.');
+      if (err instanceof ApiError) {
+        if (err.status === 401) {
+          setError('Invalid email or password.');
+        } else if (err.status === 429) {
+          setError('Too many attempts. Please wait a minute and try again.');
+        } else if (err.status === 0) {
+          setError('Unable to reach server. Please check your internet connection.');
+        } else {
+          setError(err.detail || 'An unexpected error occurred. Please try again.');
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Invalid email or password.');
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Prevent flash while checking auth
   if (isLoading || user) {
     return (
       <div className="w-full flex items-center justify-center py-20">
@@ -69,7 +82,7 @@ export default function LoginPage() {
       </section>
 
       {/* Right Column: 480px White Form Card (starts higher) */}
-      <section aria-label="Sign in" className="lg:col-span-5 w-full flex justify-center lg:justify-end animate-entrance">
+      <section aria-label="Sign in form" className="lg:col-span-5 w-full flex justify-center lg:justify-end animate-entrance">
         <div className="w-full max-w-auth-card bg-card rounded-card p-6 sm:p-10 border border-hairline shadow-modal-elevation">
           {/* Tab Switcher: Sign in / Register with sliding underline */}
           <div aria-label="Account access options" className="flex items-center gap-8 border-b border-hairline mb-6 relative" role="tablist">
@@ -101,14 +114,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Mock mode banner */}
-          {isMockEnabled && !HIDE_MOCK_BANNER && (
-            <div className="mb-5 px-4 py-3 rounded-control bg-accent-wash border border-accent/20 text-sm text-accent font-medium">
-              Mock mode is on: start your email with founder, talent, mentor, investor or admin to choose a role.
-            </div>
-          )}
-
-          {/* Error alert with 4px rise animation */}
+          {/* Error alert */}
           {error && (
             <div
               role="alert"
@@ -133,7 +139,8 @@ export default function LoginPage() {
                 placeholder="name@company.com"
                 autoComplete="email"
                 required
-                className="w-full h-12 px-4 rounded-control border border-input-border bg-white text-ink placeholder:text-text-muted text-base focus:border-accent focus:ring-[3px] focus:ring-accent-wash outline-none transition-all duration-300 ease-carnet"
+                disabled={submitting}
+                className="w-full h-12 px-4 rounded-control border border-input-border bg-white text-ink placeholder:text-text-muted text-base focus:border-accent focus:ring-[3px] focus:ring-accent-wash outline-none transition-all duration-300 ease-carnet disabled:bg-fill disabled:cursor-not-allowed"
               />
             </div>
 
@@ -151,7 +158,8 @@ export default function LoginPage() {
                   placeholder="At least 8 characters"
                   autoComplete="current-password"
                   required
-                  className="w-full h-12 px-4 pr-11 rounded-control border border-input-border bg-white text-ink placeholder:text-text-muted text-base focus:border-accent focus:ring-[3px] focus:ring-accent-wash outline-none transition-all duration-300 ease-carnet"
+                  disabled={submitting}
+                  className="w-full h-12 px-4 pr-11 rounded-control border border-input-border bg-white text-ink placeholder:text-text-muted text-base focus:border-accent focus:ring-[3px] focus:ring-accent-wash outline-none transition-all duration-300 ease-carnet disabled:bg-fill disabled:cursor-not-allowed"
                 />
                 <button
                   type="button"
@@ -170,25 +178,24 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Remember Me Checkbox with Not available yet */}
+            {/* Remember Me Checkbox */}
             <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2.5 cursor-not-allowed">
+              <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
                   type="checkbox"
-                  disabled
-                  aria-disabled="true"
-                  className="h-4 w-4 rounded border-hairline text-ink cursor-not-allowed"
+                  id="login-remember"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={submitting}
+                  className="h-4 w-4 rounded border-hairline text-ink cursor-pointer focus:ring-accent"
                 />
                 <span className="text-sm font-medium text-text-secondary select-none">
                   Remember me
                 </span>
               </label>
-              <span className="font-mono text-xs text-text-muted">
-                (Not available yet)
-              </span>
             </div>
 
-            {/* Primary Action Button: 48px high, full pill, circular arrow badge, submit sequence animation */}
+            {/* Primary Action Button: 48px high, full pill, circular arrow badge */}
             <div className="pt-2">
               <Button
                 type="submit"

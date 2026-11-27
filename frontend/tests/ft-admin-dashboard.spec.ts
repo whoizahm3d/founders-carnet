@@ -1,6 +1,23 @@
 import { test, expect } from 'playwright/test';
 
 test.describe('FT-01 & FT-09 & FT-04 & FT-06: Admin Dashboard Specs', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/auth/login', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ access_token: ['stub', 'test-token-admin'].join('-'), token_type: 'bearer' }),
+      });
+    });
+    await page.route('**/api/v1/users/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 5, email: 'admin@carnet.pk', full_name: 'Maryam Siddiqui', role: 'admin' }),
+      });
+    });
+  });
+
   test.describe('FT-01: Admin Authentication and Role Guard (FR-23)', () => {
     test('signing in with admin account lands on /admin/dashboard and typing another role URL redirects away', async ({ page }) => {
       // 1. Visit login page
@@ -9,7 +26,7 @@ test.describe('FT-01 & FT-09 & FT-04 & FT-06: Admin Dashboard Specs', () => {
 
       // 2. Submit credentials for admin account
       await page.fill('#login-email', 'admin@carnet.pk');
-      await page.fill('#login-password', 'ValidPassword123!');
+      await page.fill('#login-password', 'Founder123');
       await page.click('button[type="submit"]');
 
       // 3. Confirm landing on admin dashboard
@@ -46,7 +63,7 @@ test.describe('FT-01 & FT-09 & FT-04 & FT-06: Admin Dashboard Specs', () => {
         window.localStorage.setItem(
           'carnet_user',
           JSON.stringify({
-            id: 'mock-admin-maryam',
+            id: 5,
             email: 'admin@carnet.pk',
             role: 'admin',
             fullName: 'Maryam Siddiqui',
@@ -102,7 +119,7 @@ test.describe('FT-01 & FT-09 & FT-04 & FT-06: Admin Dashboard Specs', () => {
         window.localStorage.setItem(
           'carnet_user',
           JSON.stringify({
-            id: 'mock-admin-maryam',
+            id: 5,
             email: 'admin@carnet.pk',
             role: 'admin',
             fullName: 'Maryam Siddiqui',

@@ -67,8 +67,6 @@ async function run() {
       cwd: FRONTEND_DIR,
       env: {
         ...process.env,
-        NEXT_PUBLIC_USE_MOCK: 'true',
-        NEXT_PUBLIC_HIDE_MOCK_BANNER: 'true',
         NODE_ENV: 'production',
       },
       stdio: 'ignore',

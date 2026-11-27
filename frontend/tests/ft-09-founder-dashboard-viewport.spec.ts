@@ -8,7 +8,7 @@ test.describe('FT-09 (Dashboard): Mobile and Desktop Viewport Overflow (Usabilit
       window.localStorage.setItem(
         'carnet_user',
         JSON.stringify({
-          id: 'mock-founder-bilal',
+          id: 1,
           email: 'founder@carnet.pk',
           role: 'founder',
           fullName: 'Bilal Ahmed',

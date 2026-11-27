@@ -8,7 +8,7 @@ test.describe('FT-11: Readiness Rubric Dialog Read-Only Evaluation (FR-2)', () =
       window.localStorage.setItem(
         'carnet_user',
         JSON.stringify({
-          id: 'mock-founder-bilal',
+          id: 1,
           email: 'founder@carnet.pk',
           role: 'founder',
           fullName: 'Bilal Ahmed',

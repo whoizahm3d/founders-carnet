@@ -16,7 +16,7 @@ test.describe('FT-02: Register Consent Enforcement (FR-17)', () => {
 
     // 2. Fill credentials but leave consent unticked: submit button must remain disabled
     await page.fill('input[type="email"]', 'founder.test@example.com');
-    await page.fill('input[type="password"]', 'ValidPassword123!');
+    await page.fill('input[type="password"]', 'Founder123');
     await expect(submitButton).toBeDisabled();
 
     // 3. Tick consent box: submit button becomes enabled and helper notice disappears
