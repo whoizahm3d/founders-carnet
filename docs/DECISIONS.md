@@ -1,5 +1,17 @@
 # Decisions log
 
+## 2026-11-28: Add full required startup fields to Founder Profile form
+
+**Context:** The initial prototype of `/founder/profile` only exposed 5 input fields (startup name, description, sector, team, product link). However, the backend schema `StartupCreate` and database model require `stage`, `location`, `business_model`, `traction_summary`, `customer_count`, and `skills`.
+
+**Decision:**
+1. Added real form inputs for `stage` (select: idea, mvp, growth, scaling), `location` (text input), `business_model` (textarea), `traction_summary` (textarea), `customer_count` (numeric input), and `skills` (comma-separated text input) to `/founder/profile`.
+2. Rejected the use of hardcoded fake defaults on creation (such as defaulting location to Karachi or copying team text into business model) to ensure the database contains authentic founder-provided information.
+3. If a founder has no startup registered yet, downstream screens (readiness, matches, pitch) show an honest empty state directing the founder to complete their startup profile first.
+4. Mapped form submissions to `PUT /api/v1/founders/me/profile`, `POST` or `PATCH /api/v1/founders/me/startups`, and `POST /api/v1/founders/me/startups/{id}/verification-request`.
+
+**Why:** Grounding the profile form in the actual backend contract eliminates schema validation errors (422 Unprocessable Entity) and ensures readiness assessments and ecosystem matching receive authentic data.
+
 ## 2026-11-27: Built schema follows backend code as tested source of truth
 
 **Context:** The report data dictionary and ERD in `docs/report/main.tex` and the deployed FastAPI backend models/schemas in `backend/app/` have differences in table structures, naming conventions, primary key types, and specific columns (such as unified `ecosystem_profiles` vs separate mentor/investor profile tables, integer IDs vs UUIDs, `ticket_size_min_pkr` Float vs `ticket_min` numeric, and compliance outcome statuses `answered`/`abstained`/`failed` vs `answer`/`refuse`/`fail`).
