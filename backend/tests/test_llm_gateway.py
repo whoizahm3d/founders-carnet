@@ -930,3 +930,142 @@ def test_gateway_fixup_fields_patches_response_before_validation():
     )
 
     assert result.value == "fixed"
+
+
+def test_gateway_uses_configured_request_timeout_as_per_model_timeout():
+    client = FakeClient([json.dumps({"value": "ok"})])
+    gateway = GeminiGateway(
+        api_key="test-key",
+        model_name="configured-model",
+        client=client,
+        request_timeout_ms=45_000,
+    )
+    gateway._available_models = ["configured-model"]
+    gateway.generate_structured(
+        system_instruction="sys",
+        payload={},
+        response_schema=StructuredResult,
+        output_instruction="Return value.",
+        operation="custom_operation",
+    )
+    call_config = client.models.calls[0]["config"]
+    assert call_config["http_options"]["timeout"] == 45_000
+    assert call_config["http_options"]["retry_options"] == {"attempts": 1}
+
+
+def test_gateway_applies_operation_timeout_overrides():
+    client = FakeClient([json.dumps({"value": "ok"}), json.dumps({"value": "ok"})])
+    gateway = GeminiGateway(
+        api_key="test-key",
+        model_name="configured-model",
+        client=client,
+        request_timeout_ms=50_000,
+    )
+    gateway._available_models = ["configured-model"]
+
+    # startup_readiness override is 60_000 ms
+    gateway.generate_structured(
+        system_instruction="sys",
+        payload={},
+        response_schema=StructuredResult,
+        output_instruction="Return value.",
+        operation="startup_readiness",
+    )
+    assert client.models.calls[0]["config"]["http_options"]["timeout"] == 60_000
+
+    # pitch_turn override is 30_000 ms
+    gateway.generate_structured(
+        system_instruction="sys",
+        payload={},
+        response_schema=StructuredResult,
+        output_instruction="Return value.",
+        operation="pitch_turn",
+    )
+    assert client.models.calls[1]["config"]["http_options"]["timeout"] == 30_000
+
+
+def test_gateway_passes_thinking_budget_zero_for_readiness_and_pitch():
+    client = FakeClient([
+        json.dumps({"value": "ok"}),
+        json.dumps({"value": "ok"}),
+        json.dumps({"value": "ok"}),
+    ])
+    gateway = GeminiGateway(
+        api_key="test-key",
+        model_name="configured-model",
+        client=client,
+    )
+    gateway._available_models = ["configured-model"]
+
+    # startup_readiness gets thinking_config with thinking_budget=0
+    gateway.generate_structured(
+        system_instruction="sys",
+        payload={},
+        response_schema=StructuredResult,
+        output_instruction="Return value.",
+        operation="startup_readiness",
+    )
+    cfg_0 = client.models.calls[0]["config"].get("thinking_config")
+    assert cfg_0 is not None
+    budget_0 = getattr(cfg_0, "thinking_budget", None)
+    if budget_0 is None and isinstance(cfg_0, dict):
+        budget_0 = cfg_0.get("thinking_budget")
+    assert budget_0 == 0
+
+    # pitch_turn gets thinking_config with thinking_budget=0
+    gateway.generate_structured(
+        system_instruction="sys",
+        payload={},
+        response_schema=StructuredResult,
+        output_instruction="Return value.",
+        operation="pitch_turn",
+    )
+    cfg_1 = client.models.calls[1]["config"].get("thinking_config")
+    assert cfg_1 is not None
+    budget_1 = getattr(cfg_1, "thinking_budget", None)
+    if budget_1 is None and isinstance(cfg_1, dict):
+        budget_1 = cfg_1.get("thinking_budget")
+    assert budget_1 == 0
+
+    # generic operations do not get thinking_config
+    gateway.generate_structured(
+        system_instruction="sys",
+        payload={},
+        response_schema=StructuredResult,
+        output_instruction="Return value.",
+        operation="other_operation",
+    )
+    assert "thinking_config" not in client.models.calls[2]["config"]
+
+
+def test_gateway_guarded_against_unsupported_thinking_config():
+    class ThinkingUnsupportedModels:
+        def __init__(self):
+            self.calls = []
+
+        def generate_content(self, **kwargs):
+            self.calls.append(kwargs)
+            if "thinking_config" in kwargs.get("config", {}):
+                raise ValueError("thinking_config is not supported for this model")
+            return SimpleNamespace(text=json.dumps({"value": "fallback_success"}))
+
+    fake_client = SimpleNamespace(models=ThinkingUnsupportedModels())
+    gateway = GeminiGateway(
+        api_key="test-key",
+        model_name="configured-model",
+        client=fake_client,
+    )
+    gateway._available_models = ["configured-model"]
+
+    result = gateway.generate_structured(
+        system_instruction="sys",
+        payload={},
+        response_schema=StructuredResult,
+        output_instruction="Return value.",
+        operation="startup_readiness",
+    )
+    assert result.value == "fallback_success"
+    # First call failed due to thinking_config; second call succeeded without thinking_config
+    assert len(fake_client.models.calls) == 2
+    assert "thinking_config" in fake_client.models.calls[0]["config"]
+    assert "thinking_config" not in fake_client.models.calls[1]["config"]

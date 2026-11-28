@@ -26,10 +26,56 @@ GEMINI_MAX_ATTEMPTS_PER_MODEL = 2
 GEMINI_RETRY_DELAY_SECONDS = 0.5
 MAX_COMPLIANCE_EVIDENCE_CHARS = 6_000
 MAX_COMPLIANCE_PROMPT_CHARS = 12_000
+OPERATION_TIMEOUT_OVERRIDES_MS: dict[str, int] = {
+    "startup_readiness": 60_000,
+    "pitch_turn": 30_000,
+    "pitch_turns": 30_000,
+}
+THINKING_BUDGET_OPERATIONS: set[str] = {
+    "startup_readiness",
+    "pitch_turn",
+    "pitch_turns",
+}
 T = TypeVar("T", bound=BaseModel)
 _GENERATION_CAPACITY = 5
 _WHITESPACE = re.compile(r"\s+")
 logger = logging.getLogger(__name__)
+
+
+def _configure_call_config(
+    config_dict: dict[str, Any],
+    operation: str,
+    default_timeout_ms: int,
+) -> None:
+    timeout_ms = OPERATION_TIMEOUT_OVERRIDES_MS.get(operation, default_timeout_ms)
+    existing_opts = config_dict.get("http_options")
+    if isinstance(existing_opts, dict):
+        http_options = dict(existing_opts)
+        if "timeout" not in http_options:
+            http_options["timeout"] = timeout_ms
+        if "retry_options" not in http_options:
+            http_options["retry_options"] = {"attempts": 1}
+        config_dict["http_options"] = http_options
+    elif existing_opts is None:
+        config_dict["http_options"] = {
+            "timeout": timeout_ms,
+            "retry_options": {"attempts": 1},
+        }
+
+    if operation in THINKING_BUDGET_OPERATIONS and "thinking_config" not in config_dict:
+        try:
+            from google.genai import types
+
+            thinking_cls = getattr(types, "ThinkingConfig", None)
+            if thinking_cls is not None:
+                try:
+                    config_dict["thinking_config"] = thinking_cls(thinking_budget=0)
+                    return
+                except Exception:
+                    pass
+            config_dict["thinking_config"] = {"thinking_budget": 0}
+        except Exception:
+            config_dict["thinking_config"] = {"thinking_budget": 0}
 
 
 class GenerationQueue:
@@ -123,6 +169,7 @@ class GeminiGateway:
         self._client = client
         self._cache = cache
         self._call_log_writer = call_log_writer
+        self.request_timeout_ms = request_timeout_ms
         self._models = resolved_models
         # _available_models is populated lazily on first use; None means not yet fetched.
         self._available_models: list[str] | None = None
@@ -199,6 +246,7 @@ class GeminiGateway:
         operation: str = "structured_generation",
         prompt_version: str | None = None,
         fixup_fields: dict[str, object] | None = None,
+        timeout_ms: int | None = None,
     ) -> T:
         """Generate a schema-validated result for non-RAG AI services.
 
@@ -269,19 +317,23 @@ class GeminiGateway:
                     )
                     return cached_result
 
+        gen_config: dict[str, Any] = {
+            "system_instruction": system_instruction,
+            "temperature": 0,
+            "max_output_tokens": 1800,
+            "response_mime_type": "application/json",
+            "response_json_schema": schema,
+        }
+        if timeout_ms is not None:
+            gen_config["http_options"] = {"timeout": timeout_ms}
+
         response = self._generate_content(
             operation=operation,
             passage_count=0,
             request_id=request_id,
             prompt_version=prompt_version,
             contents=contents,
-            config={
-                "system_instruction": system_instruction,
-                "temperature": 0,
-                "max_output_tokens": 1800,
-                "response_mime_type": "application/json",
-                "response_json_schema": schema,
-            },
+            config=gen_config,
         )
         response_text = getattr(response, "text", None)
         if not isinstance(response_text, str) or not response_text.strip():
@@ -418,8 +470,11 @@ class GeminiGateway:
             attempt_number += 1
             kwargs["model"] = current_model
             config_dict = dict(kwargs.get("config", {}))
-            if "http_options" not in config_dict:
-                config_dict["http_options"] = {"timeout": 15_000}
+            _configure_call_config(
+                config_dict,
+                operation=operation,
+                default_timeout_ms=self.request_timeout_ms,
+            )
             kwargs["config"] = config_dict
 
             attempt_started = perf_counter()
@@ -441,7 +496,21 @@ class GeminiGateway:
 
             try:
                 with _GENERATION_QUEUE.slot(on_queued=log_queued) as queue_position:
-                    response = self._client.models.generate_content(**kwargs)
+                    try:
+                        response = self._client.models.generate_content(**kwargs)
+                    except Exception as call_exc:
+                        # Guard: if thinking_config is unsupported by this model or SDK,
+                        # retry immediately without thinking_config so unsupported configs never raise.
+                        if "thinking_config" in config_dict and any(
+                            term in str(call_exc).lower()
+                            for term in ("thinking", "thinking_config", "thinking_budget")
+                        ):
+                            fallback_config = dict(config_dict)
+                            fallback_config.pop("thinking_config", None)
+                            kwargs["config"] = fallback_config
+                            response = self._client.models.generate_content(**kwargs)
+                        else:
+                            raise
             except Exception as exc:
                 category = classify_provider_error(exc)
                 status_code = _provider_status_code(exc)

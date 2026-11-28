@@ -22,6 +22,7 @@ def get_gateway() -> GeminiGateway:
     return GeminiGateway(
         api_key=settings.gemini_api_key.get_secret_value(),
         models=settings.gemini_models,
+        request_timeout_ms=settings.gemini_request_timeout_ms,
         cache=StructuredResponseDiskCache(settings.llm_cache_dir),
         call_log_writer=write_gateway_call_log,
     )
