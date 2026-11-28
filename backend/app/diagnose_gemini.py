@@ -13,7 +13,8 @@ from app.services.llm_gateway import GeminiGateway, classify_provider_error
 
 def main() -> int:
     settings = get_settings()
-    print(f"configured_model={settings.gemini_model}")
+    print(f"configured_models={settings.gemini_models}")
+    print(f"legacy_model={settings.gemini_model}")
     print(f"fallback_model={settings.gemini_fallback_model or 'not configured'}")
     print(f"request_timeout_ms={settings.gemini_request_timeout_ms}")
     try:
@@ -28,8 +29,7 @@ def main() -> int:
 
     gateway = GeminiGateway(
         api_key=settings.gemini_api_key.get_secret_value(),
-        model_name=settings.gemini_model,
-        fallback_model=settings.gemini_fallback_model,
+        models=settings.gemini_models,
         request_timeout_ms=settings.gemini_request_timeout_ms,
     )
     started_at = perf_counter()

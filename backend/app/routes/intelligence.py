@@ -540,6 +540,7 @@ def assess_readiness(startup_id: int, request: Request, user: Founder, db: Sessi
             cache_scope=user.id,
             operation="startup_readiness",
             prompt_version=READINESS_PROMPT_VERSION,
+            fixup_fields={"rubric_version": "readiness-v1"},
         )
     except Exception as exc:
         raise HTTPException(

@@ -60,6 +60,22 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="GEMINI_FALLBACK_MODEL",
     )
+    gemini_models_raw: str = Field(
+        default="gemini-3.1-flash-lite,gemini-3.8-flash",
+        validation_alias=AliasChoices("GEMINI_MODELS", "gemini_models_raw", "gemini_models"),
+    )
+
+    @property
+    def gemini_models(self) -> list[str]:
+        raw = (self.gemini_models_raw or "").strip()
+        if raw.startswith("[") and raw.endswith("]"):
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(m).strip() for m in parsed if str(m).strip()]
+            except Exception:
+                pass
+        return [m.strip() for m in raw.split(",") if m.strip()]
     gemini_request_timeout_ms: int = Field(
         default=60_000,
         ge=10_000,
@@ -106,6 +122,9 @@ class Settings(BaseSettings):
         for model in (self.gemini_model, self.gemini_fallback_model):
             if model and _gemini_model_version(model) > (2, 5):
                 logger.warning("Configured Gemini model %s is newer than the approved Gemini 2.5 tier", model)
+        for model in self.gemini_models:
+            if model and _gemini_model_version(model) > (2, 5):
+                logger.warning("Configured Gemini model %s is newer than the approved Gemini 2.5 tier", model)
         return self
 
     @field_validator("database_url", mode="before")
@@ -136,6 +155,15 @@ class Settings(BaseSettings):
     def normalize_gemini_fallback_model(cls, value: object) -> object:
         if isinstance(value, str):
             return value.strip() or None
+        return value
+
+    @field_validator("gemini_models_raw", mode="before")
+    @classmethod
+    def normalize_gemini_models_raw(cls, value: object) -> object:
+        if isinstance(value, list):
+            return ",".join(str(m).strip() for m in value if str(m).strip())
+        if isinstance(value, str):
+            return value.strip()
         return value
 
     model_config = SettingsConfigDict(

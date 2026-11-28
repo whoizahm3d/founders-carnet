@@ -27,6 +27,28 @@ export interface RequestOptions extends RequestInit {
   skipAuthRedirect?: boolean;
 }
 
+function formatValidationMessage(msg: string, field: string): string {
+  // If the message starts with "Value error, ", strip it
+  let cleanMsg = msg.replace(/^Value error,\s*/i, '');
+  // If cleanMsg already describes the field nicely or is a full sentence, format to sentence case
+  if (!cleanMsg) {
+    cleanMsg = 'Invalid field';
+  }
+
+  if (field && !cleanMsg.toLowerCase().includes(field.toLowerCase())) {
+    // Human readable field name: snake_case to words
+    const humanField = field.replace(/_/g, ' ');
+    cleanMsg = `${humanField.charAt(0).toUpperCase() + humanField.slice(1)}: ${cleanMsg}`;
+  }
+
+  // Ensure sentence case and trailing period
+  cleanMsg = cleanMsg.charAt(0).toUpperCase() + cleanMsg.slice(1);
+  if (!cleanMsg.endsWith('.')) {
+    cleanMsg += '.';
+  }
+  return cleanMsg;
+}
+
 function parseFastApiDetail(data: unknown): { message: string; fieldErrors?: Record<string, string> } {
   if (!data || typeof data !== 'object') {
     return { message: 'An unexpected error occurred.' };
@@ -50,17 +72,18 @@ function parseFastApiDetail(data: unknown): { message: string; fieldErrors?: Rec
     for (const item of payload.detail) {
       if (item && typeof item === 'object') {
         const entry = item as { loc?: unknown[]; msg?: string };
-        const msg = entry.msg || 'Invalid field';
+        const rawMsg = entry.msg || 'Invalid field';
         const field = Array.isArray(entry.loc) ? String(entry.loc[entry.loc.length - 1]) : '';
+        const formattedMsg = formatValidationMessage(rawMsg, field);
         if (field) {
-          fieldErrors[field] = msg;
+          fieldErrors[field] = formattedMsg;
         }
-        messages.push(field ? `${field}: ${msg}` : msg);
+        messages.push(formattedMsg);
       }
     }
 
     return {
-      message: messages.length > 0 ? messages.join('. ') : 'Validation error',
+      message: messages.length > 0 ? messages.join(' ') : 'Validation error occurred.',
       fieldErrors: Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined,
     };
   }
@@ -116,8 +139,10 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
       errorDetail = res.statusText || `Request failed with status ${res.status}`;
     }
 
-    // Trigger auth session expiration on 401 unless specifically opted out (such as /auth/login)
-    if (res.status === 401 && !skipAuthRedirect && typeof window !== 'undefined') {
+    // Trigger auth session expiration on 401 only if request carried an Authorization header,
+    // unless specifically opted out (such as /auth/login)
+    const hasAuthHeader = Boolean(headers['Authorization'] || headers['authorization']);
+    if (res.status === 401 && hasAuthHeader && !skipAuthRedirect && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
     }
 
