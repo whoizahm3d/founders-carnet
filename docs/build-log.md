@@ -914,3 +914,66 @@ One entry per finished piece of work, newest first. This is what we use to write
 - **Cut or partial:** None. Operates on typed fixtures pending backend API implementation.
 - **Differs from the report?** Yes; tracked in `docs/pending-report-changes.md` (2026-11-19 entry).
 
+## 2026-11-22: Add supporting classifier scaffold (Copilot)
+
+- **Feature and IDs:** Supporting classifiers, FYP-2; no FR/NFR ID.
+- **Built:** Added shared split, metrics, baseline, training, and results helpers,
+  plus the resume role, startup outcome, and follow-on funding scaffolds.
+  Resume texts are deduplicated before splitting; outcome features exclude
+  post-outcome and funding columns. The unresolved funding label remains a
+  `NotImplementedError` TODO. Added the dataset guide and ignored local artifacts
+  and data paths.
+- **Tested:** `ml\.venv\Scripts\python.exe -m pytest ml\classifiers\tests -q`
+  passed (8 tests); `backend\.venv\Scripts\ruff.exe check ml\classifiers` and
+  `ml\.venv\Scripts\python.exe -m compileall -q ml\classifiers` passed. The
+  resume loader returned 4,170 deduplicated technical resumes, and the startup
+  loader returned 49,766 rows after the 1990 to 2015 date filter. All three CLI
+  help commands ran. No training was run.
+- **Cut or partial:** Funding labels and training remain blocked pending the
+  dataset label decision.
+- **Differs from the report?** No. The scaffold implements the report's planned
+  FYP-2 classifier outline and does not claim a model has been trained.
+
+## 2026-11-22: Define supporting classifier loader populations (Copilot)
+
+- **Feature and IDs:** Supporting classifiers, FYP-2; no FR/NFR ID.
+- **Built:** Added cross-category resume text removal, binary startup outcome
+  labels, startup timing and category features, and the seed-population
+  follow-on funding rule using `round_A`. Removed post-event and round columns
+  from the funding feature matrix.
+- **Tested:** `ml\.venv\Scripts\python.exe -m pytest ml\classifiers\tests -q`
+  passed; `backend\.venv\Scripts\ruff.exe check ml\classifiers` passed.
+  Loader counts: resume 4,135 rows; startup 13,334 rows with class balance
+  7,096 positives and 6,238 negatives; funding 10,903 rows after the
+  right-censor cutoff and negative-timing removal, with class balance
+  1,480 positives and 9,423 negatives. The binary label is based on `round_A`.
+- **Cut or partial:** No model training was run. Dataset label and split
+  decisions remain offline FYP-2 work.
+- **Differs from the report?** No. The report remains an FYP-2 classifier plan
+  and does not add user-facing predictions.
+
+## 2026-11-22: Fix resume classifier training input and evaluation
+
+- **Feature and IDs:** Supporting classifier evaluation, FYP-2; no FR/NFR ID.
+- **Built:** The shared trainer now converts the resume `Text` feature frame to a
+  one-dimensional string Series while preserving tabular DataFrames. Added a
+  minimum-document guard, five-fold CV, held-out test summaries, and comparison
+  support for the dummy, logistic regression, and LinearSVC models.
+- **Tested:** `ml\.venv\Scripts\python.exe -m ml.classifiers.resume_role.train
+  --seeds 5` completed. `ml\.venv\Scripts\python.exe -m pytest
+  ml\classifiers\tests -q` passed (13 tests), and
+  `backend\.venv\Scripts\ruff.exe check ml\classifiers` passed. Results saved to
+  `ml/classifiers/artifacts/resume_role_results.json`.
+
+  | Model | CV macro F1 | Test macro F1 |
+  | --- | ---: | ---: |
+  | Dummy | 0.0585 ± 0.0002 | 0.0585 ± 0.0000 |
+  | Logistic regression | 0.8872 ± 0.0113 | 0.8912 ± 0.0092 |
+  | LinearSVC | 0.8969 ± 0.0123 | 0.8985 ± 0.0091 |
+
+- **Cut or partial:** None. No model artifact was saved; only evaluation
+  metrics were written. These external-dataset results are offline and not
+  user-facing predictions.
+- **Differs from the report?** No. This evaluates the planned FYP-2 classifier
+  against a simple baseline as described in the report.
+

@@ -2,7 +2,7 @@ import json
 import os
 import urllib.request
 
-from service import ReadinessError, generate_assessment
+from service import generate_assessment, ReadinessError
 
 API_KEY = os.environ["GEMINI_API_KEY"]
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
@@ -42,7 +42,7 @@ for label, profile in PROFILES.items():
         res = generate_assessment(profile, llm_call)
     except ReadinessError as e:
         print("FAILED:", e)
-        continue
+        continue  
     print("overall:", res.overall_score)
     for d in res.assessment.dimensions:
         print(f"  {d.dimension}: {d.score} | {d.reasoning} | NEXT: {d.next_action}")
