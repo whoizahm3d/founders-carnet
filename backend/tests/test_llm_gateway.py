@@ -196,7 +196,9 @@ def test_gateway_logs_and_propagates_timeout_without_prompt_contents(caplog):
     assert failed_record.elapsed_ms >= 0
 
 
-def test_gateway_retries_504_once_and_logs_each_attempt(monkeypatch, caplog):
+def test_gateway_cascades_504_to_next_model_without_retrying_failed_model(
+    monkeypatch, caplog
+):
     timeout_error = ServerError(
         code=504,
         response_json={
@@ -222,7 +224,10 @@ def test_gateway_retries_504_once_and_logs_each_attempt(monkeypatch, caplog):
     monkeypatch.setattr(gateway_module, "sleep", lambda seconds: None)
     client = SimpleNamespace(models=RetryModels())
     gateway = GeminiGateway(
-        api_key="test-key", model_name="configured-model", client=client
+        api_key="test-key",
+        model_name="configured-model",
+        fallback_model="configured-fallback",
+        client=client,
     )
     passage = RetrievedChunk(
         chunk=SimpleNamespace(
@@ -244,22 +249,25 @@ def test_gateway_retries_504_once_and_logs_each_attempt(monkeypatch, caplog):
 
     assert answer.answer == "Supported."
     assert len(client.models.calls) == 2
-    assert all(call["model"] == "configured-model" for call in client.models.calls)
-    retry_record = next(
+    assert [call["model"] for call in client.models.calls] == [
+        "configured-model",
+        "configured-fallback",
+    ]
+    fallback_record = next(
         record
         for record in caplog.records
-        if record.message.startswith("Gemini retry scheduled")
+        if record.message.startswith("Gemini fallback selected")
     )
     success_record = next(
         record
         for record in caplog.records
         if record.message.startswith("Gemini generation completed")
     )
-    assert retry_record.attempt_number == 1
-    assert retry_record.failure_category == "provider_timeout"
+    assert fallback_record.attempt_number == 1
+    assert fallback_record.failure_category == "provider_timeout"
     assert success_record.attempt_number == 2
-    assert "attempt_number=1" in retry_record.message
-    assert "model=configured-model" in retry_record.message
+    assert "model=configured-model" in fallback_record.message
+    assert "next_model=configured-fallback" in fallback_record.message
 
 
 def test_gateway_uses_only_an_explicit_configured_fallback(monkeypatch, caplog):
@@ -304,7 +312,7 @@ def test_gateway_uses_only_an_explicit_configured_fallback(monkeypatch, caplog):
     )
 
 
-def test_gateway_uses_fallback_only_after_primary_retry_fails(monkeypatch, caplog):
+def test_gateway_does_not_retry_failing_model_within_request(monkeypatch, caplog):
     timeout_response = {
         "error": {"message": "deadline expired", "status": "DEADLINE_EXCEEDED"}
     }
@@ -315,7 +323,7 @@ def test_gateway_uses_fallback_only_after_primary_retry_fails(monkeypatch, caplo
 
         def generate_content(self, **kwargs):
             self.calls.append(kwargs)
-            if len(self.calls) <= 2:
+            if len(self.calls) == 1:
                 raise ServerError(code=504, response_json=timeout_response)
             return SimpleNamespace(
                 text=json.dumps({"answer": "", "citation_chunk_ids": []})
@@ -335,12 +343,8 @@ def test_gateway_uses_fallback_only_after_primary_retry_fails(monkeypatch, caplo
 
     assert [call["model"] for call in client.models.calls] == [
         "configured-model",
-        "configured-model",
         "configured-fallback",
     ]
-    events = [record.message for record in caplog.records]
-    assert events[0].startswith("Gemini retry scheduled")
-    assert events[1].startswith("Gemini fallback selected")
 
 
 def test_gateway_does_not_retry_quota_errors(monkeypatch):
@@ -696,3 +700,233 @@ def test_gateway_call_metadata_is_persisted_without_prompt_content(monkeypatch):
         assert row.approximate_prompt_chars > 0
         assert not hasattr(row, "prompt")
         assert not hasattr(row, "response")
+
+
+# ---------------------------------------------------------------------------
+# Multi-model cascade tests
+# ---------------------------------------------------------------------------
+
+
+def test_gateway_models_list_is_fetched_once_and_cached():
+    """_get_available_models must call client.models.list() only on the first use."""
+    list_calls = []
+
+    class FakeModelItem:
+        def __init__(self, name):
+            self.name = name
+
+    class FakeModelsList:
+        def list(self):
+            list_calls.append(1)
+            return [FakeModelItem("model-a"), FakeModelItem("model-b")]
+
+        def generate_content(self, **kwargs):
+            return SimpleNamespace(text=json.dumps({"value": "ok"}))
+
+    fake_client = SimpleNamespace(models=FakeModelsList())
+    gateway = GeminiGateway(
+        api_key="test-key",
+        models=["model-a", "model-b"],
+        client=fake_client,
+    )
+
+    gateway.generate_structured(
+        system_instruction="sys",
+        payload={"x": 1},
+        response_schema=StructuredResult,
+        output_instruction="Return a value.",
+        operation="test",
+        prompt_version="v1",
+    )
+    gateway.generate_structured(
+        system_instruction="sys",
+        payload={"x": 2},
+        response_schema=StructuredResult,
+        output_instruction="Return a value.",
+        operation="test",
+        prompt_version="v1",
+    )
+
+    assert list_calls == [1], "models.list() must be called exactly once"
+
+
+def test_gateway_skips_unavailable_model_on_404_and_tries_next(monkeypatch, caplog):
+    """404 on the first model must move to the next without retry."""
+    not_found = ServerError(
+        code=404,
+        response_json={"error": {"message": "model not found", "status": "NOT_FOUND"}},
+    )
+
+    class FakeModelItem:
+        def __init__(self, name):
+            self.name = name
+
+    class CascadeModels:
+        def __init__(self):
+            self.calls = []
+
+        def list(self):
+            return [FakeModelItem("model-a"), FakeModelItem("model-b")]
+
+        def generate_content(self, **kwargs):
+            self.calls.append(kwargs["model"])
+            if kwargs["model"] == "model-a":
+                raise not_found
+            return SimpleNamespace(text=json.dumps({"value": "from-b"}))
+
+    monkeypatch.setattr(gateway_module, "sleep", lambda s: None)
+    fake_client = SimpleNamespace(models=CascadeModels())
+    gateway = GeminiGateway(
+        api_key="test-key",
+        models=["model-a", "model-b"],
+        client=fake_client,
+    )
+
+    with caplog.at_level(logging.INFO, logger="app.services.llm_gateway"):
+        result = gateway.generate_structured(
+            system_instruction="sys",
+            payload={"x": 1},
+            response_schema=StructuredResult,
+            output_instruction="Return a value.",
+            operation="test",
+            prompt_version="v1",
+        )
+
+    assert result.value == "from-b"
+    assert fake_client.models.calls == ["model-a", "model-b"]
+    assert any("Gemini model failed" in r.message for r in caplog.records)
+
+
+def test_gateway_skips_on_429_and_tries_next(monkeypatch):
+    """429 (rate limit) on the first model must cascade to the next."""
+    quota_error = ServerError(
+        code=429,
+        response_json={"error": {"message": "quota", "status": "RESOURCE_EXHAUSTED"}},
+    )
+
+    class FakeModelItem:
+        def __init__(self, name):
+            self.name = name
+
+    class Models429:
+        def __init__(self):
+            self.calls = []
+
+        def list(self):
+            return [FakeModelItem("model-a"), FakeModelItem("model-b")]
+
+        def generate_content(self, **kwargs):
+            self.calls.append(kwargs["model"])
+            if kwargs["model"] == "model-a":
+                raise quota_error
+            return SimpleNamespace(text=json.dumps({"value": "ok"}))
+
+    monkeypatch.setattr(gateway_module, "sleep", lambda s: None)
+    fake_client = SimpleNamespace(models=Models429())
+    gateway = GeminiGateway(
+        api_key="test-key",
+        models=["model-a", "model-b"],
+        client=fake_client,
+    )
+
+    result = gateway.generate_structured(
+        system_instruction="sys",
+        payload={},
+        response_schema=StructuredResult,
+        output_instruction="Return a value.",
+    )
+    assert result.value == "ok"
+    assert fake_client.models.calls == ["model-a", "model-b"]
+
+
+def test_gateway_raises_when_all_models_exhausted(monkeypatch, caplog):
+    """When every model in the cascade fails, the exception must be re-raised."""
+    error = ServerError(
+        code=503,
+        response_json={"error": {"message": "unavailable", "status": "UNAVAILABLE"}},
+    )
+
+    class FakeModelItem:
+        def __init__(self, name):
+            self.name = name
+
+    class AllFailModels:
+        def list(self):
+            return [FakeModelItem("model-a"), FakeModelItem("model-b")]
+
+        def generate_content(self, **kwargs):
+            raise error
+
+    monkeypatch.setattr(gateway_module, "sleep", lambda s: None)
+    fake_client = SimpleNamespace(models=AllFailModels())
+    gateway = GeminiGateway(
+        api_key="test-key",
+        models=["model-a", "model-b"],
+        client=fake_client,
+    )
+
+    with caplog.at_level(logging.ERROR, logger="app.services.llm_gateway"):
+        with pytest.raises(ServerError):
+            gateway.generate_structured(
+                system_instruction="sys",
+                payload={},
+                response_schema=StructuredResult,
+                output_instruction="Return a value.",
+            )
+
+    assert any("Gemini all models exhausted" in r.message for r in caplog.records)
+
+
+def test_gateway_models_list_fallback_on_list_api_failure(caplog):
+    """If client.models.list() raises, all configured models must be tried."""
+    class FakeModelsList:
+        def __init__(self):
+            self.calls = []
+
+        def list(self):
+            raise RuntimeError("list endpoint unavailable")
+
+        def generate_content(self, **kwargs):
+            self.calls.append(kwargs["model"])
+            return SimpleNamespace(text=json.dumps({"value": "ok"}))
+
+    fake_client = SimpleNamespace(models=FakeModelsList())
+    gateway = GeminiGateway(
+        api_key="test-key",
+        models=["model-a"],
+        client=fake_client,
+    )
+
+    with caplog.at_level(logging.WARNING, logger="app.services.llm_gateway"):
+        result = gateway.generate_structured(
+            system_instruction="sys",
+            payload={},
+            response_schema=StructuredResult,
+            output_instruction="Return a value.",
+        )
+
+    assert result.value == "ok"
+    assert any("models list call failed" in r.message for r in caplog.records)
+
+
+def test_gateway_fixup_fields_patches_response_before_validation():
+    """fixup_fields must overwrite the named field in the raw JSON response."""
+    # Return a response where rubric_version is wrong; fixup must correct it.
+    client = FakeClient([json.dumps({"value": "patched"})])
+    gateway = GeminiGateway(
+        api_key="test-key",
+        model_name="configured-model",
+        client=client,
+    )
+    # Artificially set _available_models so list() is not called on the fake client.
+    gateway._available_models = ["configured-model"]
+
+    result = gateway.generate_structured(
+        system_instruction="sys",
+        payload={},
+        response_schema=StructuredResult,
+        output_instruction="Return a value.",
+        fixup_fields={"value": "fixed"},
+    )
+
+    assert result.value == "fixed"

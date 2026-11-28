@@ -20,8 +20,7 @@ def get_compliance_answer_service() -> ComplianceAnswerService:
 
     gateway = GeminiGateway(
         api_key=settings.gemini_api_key.get_secret_value(),
-        model_name=settings.gemini_model,
-        fallback_model=settings.gemini_fallback_model,
+        models=settings.gemini_models,
         request_timeout_ms=settings.gemini_request_timeout_ms,
         call_log_writer=write_gateway_call_log,
     )

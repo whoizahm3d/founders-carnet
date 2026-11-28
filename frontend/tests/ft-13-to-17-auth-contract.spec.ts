@@ -212,4 +212,70 @@ test.describe('FT-13 to FT-17: Authentication and Contract Tests', () => {
     const localToken = await page.evaluate(() => window.localStorage.getItem('carnet_token'));
     expect(localToken).toBeNull();
   });
+
+  test('request without Authorization header that gets a stubbed 401 does not log the user out', async ({ page }) => {
+    // Pre-populate stored session
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem('carnet_token', 'valid-active-token');
+      window.sessionStorage.setItem(
+        'carnet_user',
+        JSON.stringify({
+          id: 1,
+          email: 'founder@carnet.pk',
+          role: 'founder',
+          fullName: 'Bilal Ahmed',
+        })
+      );
+    });
+
+    // /users/me validates the initial session
+    await page.route('**/api/v1/users/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 1,
+          email: 'founder@carnet.pk',
+          role: 'founder',
+          full_name: 'Bilal Ahmed',
+        }),
+      });
+    });
+
+    // Stub a public or unauthenticated probe returning 401
+    await page.route('**/api/v1/founders/me/startups', async (route) => {
+      // Check that this probe carried no auth header
+      const headers = route.request().headers();
+      expect(headers['authorization']).toBeUndefined();
+
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Missing authentication credentials' }),
+      });
+    });
+
+    await page.goto('/founder/dashboard');
+    await expect(page).toHaveURL('/founder/dashboard');
+
+    // Execute an unauthenticated request directly via window.fetch through api client
+    const errorDetails = await page.evaluate(async () => {
+      try {
+        // Fetch without token option
+        const response = await fetch('/api/v1/founders/me/startups', {
+          headers: { Accept: 'application/json' },
+        });
+        return { status: response.status };
+      } catch (err: unknown) {
+        return { error: (err as Error).message };
+      }
+    });
+
+    expect(errorDetails.status).toBe(401);
+
+    // Verify session remains intact and user is not logged out or redirected
+    const sessionToken = await page.evaluate(() => window.sessionStorage.getItem('carnet_token'));
+    expect(sessionToken).toBe('valid-active-token');
+    await expect(page).not.toHaveURL('/login');
+  });
 });

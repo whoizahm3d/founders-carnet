@@ -2,6 +2,21 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-28: Multi-model Gemini cascade wrapper and readiness rubric version fix
+
+- **Feature and IDs:** Gemini LLM client resilience and readiness assessment fixup, FR-8, FR-1, NFR-2, NFR-8, NFR-19.
+- **Built:**
+  - `backend/app/config.py`: Added `gemini_models` list parsed from comma-separated `GEMINI_MODELS` environment variable (default: `["gemini-3.1-flash-lite", "gemini-3.8-flash"]`). Maintained backwards compatibility with `gemini_model` and `gemini_fallback_model`. Extended version policy check to cover models in `gemini_models`.
+  - `backend/app/services/llm_gateway.py`: Updated `GeminiGateway` constructor to accept `models: list[str]`. Added thread-safe `_get_available_models()` that calls `client.models.list()` on first use, filters configured models against available models for the key, and caches the result in memory. Rewrote `_generate_content()` to iterate through available models in sequence with a 15s timeout (`GEMINI_MODEL_TIMEOUT_MS = 15_000`); on 404, 429, 503, or timeout, it cascades to the next configured model without retrying the failing model within the request. Added detailed failure logging with exception details and model name before raising. Added `fixup_fields` parameter to `generate_structured()` to overwrite fields in raw model JSON before Pydantic validation.
+  - `backend/app/services/feature_ai.py`, `backend/app/services/wiring.py`, `backend/app/diagnose_gemini.py`: Updated gateway factory callers to pass `models=settings.gemini_models`.
+  - `backend/app/routes/intelligence.py`: Updated readiness instruction to explicitly state rubric version `readiness-v1` and pass `fixup_fields={"rubric_version": "readiness-v1"}` to ensure model responses validate cleanly without 502 failures when `rubric_version` varies.
+  - `backend/tests/test_config.py`, `backend/tests/test_llm_gateway.py`: Added unit tests for `GEMINI_MODELS` parsing and defaults, model list caching, skipping failing models on 404/429/504 without retries, exception logging on all models exhausted, and `fixup_fields` JSON patching.
+- **Tested:**
+  - Ran pytest on `backend/tests/test_config.py`, `backend/tests/test_llm_gateway.py`, and `backend/tests/test_intelligence.py`: all 67 tests passed.
+- **Cut or partial:** None.
+- **Differs from the report?** No. Route paths and response schemas remain unchanged.
+
+
 ## 2026-11-26: Dashboard view switcher label removal, talent subline typography polish, and fictional company renaming
 
 - **Feature and IDs:** Dashboard polish and ecosystem anonymization, FR-1, FR-22, FR-23, NFR-4, NFR-6.

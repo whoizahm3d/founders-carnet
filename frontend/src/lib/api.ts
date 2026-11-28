@@ -139,8 +139,10 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
       errorDetail = res.statusText || `Request failed with status ${res.status}`;
     }
 
-    // Trigger auth session expiration on 401 unless specifically opted out (such as /auth/login)
-    if (res.status === 401 && !skipAuthRedirect && typeof window !== 'undefined') {
+    // Trigger auth session expiration on 401 only if request carried an Authorization header,
+    // unless specifically opted out (such as /auth/login)
+    const hasAuthHeader = Boolean(headers['Authorization'] || headers['authorization']);
+    if (res.status === 401 && hasAuthHeader && !skipAuthRedirect && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
     }
 

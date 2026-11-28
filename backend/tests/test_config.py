@@ -102,6 +102,21 @@ def test_gemini_default_uses_approved_25_flash_model() -> None:
     assert Settings(_env_file=None).gemini_model == "gemini-2.5-flash"
 
 
+def test_settings_read_gemini_models_default() -> None:
+    settings = Settings(_env_file=None)
+    assert settings.gemini_models == ["gemini-3.1-flash-lite", "gemini-3.8-flash"]
+
+
+def test_settings_read_gemini_models_from_env_comma_list() -> None:
+    settings = Settings(_env_file=None, GEMINI_MODELS="gemini-2.5-flash,gemini-2.0-flash")
+    assert settings.gemini_models == ["gemini-2.5-flash", "gemini-2.0-flash"]
+
+
+def test_settings_parse_gemini_models_strips_whitespace() -> None:
+    settings = Settings(_env_file=None, GEMINI_MODELS=" gemini-2.5-flash , gemini-2.0-flash ")
+    assert settings.gemini_models == ["gemini-2.5-flash", "gemini-2.0-flash"]
+
+
 def test_e5_query_encoder_adds_query_prefix() -> None:
     """encode_query must prepend 'query: ' when the model is intfloat/multilingual-e5-base."""
     import sys

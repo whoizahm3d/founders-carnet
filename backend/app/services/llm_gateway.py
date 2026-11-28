@@ -81,7 +81,8 @@ class GeminiGateway:
         self,
         *,
         api_key: str,
-        model_name: str,
+        model_name: str | None = None,
+        models: list[str] | None = None,
         fallback_model: str | None = None,
         client: Any | None = None,
         request_timeout_ms: int = GEMINI_REQUEST_TIMEOUT_MS,
@@ -90,7 +91,16 @@ class GeminiGateway:
     ) -> None:
         if not api_key:
             raise ValueError("Gemini API key is not configured")
-        if not model_name.strip():
+        # Accept either the old model_name/fallback_model signature or the new models list.
+        if models is not None:
+            resolved_models = [m.strip() for m in models if m.strip()]
+        elif model_name is not None:
+            resolved_models = [model_name.strip()]
+            if fallback_model and fallback_model.strip() and fallback_model.strip() != model_name.strip():
+                resolved_models.append(fallback_model.strip())
+        else:
+            resolved_models = []
+        if not resolved_models:
             raise ValueError("Gemini model name is not configured")
         if not 10_000 <= request_timeout_ms <= 120_000:
             raise ValueError(
@@ -113,13 +123,14 @@ class GeminiGateway:
         self._client = client
         self._cache = cache
         self._call_log_writer = call_log_writer
-        self.model_name = model_name
-        normalized_fallback = fallback_model.strip() if fallback_model else ""
-        self.fallback_model = (
-            normalized_fallback
-            if normalized_fallback and normalized_fallback != model_name.strip()
-            else None
-        )
+        self._models = resolved_models
+        # _available_models is populated lazily on first use; None means not yet fetched.
+        self._available_models: list[str] | None = None
+        self._models_lock = Lock()
+        # Keep model_name and fallback_model for backward compatibility with existing
+        # call-log code and tests that inspect these attributes.
+        self.model_name = resolved_models[0]
+        self.fallback_model = resolved_models[1] if len(resolved_models) > 1 else None
         self.prompt_version = f"{ANSWER_PROMPT_VERSION}+{VALIDATION_PROMPT_VERSION}"
 
     def generate_answer(
@@ -187,8 +198,15 @@ class GeminiGateway:
         cache_scope: int | str | None = None,
         operation: str = "structured_generation",
         prompt_version: str | None = None,
+        fixup_fields: dict[str, object] | None = None,
     ) -> T:
-        """Generate a schema-validated result for non-RAG AI services."""
+        """Generate a schema-validated result for non-RAG AI services.
+
+        ``fixup_fields``: if supplied, the named fields are overwritten in the raw
+        JSON response before Pydantic validation.  Use this to enforce a known-good
+        value for a Literal field when the model may return a slightly different
+        string (e.g. ``{"rubric_version": "readiness-v1"}``).
+        """
         request_id = str(uuid4())
         schema = response_schema.model_json_schema()
         contents = json.dumps(
@@ -256,7 +274,6 @@ class GeminiGateway:
             passage_count=0,
             request_id=request_id,
             prompt_version=prompt_version,
-            model=self.model_name,
             contents=contents,
             config={
                 "system_instruction": system_instruction,
@@ -269,6 +286,13 @@ class GeminiGateway:
         response_text = getattr(response, "text", None)
         if not isinstance(response_text, str) or not response_text.strip():
             raise ValueError("Gemini returned no structured response")
+        if fixup_fields:
+            try:
+                raw = json.loads(response_text)
+                raw.update(fixup_fields)
+                response_text = json.dumps(raw, ensure_ascii=False)
+            except Exception:
+                pass  # Let validation fail with its own message.
         result = response_schema.model_validate_json(response_text)
         if (
             cache_scope is not None
@@ -296,13 +320,59 @@ class GeminiGateway:
             passage_count=0,
             request_id=str(uuid4()),
             prompt_version="diagnostic-ping-v1",
-            model=self.model_name,
             contents="Reply with exactly: OK",
             config={"temperature": 0, "max_output_tokens": 8},
         )
         response_text = getattr(response, "text", None)
         if not isinstance(response_text, str) or not response_text.strip():
             raise ValueError("Gemini returned no diagnostic response")
+
+    def _get_available_models(self) -> list[str]:
+        """Return the filtered, ordered list of models that are available to this API key.
+
+        The result is cached in memory after the first call.  If the models-list API
+        call fails we fall back to the full configured list so callers always get
+        something to try.
+        """
+        with self._models_lock:
+            if self._available_models is not None:
+                return self._available_models
+
+            try:
+                models_api = getattr(self._client, "models", None)
+                if hasattr(models_api, "list") and callable(models_api.list):
+                    pager = models_api.list()
+                    remote_names: set[str] = set()
+                    for m in pager:
+                        name = getattr(m, "name", "") or ""
+                        # The API may return "models/gemini-2.5-flash" or "gemini-2.5-flash".
+                        remote_names.add(name.removeprefix("models/"))
+                    available = [m for m in self._models if m in remote_names]
+                    if not available:
+                        logger.warning(
+                            "Gemini models list returned no match for configured models=%s; "
+                            "falling back to configured list",
+                            self._models,
+                        )
+                        available = list(self._models)
+                    else:
+                        skipped = [m for m in self._models if m not in remote_names]
+                        if skipped:
+                            logger.warning(
+                                "Gemini models not available for this key (skipped): %s",
+                                skipped,
+                            )
+                else:
+                    available = list(self._models)
+            except Exception as exc:
+                logger.warning(
+                    "Gemini models list call failed error_type=%s; using configured list",
+                    type(exc).__name__,
+                )
+                available = list(self._models)
+
+            self._available_models = available
+            return self._available_models
 
     def _generate_content(
         self,
@@ -330,18 +400,28 @@ class GeminiGateway:
             "passage_count": passage_count,
             "approximate_prompt_chars": prompt_chars,
         }
-        primary_model = str(log_context["model"])
-        current_model = primary_model
-        primary_attempts = 0
-        fallback_used = False
         operation_started = perf_counter()
         attempt_number = 0
+        last_exc: BaseException | None = None
+        last_failed_model: str = self.model_name
+        last_status_code: int | None = None
+        last_category: str = "provider_error"
+        last_queue_position: int = 0
 
-        while True:
+        models_to_try = self._get_available_models()
+        failed_models: set[str] = set()
+
+        for current_model in models_to_try:
+            if current_model in failed_models:
+                continue
+
             attempt_number += 1
-            if current_model == primary_model:
-                primary_attempts += 1
             kwargs["model"] = current_model
+            config_dict = dict(kwargs.get("config", {}))
+            if "http_options" not in config_dict:
+                config_dict["http_options"] = {"timeout": 15_000}
+            kwargs["config"] = config_dict
+
             attempt_started = perf_counter()
             queue_position = 0
 
@@ -366,6 +446,12 @@ class GeminiGateway:
                 category = classify_provider_error(exc)
                 status_code = _provider_status_code(exc)
                 attempt_elapsed_ms = int((perf_counter() - attempt_started) * 1000)
+                last_exc = exc
+                last_failed_model = current_model
+                last_status_code = status_code
+                last_category = category
+                last_queue_position = queue_position
+
                 self._write_call_log(
                     request_id=request_id,
                     operation=operation,
@@ -380,72 +466,79 @@ class GeminiGateway:
                     failure_category=category,
                     elapsed_ms=attempt_elapsed_ms,
                 )
-                retry_primary = (
-                    current_model == primary_model
-                    and primary_attempts < GEMINI_MAX_ATTEMPTS_PER_MODEL
-                    and category
-                    in {
-                        "provider_timeout",
-                        "transient_provider_error",
-                        "local_timeout",
-                        "local_network",
-                    }
-                )
-                use_fallback = (
-                    current_model == primary_model
-                    and not retry_primary
-                    and self.fallback_model is not None
-                    and not fallback_used
-                    and category
-                    in {
-                        "provider_timeout",
-                        "transient_provider_error",
-                        "local_timeout",
-                        "local_network",
+                retriable = (
+                    status_code in {404, 429, 503}
+                    or category in {
                         "model_unavailable",
+                        "rate_limit_or_quota",
+                        "transient_provider_error",
+                        "local_timeout",
+                        "local_network",
+                        "provider_timeout",
                     }
                 )
-                next_model = (
-                    current_model
-                    if retry_primary
-                    else (self.fallback_model if use_fallback else None)
+                logger.warning(
+                    "Gemini model failed model=%s operation=%s attempt_number=%d "
+                    "status_code=%s failure_category=%s passages=%d "
+                    "approximate_prompt_chars=%d elapsed_ms=%d retriable=%s",
+                    current_model,
+                    operation,
+                    attempt_number,
+                    status_code or "unavailable",
+                    category,
+                    passage_count,
+                    prompt_chars,
+                    attempt_elapsed_ms,
+                    retriable,
+                    exc_info=True,
+                    extra={
+                        **log_context,
+                        "model": current_model,
+                        "attempt_number": attempt_number,
+                        "status_code": status_code,
+                        "failure_category": category,
+                        "elapsed_ms": attempt_elapsed_ms,
+                        "queue_position": queue_position,
+                    },
                 )
-                if next_model is not None:
-                    event = (
-                        "Gemini fallback selected"
-                        if use_fallback
-                        else "Gemini retry scheduled"
-                    )
-                    logger.warning(
-                        "%s model=%s operation=%s attempt_number=%d next_model=%s "
-                        "status_code=%s failure_category=%s passages=%d "
-                        "approximate_prompt_chars=%d elapsed_ms=%d",
-                        event,
-                        current_model,
-                        operation,
-                        attempt_number,
-                        next_model,
-                        status_code or "unavailable",
-                        category,
-                        passage_count,
-                        prompt_chars,
-                        attempt_elapsed_ms,
-                        extra={
-                            **log_context,
-                            "attempt_number": attempt_number,
-                            "next_model": next_model,
-                            "status_code": status_code,
-                            "failure_category": category,
-                            "elapsed_ms": attempt_elapsed_ms,
-                            "queue_position": queue_position,
-                        },
-                    )
-                    if use_fallback:
-                        fallback_used = True
-                    sleep(GEMINI_RETRY_DELAY_SECONDS)
-                    current_model = next_model
-                    continue
-
+                if retriable:
+                    failed_models.add(current_model)
+                    remaining = [m for m in models_to_try if m not in failed_models]
+                    if remaining:
+                        logger.warning(
+                            "Gemini fallback selected model=%s next_model=%s operation=%s attempt_number=%d "
+                            "status_code=%s failure_category=%s passages=%d "
+                            "approximate_prompt_chars=%d elapsed_ms=%d",
+                            current_model,
+                            remaining[0],
+                            operation,
+                            attempt_number,
+                            status_code or "unavailable",
+                            category,
+                            passage_count,
+                            prompt_chars,
+                            attempt_elapsed_ms,
+                            extra={
+                                **log_context,
+                                "model": current_model,
+                                "next_model": remaining[0],
+                                "attempt_number": attempt_number,
+                                "status_code": status_code,
+                                "failure_category": category,
+                                "elapsed_ms": attempt_elapsed_ms,
+                                "queue_position": queue_position,
+                            },
+                        )
+                        continue
+                    else:
+                        elapsed_ms = int((perf_counter() - operation_started) * 1000)
+                        logger.exception(
+                            "Gemini all models exhausted after %d attempts operation=%s elapsed_ms=%d",
+                            len(failed_models),
+                            operation,
+                            elapsed_ms,
+                        )
+                # Non-retriable or no more models to try.
                 try:
                     exc._carnet_generation_failure_logged = True
                 except (AttributeError, TypeError):
@@ -465,6 +558,7 @@ class GeminiGateway:
                     elapsed_ms,
                     extra={
                         **log_context,
+                        "model": current_model,
                         "attempt_number": attempt_number,
                         "status_code": status_code,
                         "failure_category": category,
@@ -503,12 +597,46 @@ class GeminiGateway:
                 elapsed_ms,
                 extra={
                     **log_context,
+                    "model": current_model,
                     "attempt_number": attempt_number,
                     "elapsed_ms": elapsed_ms,
                     "queue_position": queue_position,
                 },
             )
             return response
+
+        # All models exhausted.
+        elapsed_ms = int((perf_counter() - operation_started) * 1000)
+        try:
+            if last_exc is not None:
+                last_exc._carnet_generation_failure_logged = True
+        except (AttributeError, TypeError):
+            pass
+        logger.exception(
+            "Gemini generation failed model=%s operation=%s attempt_number=%d "
+            "status_code=%s failure_category=%s passages=%d "
+            "approximate_prompt_chars=%d elapsed_ms=%d",
+            last_failed_model,
+            operation,
+            attempt_number,
+            last_status_code or "unavailable",
+            last_category,
+            passage_count,
+            prompt_chars,
+            elapsed_ms,
+            extra={
+                **log_context,
+                "model": last_failed_model,
+                "attempt_number": attempt_number,
+                "status_code": last_status_code,
+                "failure_category": last_category,
+                "elapsed_ms": elapsed_ms,
+                "queue_position": last_queue_position,
+            },
+        )
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError("Gemini generation failed: no models available")
 
     def _write_call_log(self, **event: object) -> None:
         if self._call_log_writer is None:

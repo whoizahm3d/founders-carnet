@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useTransition } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
@@ -14,8 +15,9 @@ function PitchFeedbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionIdParam = searchParams.get('session_id');
+  const { isLoading: authLoading } = useAuth();
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [startup, setStartup] = useState<StartupRead | null>(null);
   const [history, setHistory] = useState<PitchSessionRead[]>([]);
@@ -24,26 +26,27 @@ function PitchFeedbackContent() {
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
   const [, startTransition] = useTransition();
 
+  const token = authStorage.getToken();
+  const isLoading = authLoading || (Boolean(token) && !loaded && !errorMsg);
+
   useEffect(() => {
+    if (authLoading) return;
+
+    const token = authStorage.getToken();
+    if (!token) return;
+
     let cancelled = false;
 
     async function loadData() {
-      setIsLoading(true);
-      setErrorMsg(null);
-
-      const token = authStorage.getToken();
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const startups = await api.get<StartupRead[]>('/founders/me/startups');
+        const startups = await api.get<StartupRead[]>('/founders/me/startups', { token });
         if (cancelled) return;
+
+        setErrorMsg(null);
 
         if (!startups || startups.length === 0) {
           setStartup(null);
-          setIsLoading(false);
+          setLoaded(true);
           return;
         }
 
@@ -51,7 +54,8 @@ function PitchFeedbackContent() {
         setStartup(activeStartup);
 
         const sessions = await api.get<PitchSessionRead[]>(
-          `/pitch/history?startup_id=${activeStartup.id}`
+          `/pitch/history?startup_id=${activeStartup.id}`,
+          { token }
         );
         if (cancelled) return;
 
@@ -70,8 +74,10 @@ function PitchFeedbackContent() {
         }
 
         setSelectedSession(target);
+        setLoaded(true);
       } catch (err) {
         if (cancelled) return;
+        setLoaded(true);
         if (err instanceof ApiError) {
           if (err.status === 429) {
             setErrorMsg('Too many requests. Please wait a moment before trying again.');
@@ -85,10 +91,6 @@ function PitchFeedbackContent() {
         } else {
           setErrorMsg('An unexpected error occurred while loading session feedback.');
         }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
       }
     }
 
@@ -97,7 +99,7 @@ function PitchFeedbackContent() {
     return () => {
       cancelled = true;
     };
-  }, [sessionIdParam]);
+  }, [authLoading, sessionIdParam]);
 
   const toggleStep = (id: string) => {
     setCompletedSteps((prev) => ({

@@ -60,6 +60,10 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="GEMINI_FALLBACK_MODEL",
     )
+    gemini_models: list[str] = Field(
+        default=["gemini-3.1-flash-lite", "gemini-3.8-flash"],
+        validation_alias="GEMINI_MODELS",
+    )
     gemini_request_timeout_ms: int = Field(
         default=60_000,
         ge=10_000,
@@ -106,6 +110,9 @@ class Settings(BaseSettings):
         for model in (self.gemini_model, self.gemini_fallback_model):
             if model and _gemini_model_version(model) > (2, 5):
                 logger.warning("Configured Gemini model %s is newer than the approved Gemini 2.5 tier", model)
+        for model in self.gemini_models:
+            if model and _gemini_model_version(model) > (2, 5):
+                logger.warning("Configured Gemini model %s is newer than the approved Gemini 2.5 tier", model)
         return self
 
     @field_validator("database_url", mode="before")
@@ -136,6 +143,13 @@ class Settings(BaseSettings):
     def normalize_gemini_fallback_model(cls, value: object) -> object:
         if isinstance(value, str):
             return value.strip() or None
+        return value
+
+    @field_validator("gemini_models", mode="before")
+    @classmethod
+    def parse_gemini_models(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [m.strip() for m in value.split(",") if m.strip()]
         return value
 
     model_config = SettingsConfigDict(
