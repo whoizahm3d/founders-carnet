@@ -133,6 +133,15 @@ export interface MatchRead {
   contact_email: string | null;
 }
 
+export interface PitchStart {
+  startup_id: number;
+  persona: string;
+}
+
+export interface PitchAnswer {
+  answer: string;
+}
+
 export interface PitchTurnRead {
   turn_number: number;
   speaker: string;
