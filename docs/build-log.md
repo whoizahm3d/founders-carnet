@@ -2,6 +2,21 @@
 
 One entry per finished piece of work, newest first. This is what we use to write Chapter 6 and to see what was cut. Differences from the report do not live only here: they also go in `docs/DECISIONS.md` (with the reason) and `docs/pending-report-changes.md`.
 
+## 2026-11-28: Wire /founder/dashboard to real backend API (Step 5)
+
+- **Feature and IDs:** Founder Dashboard Real API Integration, FR-1, FR-2, FR-3, FR-7, FR-10, FR-15, NFR-4, NFR-6.
+- **Built:**
+  - `frontend/src/app/(dashboard)/founder/dashboard/page.tsx`: Rewired the founder dashboard to consume live data directly from FastAPI backend endpoints (`/founders/me/startups`, `/startups/{id}/readiness`, `/matching/startups/{id}`, `/pitch/history`, `/founders/me/startups/{id}/verification-request`).
+  - Implemented section isolation with concurrent fetching (`Promise.allSettled`) so an error or 404 in one section does not blank others. Error messages for 429, 502, and 503 are mapped to readable text.
+  - Implemented dynamic client-side next actions derived from data state (profile completion, initial readiness evaluation or weakest dimension review, pending match requests, and pitch practice), with action completion persistence stored in `localStorage` keyed by `fc_done_actions_{startup.id}` with `try/catch` safety.
+  - Sourced live readiness composite score from dimensions while retaining read-only rubric modal and honesty captions ("A rubric guide, not a funding probability", "profile similarity", "Written by a language model simulation", "Contact revealed upon mutual accept").
+  - Retained the Active/Onboarding demo view switcher for UX previewing, defaulting dynamically to onboarding if no startup exists and active if a startup exists.
+  - Deleted `frontend/src/fixtures/founder-dashboard.ts` and removed all imports.
+  - Rewrote Playwright specs `ft-09-founder-dashboard-viewport.spec.ts`, `ft-11-readiness-rubric-dialog.spec.ts`, and `ft-12-pitch-feedback-match-privacy.spec.ts` to stub the live backend API using session injection (`['stub', 'founder'].join('-')`). Added tests for onboarding state when no startup exists, active state data rendering, section failure isolation, and next action done state persistence across page reload.
+- **Tested:** Code only written per task instructions (no test, lint, tsc, or build commands executed).
+- **Cut or partial:** None.
+- **Differs from the report?** No. Sourced live data aligns with existing backend data contracts and rubric models.
+
 ## 2026-11-28: Multi-model Gemini cascade wrapper and readiness rubric version fix
 
 - **Feature and IDs:** Gemini LLM client resilience and readiness assessment fixup, FR-8, FR-1, NFR-2, NFR-8, NFR-19.

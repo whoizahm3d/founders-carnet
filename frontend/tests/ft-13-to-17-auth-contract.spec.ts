@@ -242,8 +242,17 @@ test.describe('FT-13 to FT-17: Authentication and Contract Tests', () => {
       });
     });
 
-    // Stub a public or unauthenticated probe returning 401
+    // Stub dashboard startup fetch on page load so it succeeds with a token
     await page.route('**/api/v1/founders/me/startups', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    // Stub a unique unauthenticated probe URL returning 401
+    await page.route('**/api/v1/__probe_no_auth', async (route) => {
       // Check that this probe carried no auth header
       const headers = route.request().headers();
       expect(headers['authorization']).toBeUndefined();
@@ -258,11 +267,11 @@ test.describe('FT-13 to FT-17: Authentication and Contract Tests', () => {
     await page.goto('/founder/dashboard');
     await expect(page).toHaveURL('/founder/dashboard');
 
-    // Execute an unauthenticated request directly via window.fetch through api client
+    // Execute an unauthenticated request directly via window.fetch
     const errorDetails = await page.evaluate(async () => {
       try {
         // Fetch without token option
-        const response = await fetch('/api/v1/founders/me/startups', {
+        const response = await fetch('/api/v1/__probe_no_auth', {
           headers: { Accept: 'application/json' },
         });
         return { status: response.status };
